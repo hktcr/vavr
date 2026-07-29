@@ -26,10 +26,13 @@
 </head>
 <body data-lage="raden">
 
-  <!-- Huvud-header / Navigationsfält -->
+  <!-- Skärmläsaranmälare (a11y status announcer) -->
+  <div id="a11y-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+  <!-- Svävande Glassmorphism-Header (MärkR-estetik) -->
   <header class="huvudbar">
     <button id="paneltoggle" class="knapp-ikon" title="Öppna sidopanel (Cmd+B)" aria-label="Sidopanel">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
     </button>
 
     <div class="dok-titel-container">
@@ -44,22 +47,22 @@
     </nav>
   </header>
 
-  <!-- Nätverksvy canvas (Väven) -->
+  <!-- Nätverksvy canvas & nodlager (Subtilt i bakgrunden i Raden-läge) -->
   <canvas id="vaven" aria-hidden="true"></canvas>
   <div id="nodlager"></div>
 
   <!-- Huvudinnehållsytor -->
   <main id="huvudomrade">
-    <!-- LÄGE 1: RADEN (skrivläge) -->
+    <!-- LÄGE 1: RADEN (skrivläge i centrum) -->
     <section id="vy-raden" class="skrivyta">
       <div class="trappa" id="skrivtrappa"></div>
       <div class="raden aktiv" id="radcontainer">
         <div class="marke"></div>
-        <textarea id="skrivfalt" placeholder="Skriv ett stycke eller # Rubrik..." rows="1" spellcheck="false"></textarea>
+        <textarea id="skrivfalt" placeholder="Skriv ett stycke eller # Rubrik..." rows="1" spellcheck="false" aria-label="Skrivfält"></textarea>
       </div>
     </section>
 
-    <!-- LÄGE 3: TRAPPAN (disposition / läsning) -->
+    <!-- LÄGE 3: TRAPPAN (disposition & läsning) -->
     <section id="vy-trappan" class="trappvy" data-utfallning="2" style="display:none;">
       <div class="utfallningsreglage">
         <span class="etikett">Visning:</span>
@@ -77,8 +80,8 @@
         <span id="studio-block-typ" class="studio-info"></span>
       </div>
       <div id="studio-foralder" class="grannskap"></div>
-      <textarea id="studio-falt" rows="6" placeholder="Redigera stycke..."></textarea>
-      <div id="studio-efterföljande" class="grannskap"></div>
+      <textarea id="studio-falt" rows="6" placeholder="Redigera stycke..." aria-label="Redigera stycke"></textarea>
+      <div id="studio-efterfoljande" class="grannskap"></div>
       <div class="studio-kommentarer">
         <h3>Kommentarer</h3>
         <div id="studio-kommentarer-lista"></div>
@@ -103,12 +106,18 @@
       <div id="dok-lista" class="dok-lista"></div>
       <div class="knapprad">
         <button id="nytt-dok-knapp" class="knapp-sekundar">+ Nytt</button>
-        <button id="ladda-ner-alla-knapp" class="knapp-sekundar">Ladda ner alla</button>
+        <button id="ladda-ner-alla-knapp" class="knapp-sekundar">Spara alla</button>
       </div>
     </div>
 
-    <!-- 2. Ordlistan -->
-    <div class="avdelning">ORDLISTAN</div>
+    <!-- 2. Textuell Graf (a11y) -->
+    <div class="avdelning">TEXTUELL GRAF (A11Y)</div>
+    <div class="panel-sektion">
+      <div id="textuell-graf-container" class="textuell-graf-lista"></div>
+    </div>
+
+    <!-- 3. Ordlistan & Lexikal Återkoppling -->
+    <div class="avdelning">LEXIKAL ÅTERKOPPLING</div>
     <div class="panel-sektion">
       <div id="dolda-ord-notis" class="dolda-notis" style="display:none;">
         <span id="dolda-antal">0 dolda ord</span>
@@ -117,7 +126,7 @@
       <div id="ordlista-container" class="ordlista-container"></div>
     </div>
 
-    <!-- 3. Nyckeltal -->
+    <!-- 4. Nyckeltal -->
     <div class="avdelning">NYCKELTAL</div>
     <div class="panel-sektion">
       <div class="tal"><span>Ord</span><b id="stat-ord">0</b></div>
@@ -128,7 +137,7 @@
       <div class="tal"><span>LIX</span><b id="stat-lix">0</b></div>
     </div>
 
-    <!-- 4. Skrivmål -->
+    <!-- 5. Skrivmål -->
     <div class="avdelning">SKRIVMÅL</div>
     <div class="panel-sektion">
       <div class="malform">
@@ -142,7 +151,7 @@
       <div class="tal"><span id="mal-text">0 / 800 ord</span><b id="mal-procent">0%</b></div>
     </div>
 
-    <!-- 5. Timer -->
+    <!-- 6. Timer -->
     <div class="avdelning">TIMER</div>
     <div class="panel-sektion">
       <div class="timer-display" id="timer-display">25:00</div>
@@ -152,7 +161,7 @@
       </div>
     </div>
 
-    <!-- 6. Ljud -->
+    <!-- 7. Ljud -->
     <div class="avdelning">LJUDTEMA</div>
     <div class="panel-sektion">
       <select id="ljud-select" class="panel-select" aria-label="Ljudtema">
@@ -172,7 +181,7 @@
       </div>
     </div>
 
-    <!-- 7. Inställningar -->
+    <!-- 8. Inställningar & Läge -->
     <div class="avdelning">INSTÄLLNINGAR</div>
     <div class="panel-sektion">
       <div class="reglage-rad">
@@ -189,16 +198,17 @@
       </div>
     </div>
 
-    <!-- 8. Export -->
-    <div class="avdelning">EXPORT & VALV</div>
+    <!-- 9. Export & File System API -->
+    <div class="avdelning">EXPORT & DISK</div>
     <div class="panel-sektion">
       <label class="kryss-rad">
         <input type="checkbox" id="export-kommentarer" checked>
         <span>Ta med kommentarer</span>
       </label>
       <div class="knapp-vertikalsida">
+        <button id="export-fs-api" class="knapp-primar">Spara till disk (Fil-API)</button>
         <button id="export-kopiera" class="knapp-sekundar">Kopiera Markdown</button>
-        <button id="export-ladda-ner" class="knapp-primar">Ladda ner .md</button>
+        <button id="export-ladda-ner" class="knapp-sekundar">Ladda ner .md</button>
       </div>
     </div>
   </aside>
@@ -231,13 +241,13 @@
       if (!dokumenter.length) {
         const startDok = nyttDokument('Välkommen till VävR');
         startDok.block = franMarkdown(
-`# VävR: Ett verktyg för den röda tråden
+`# VävR: Ett skrivverktyg för den röda tråden
 
-VävR är utformat för att göra textens sammanhang och lexikala kohesion synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna speglar sekvens och ämnesöverlapp.
+VävR är utformat för att göra textens sammanhang och lexikala återkoppling synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna speglar sekvens och ämnesöverlapp.
 
-# Hur kohesion beräknas
+# Hur lexikal återkoppling beräknas
 
-Metoden bygger på lexikal kohesion och ordöverlapp mellan textblock. Genom tf-idf och cosinuslikhet mäts hur väl varje stycke knyter an till resten av dokumentet.
+Metoden bygger på lexikal återkoppling och ordöverlapp mellan textblock. Genom tf-idf och cosinuslikhet mäts hur väl varje stycke knyter an till resten av dokumentet.
 
 Ett stycke som inte binder till någonting flaggas som ensamt. Ett stycke som binder starkt till stycken långt bort antyder ett flyttförslag.
 
@@ -256,7 +266,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
       aktivtId = dok.id;
 
       let nuvarandeLage = 'raden';
-      let lyftIndex = null; // index för block som lyfts in i skrivfältet
+      let lyftIndex = null;
       let studioBlockId = null;
       let audioCtx = null;
       let aktivMotor = null;
@@ -264,6 +274,54 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
       let timerSekunder = 25 * 60;
       let timerKor = false;
       let beraknatResultat = null;
+
+      // Ångra-stack (Undo / Redo)
+      let undoStack = [];
+      let redoStack = [];
+
+      function sparaTillstand(handling = 'Ändring') {
+        if (!dok) return;
+        undoStack.push(JSON.stringify(dok.block));
+        if (undoStack.length > 50) undoStack.shift();
+        redoStack = [];
+      }
+
+      function utforUndo() {
+        if (undoStack.length === 0) {
+          visaBrodrost('Ingenting att ångra');
+          return;
+        }
+        redoStack.push(JSON.stringify(dok.block));
+        const tidigare = undoStack.pop();
+        dok.block = JSON.parse(tidigare);
+        spara();
+        TextContext.forceRescan();
+        analyseraOchUppdatera();
+        if (nuvarandeLage === 'trappan') renderaTrappan();
+        annonseraA11y('Ångrade senaste ändringen');
+        visaBrodrost('↺ Ångrade');
+      }
+
+      function utforRedo() {
+        if (redoStack.length === 0) {
+          visaBrodrost('Ingenting att göra om');
+          return;
+        }
+        undoStack.push(JSON.stringify(dok.block));
+        const nasta = redoStack.pop();
+        dok.block = JSON.parse(nasta);
+        spara();
+        TextContext.forceRescan();
+        analyseraOchUppdatera();
+        if (nuvarandeLage === 'trappan') renderaTrappan();
+        annonseraA11y('Gjorde om ändringen');
+        visaBrodrost('↻ Gjorde om');
+      }
+
+      function annonseraA11y(text) {
+        const el = document.getElementById('a11y-announcer');
+        if (el) el.textContent = text;
+      }
 
       /* ── 2. SINGLE SOURCE OF TRUTH & SPARA ────────────────────── */
 
@@ -363,17 +421,18 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           opnaStudion(dok.block[0].id);
         }
 
+        annonseraA11y(`Växlade till läge ${nyttLage}`);
         veckSimulering();
       }
 
-      /* ── 5. RADEN (SKRIVLÄGET) ────────────────────────────────── */
+      /* ── 5. RADEN (SKRIVLÄGET IN CENTRUM) ─────────────────────── */
 
       const skrivfalt = document.getElementById('skrivfalt');
       const skrivtrappa = document.getElementById('skrivtrappa');
 
       function autoHojd() {
         skrivfalt.style.height = 'auto';
-        skrivfalt.style.height = Math.max(38, skrivfalt.scrollHeight) + 'px';
+        skrivfalt.style.height = Math.max(42, skrivfalt.scrollHeight) + 'px';
       }
 
       function uppdateraRubrikNiva() {
@@ -409,9 +468,10 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         const ra = skrivfalt.value;
         if (!ra.trim()) return;
 
+        sparaTillstand('Commit');
+
         let nyaBlock = [];
         if (lyftIndex !== null) {
-          // Uppdatera ett tidigare lyft block
           const tolkat = franMarkdown(ra);
           if (tolkat.length) {
             dok.block[lyftIndex].text = tolkat[0].text;
@@ -421,7 +481,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           }
           lyftIndex = null;
         } else {
-          // Lägg till nya block i slutet
           nyaBlock = franMarkdown(ra);
           dok.block = dok.block.concat(nyaBlock);
         }
@@ -442,6 +501,8 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             setTimeout(() => el.classList.remove('ny'), 600);
           }
         }
+
+        annonseraA11y(`Stycke sparat. Totalt ${dok.block.length} block.`);
       }
 
       function lyftBlock(index) {
@@ -501,13 +562,13 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         }
       });
 
-      /* ── 6. VÄVEN (GRAFSIMULERING) ───────────────────────────── */
+      /* ── 6. VÄVEN (SUBTILT NÄTVERK & SIMULERING) ────────────── */
 
       const vavenCanvas = document.getElementById('vaven');
       const ctx = vavenCanvas.getContext('2d');
       const nodlager = document.getElementById('nodlager');
 
-      let noderMap = new Map(); // id -> { id, x, y, vx, vy, d, typ, label }
+      let noderMap = new Map();
       let simKorer = false;
       let simAnimFrame = null;
       let dragenNodId = null;
@@ -534,6 +595,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
 
         renderaNodKnappar();
         renderaOrdlista();
+        renderaTextuellGraf();
         uppdateraNyckeltal();
         uppdateraSkrivmal();
         veckSimulering();
@@ -547,7 +609,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         const { noder } = beraknatResultat;
         const maxOrd = Math.max(1, ...noder.map(n => n.ord || 1));
 
-        // Rensa bort gamla noder som inte finns kvar
         const existerandeIds = new Set(noder.map(n => n.id));
         for (const id of noderMap.keys()) {
           if (!existerandeIds.has(id)) noderMap.delete(id);
@@ -594,16 +655,11 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           prick.className = 'prick';
           btn.appendChild(prick);
 
-          // Drag-and-drop & klick på noder
-          btn.addEventListener('click', (e) => {
-            if (n.typ === 'rubrik') {
-              bytLage('trappan');
-            } else {
-              opnaStudion(n.id);
-            }
+          btn.addEventListener('click', () => {
+            if (n.typ === 'rubrik') bytLage('trappan');
+            else opnaStudion(n.id);
           });
 
-          // Musdragning
           btn.addEventListener('mousedown', (e) => {
             dragenNodId = n.id;
             e.stopPropagation();
@@ -613,7 +669,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         });
       }
 
-      // Dra-nod i Väven
       window.addEventListener('mousemove', (e) => {
         if (!dragenNodId) return;
         const pos = noderMap.get(dragenNodId);
@@ -625,9 +680,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           veckSimulering();
         }
       });
-      window.addEventListener('mouseup', () => {
-        dragenNodId = null;
-      });
+      window.addEventListener('mouseup', () => { dragenNodId = null; });
 
       function korSimuleringSteg() {
         if (!beraknatResultat) return 0;
@@ -641,7 +694,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
 
         let totalEnergi = 0;
 
-        // Repulsion mellan noder
         for (let i = 0; i < nList.length; i++) {
           for (let j = i + 1; j < nList.length; j++) {
             const a = nList[i];
@@ -649,8 +701,8 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             let dx = b.x - a.x;
             let dy = b.y - a.y;
             let dist = Math.hypot(dx, dy) || 1;
-            if (dist < 300) {
-              const f = 900 / (dist * dist);
+            if (dist < 280) {
+              const f = 800 / (dist * dist);
               const fx = (dx / dist) * f;
               const fy = (dy / dist) * f;
               if (a.id !== dragenNodId) { a.vx -= fx; a.vy -= fy; }
@@ -659,7 +711,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           }
         }
 
-        // Kanter (sekvens & kohesion)
         for (const k of kanter) {
           const a = noderMap.get(k.a);
           const b = noderMap.get(k.b);
@@ -680,7 +731,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           if (b.id !== dragenNodId) { b.vx -= fx; b.vy -= fy; }
         }
 
-        // Rubrikgravitation & centrumattraktion
         for (const a of nList) {
           if (a.id === dragenNodId) continue;
 
@@ -693,28 +743,15 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             }
           }
 
-          // Undvik skrivytan i Raden-läget
-          if (nuvarandeLage === 'raden') {
-            const skrivRect = document.getElementById('vy-raden').getBoundingClientRect();
-            if (a.x > skrivRect.left - 40 && a.x < skrivRect.right + 40 &&
-                a.y > skrivRect.top - 40 && a.y < skrivRect.bottom + 40) {
-              a.vy += (a.y < cy ? -2 : 2);
-            }
-          }
-
-          // Gravitation mot centrum
           a.vx += (cx - a.x) * 0.004;
           a.vy += (cy - a.y) * 0.004;
 
-          // Dämpning
           a.vx *= 0.82;
           a.vy *= 0.82;
 
-          // Uppdatera positioner
           a.x += a.vx;
           a.y += a.vy;
 
-          // Gränser på skärmen
           const pad = 30;
           a.x = Math.max(pad, Math.min(window.innerWidth - pad, a.x));
           a.y = Math.max(pad, Math.min(window.innerHeight - pad, a.y));
@@ -750,7 +787,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           ctx.stroke();
         }
 
-        // Uppdatera HTML-nodknapparnas placering
         for (const [id, pos] of noderMap) {
           const btn = document.querySelector(`.nod[data-id="${id}"]`);
           if (btn) {
@@ -813,7 +849,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             const resNode = beraknatResultat && beraknatResultat.noder.find(n => n.id === b.id);
             if (resNode && resNode.ensam) p.setAttribute('data-ensam', 'true');
 
-            // Meningssplittning med regex enligt spec
             const m = /^(.*?[.!?])(\s+)([\s\S]*)$/.exec(b.text);
             if (m) {
               const ing = document.createElement('span');
@@ -873,9 +908,10 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         document.querySelectorAll('.slappmark').forEach(m => m.remove());
         if (draKallaIndex === null || draKallaIndex === tillIndex) return;
 
+        sparaTillstand('Blockflytt');
+
         const franBlock = dok.block[draKallaIndex];
         if (franBlock.typ === 'rubrik') {
-          // Sektionsflytt för rubriker
           const sek = sektioner(dok.block).find(s => s.rubrikId === franBlock.id);
           if (sek) {
             const sektionsBlock = dok.block.slice(sek.fran, sek.till);
@@ -892,6 +928,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         TextContext.forceRescan();
         analyseraOchUppdatera();
         renderaTrappan();
+        annonseraA11y('Flyttade block');
       }
 
       document.querySelectorAll('.reglage-knapp').forEach(btn => {
@@ -915,7 +952,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         document.getElementById('studio-block-typ').textContent = block.typ === 'rubrik' ? `Rubrik nivå ${block.niva}` : 'Stycke';
 
         const foralderEl = document.getElementById('studio-foralder');
-        const efterEl = document.getElementById('studio-efterföljande');
+        const efterEl = document.getElementById('studio-efterfoljande');
         foralderEl.textContent = bIdx > 0 ? dok.block[bIdx - 1].text : '(Starten på dokumentet)';
         efterEl.textContent = bIdx < dok.block.length - 1 ? dok.block[bIdx + 1].text : '(Slutet på dokumentet)';
 
@@ -958,6 +995,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         const val = inp.value.trim();
         if (!val || !studioBlockId) return;
 
+        sparaTillstand('Kommentar');
         const b = dok.block.find(x => x.id === studioBlockId);
         if (b) {
           if (!b.kommentarer) b.kommentarer = [];
@@ -977,7 +1015,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         bytLage('raden');
       });
 
-      /* ── 9. SIDOPANEL & ORDLISTA ─────────────────────────────── */
+      /* ── 9. SIDOPANEL, ORDLISTA & TEXTUELL GRAF (A11Y) ───────── */
 
       const panel = document.getElementById('sidopanel');
 
@@ -1023,6 +1061,8 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         if (!ny) return;
         dok = ny;
         aktivtId = id;
+        undoStack = [];
+        redoStack = [];
         sparaDokumenter();
 
         document.getElementById('dok-titel-input').value = dok.titel;
@@ -1067,6 +1107,48 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           renderaDokumentLista();
         }
       });
+
+      // Textuell Graf (a11y-parallell enligt Anneli Ros krav)
+      function renderaTextuellGraf() {
+        const container = document.getElementById('textuell-graf-container');
+        if (!container || !beraknatResultat) return;
+
+        container.innerHTML = '';
+        const { noder, kanter } = beraknatResultat;
+
+        noder.forEach((n, idx) => {
+          const b = dok.block.find(x => x.id === n.id);
+          if (!b) return;
+
+          const item = document.createElement('div');
+          item.className = 'graf-item' + (n.ensam ? ' ensam' : '') + (n.flodesbrott ? ' flodesbrott' : '');
+          item.setAttribute('role', 'treeitem');
+          item.tabIndex = 0;
+
+          const rubricText = b.typ === 'rubrik' ? `[Rubrik ${b.niva}] ` : `[Stycke ${idx + 1}] `;
+          const snippet = b.text.slice(0, 35) + (b.text.length > 35 ? '...' : '');
+
+          let bindingarText = 'Inga kohesionslänkar';
+          if (n.ensam) bindingarText = '⚠️ Saknar koppling (ensam nod)';
+          else if (n.flodesbrott) bindingarText = '⚡ Flödesbrott (länk finns men saknas mot grannar)';
+          else {
+            const relKanter = kanter.filter(k => k.typ === 'kohesion' && (k.a === n.id || k.b === n.id));
+            if (relKanter.length) {
+              const koppladeIds = relKanter.map(k => (k.a === n.id ? k.b : k.a));
+              bindingarText = `Binder till ${koppladeIds.length} block`;
+            }
+          }
+
+          item.innerHTML = `<strong>${escapeHtml(rubricText)}</strong> ${escapeHtml(snippet)}<br><small style="color:var(--papper-dim);">${escapeHtml(bindingarText)}</small>`;
+
+          item.addEventListener('click', () => {
+            if (b.typ === 'rubrik') bytLage('trappan');
+            else opnaStudion(b.id);
+          });
+
+          container.appendChild(item);
+        });
+      }
 
       // Ordlistan & Dolda ord
       function renderaOrdlista() {
@@ -1113,7 +1195,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           btn.appendChild(antal);
           btn.appendChild(oga);
 
-          // Klick tänder noderna där ordet finns
           btn.addEventListener('click', () => {
             const radBlockSet = new Set(rad.block);
             document.querySelectorAll('.nod').forEach(el => {
@@ -1144,7 +1225,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         analyseraOchUppdatera();
       });
 
-      // Nyckeltal & Statistik
       function uppdateraNyckeltal() {
         const stats = statistik(dok.block);
         const tcStats = TextContext.getStats();
@@ -1157,7 +1237,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         document.getElementById('stat-lix').textContent = tcStats.lix || 0;
       }
 
-      // Skrivmål
       function uppdateraSkrivmal() {
         if (!dok.skrivmal) dok.skrivmal = { typ: 'ord', varde: 800 };
         const typ = document.getElementById('mal-typ').value;
@@ -1233,7 +1312,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         if (aktivMotor && typeof aktivMotor.setDepth === 'function') aktivMotor.setDepth(inst.djup);
       });
 
-      // Inställningar (Paus, Tröskel, Maxkanter)
+      // Inställningar
       document.getElementById('inst-paus').value = inst.pausMs;
       document.getElementById('inst-troskel').value = inst.troskel;
       document.getElementById('inst-maxkanter').value = inst.maxPerNod;
@@ -1253,7 +1332,28 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         analyseraOchUppdatera();
       });
 
-      // Export
+      // Export & File System Access API (Mira Löfgren krav)
+      document.getElementById('export-fs-api').addEventListener('click', async () => {
+        const medK = document.getElementById('export-kommentarer').checked;
+        const md = tillMarkdown(dok.block, medK);
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: `${dok.titel || 'dokument'}.md`,
+              types: [{ description: 'Markdown-fil', accept: { 'text/markdown': ['.md'] } }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(md);
+            await writable.close();
+            visaBrodrost('💾 Sparat direkt på disk!');
+            return;
+          } catch (err) {
+            if (err.name !== 'AbortError') console.error(err);
+          }
+        }
+        laddaNerFil(`${dok.titel || 'dokument'}.md`, md);
+      });
+
       document.getElementById('export-kopiera').addEventListener('click', () => {
         const medK = document.getElementById('export-kommentarer').checked;
         const md = tillMarkdown(dok.block, medK);
@@ -1289,11 +1389,24 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
 
-      /* ── 10. TANGENTBORDSGENVÄGAR ──────────────────────────────── */
+      /* ── 10. TANGENTBORDSGENVÄGAR & UNDO/REDO ─────────────────── */
 
       window.addEventListener('keydown', (e) => {
         const isCmd = e.metaKey || e.ctrlKey;
 
+        // Undo (Cmd+Z) & Redo (Cmd+Shift+Z / Cmd+Y)
+        if (isCmd && !e.shiftKey && e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          utforUndo();
+        } else if (isCmd && e.shiftKey && e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          utforRedo();
+        } else if (isCmd && e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          utforRedo();
+        }
+
+        // Vybyte (Cmd+1..4)
         if (isCmd && !e.shiftKey && e.key === '1') { e.preventDefault(); bytLage('raden'); }
         if (isCmd && !e.shiftKey && e.key === '2') { e.preventDefault(); bytLage('vaven'); }
         if (isCmd && !e.shiftKey && e.key === '3') { e.preventDefault(); bytLage('trappan'); }
@@ -1321,7 +1434,6 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         }
       });
 
-      // Vynav-knappar i toppen
       document.querySelectorAll('.vyknapp').forEach(btn => {
         btn.addEventListener('click', () => {
           bytLage(btn.getAttribute('data-vy'));
