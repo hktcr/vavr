@@ -1,0 +1,473 @@
+/* ══════════════════════════════════════════════════════════════
+   VävR: sot, papper och lysande blått.
+
+   Formspråket är MärkR:s, med mässingen utbytt mot en klart lysande
+   ljusblå. Orange är reserverad för kommentarer och för ingenting
+   annat, så att en orange yta i gränssnittet alltid betyder samma sak.
+
+   Alla färger ligger som variabler här. Ändra inte färg någon
+   annanstans i koden, ändra tokenen.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Sotskalan, oförändrad från MärkR */
+  --sot:         #0b0b0d;
+  --sot-2:       #131317;
+  --sot-3:       #1c1c21;
+  --sot-sank:    #08080a;
+
+  /* Papper */
+  --papper:      #f2efe9;
+  --papper-dim:  #9b978e;
+  --papper-svag: #6b685f;
+
+  /* Accenten. Kontrast mot --sot är över 10:1, alltså med god marginal
+     över WCAG AA för brödtext. */
+  --ljus:        #74d0ff;
+  --ljus-stark:  #a8e4ff;
+  --ljus-svag:   rgba(116, 208, 255, 0.28);
+  --ljus-harfin: rgba(116, 208, 255, 0.12);
+  --ljus-glod:   rgba(116, 208, 255, 0.38);
+
+  /* Kommentarer. Nästan komplementär till accenten, alltså maximal
+     åtskillnad utan att färgerna slåss om samma plats i spektrum. */
+  --orange:      #e8913f;
+  --orange-lj:   #f2b273;
+  --orange-svag: rgba(232, 145, 63, 0.26);
+
+  /* Hårfina linjer */
+  --harfin:      rgba(242, 239, 233, 0.10);
+  --harfin-2:    rgba(242, 239, 233, 0.18);
+
+  /* Typografi, samma stack som MärkR */
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+  --sans:  system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono:  ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Mått */
+  --spalt:   46rem;
+  --lasmatt: 66ch;
+  --r:       6px;
+
+  /* Rörelse. Vyväxlingar använder --rorelse-vy, allt annat de snabbare. */
+  --rorelse-snabb: 0.14s cubic-bezier(0.4, 0, 0.2, 1);
+  --rorelse-lugn:  0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --rorelse-vy:    0.42s cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Opacitetstrappan uppåt från skrivraden */
+  --trappa-0: 1;
+  --trappa-1: 0.42;
+  --trappa-2: 0.16;
+}
+
+/* ── Grund ──────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--sot);
+  color: var(--papper);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ljus);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* ── Skrivraden och trappan uppåt ───────────────────────────── */
+
+.skrivyta {
+  position: relative;
+  z-index: 2;
+  max-width: var(--spalt);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  pointer-events: auto;
+}
+
+.trappa {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.trappsteg {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--papper);
+  cursor: pointer;
+  transition: opacity var(--rorelse-lugn), color var(--rorelse-snabb);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.trappsteg[data-avstand="1"] { opacity: var(--trappa-1); }
+.trappsteg[data-avstand="2"] { opacity: var(--trappa-2); -webkit-line-clamp: 1; }
+.trappsteg:hover { opacity: 0.75; color: var(--ljus-stark); }
+
+.trappsteg[data-typ="rubrik"] {
+  font-family: var(--sans);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Själva raden. Lysande blå text, ingen ram, bara ett märke till vänster
+   som tänds när fältet är aktivt. Textarea, inte input, för att kunna växa. */
+.raden {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.15rem 0;
+}
+
+.raden .marke {
+  width: 3px;
+  align-self: stretch;
+  min-height: 1.9rem;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: linear-gradient(var(--ljus-stark), var(--ljus));
+  opacity: 0.5;
+  transition: opacity var(--rorelse-snabb), box-shadow var(--rorelse-lugn);
+}
+
+.raden.aktiv .marke {
+  opacity: 1;
+  box-shadow: 0 0 12px var(--ljus-glod);
+}
+
+#skrivfalt {
+  flex: 1 1 auto;
+  min-height: 2.4rem;
+  background: none;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  color: var(--ljus);
+  font-family: var(--serif);
+  font-size: 1.1875rem;
+  line-height: 1.6;
+  padding: 0;
+  caret-color: var(--ljus-stark);
+}
+
+#skrivfalt::placeholder { color: var(--papper-svag); }
+
+/* Rubriknivå syns på skrivfältet medan rubriken skrivs */
+#skrivfalt[data-niva] { font-family: var(--sans); font-weight: 500; }
+#skrivfalt[data-niva="1"] { font-size: 1.5rem; }
+#skrivfalt[data-niva="2"] { font-size: 1.3125rem; }
+#skrivfalt[data-niva="3"] { font-size: 1.1875rem; }
+
+/* ── Väven: canvas för kanter, riktiga knappar för noder ─────── */
+
+#vaven {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  transition: opacity var(--rorelse-vy);
+}
+
+#nodlager {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity var(--rorelse-vy);
+}
+
+#vaven[data-dold], #nodlager[data-dold] { opacity: 0; pointer-events: none; }
+#nodlager[data-dold] .nod { visibility: hidden; }
+
+/* I skrivläget dämpas väven så att den inte konkurrerar med raden */
+body[data-lage="raden"] #vaven { opacity: 0.5; }
+body[data-lage="raden"] #nodlager { opacity: 0.62; }
+body[data-lage="vaven"] #vaven,
+body[data-lage="vaven"] #nodlager { opacity: 1; }
+
+.nod {
+  position: absolute;
+  left: 0; top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 8px;
+  justify-content: center;
+  background: none;
+  border: 0;
+  color: var(--papper-dim);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0;
+  will-change: transform;
+  transition: color var(--rorelse-snabb), opacity 0.6s ease var(--fordrojning, 0s);
+}
+
+#nodlager.framme .nod { opacity: 1; }
+#nodlager.framme .nod.avlagsen { opacity: 0.3; transition-delay: 0s; }
+
+/* Styckenod: fylld prick, storlek efter styckets längd via --d */
+.nod .prick {
+  display: block;
+  width: var(--d, 9px);
+  height: var(--d, 9px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--ljus-stark), var(--ljus) 65%);
+  box-shadow: 0 0 7px var(--ljus-svag);
+  transition: box-shadow var(--rorelse-snabb), transform var(--rorelse-snabb);
+}
+
+/* Rubriknod: öppen ring, inte fylld prick. Skiljer strukturen från innehållet. */
+.nod[data-typ="rubrik"] .prick {
+  background: none;
+  border: 1.5px solid var(--ljus);
+  box-shadow: 0 0 10px var(--ljus-harfin);
+}
+
+/* Ensam nod: stycke utan kohesion till någonting i dokumentet. Enda stället
+   där orange används utanför kommentarer, eftersom signalen är densamma:
+   här finns något som behöver din uppmärksamhet. */
+.nod[data-ensam] .prick {
+  background: radial-gradient(circle at 35% 35%, var(--orange-lj), var(--orange) 65%);
+  box-shadow: 0 0 9px var(--orange-svag);
+}
+
+/* Flödesbrott: stycket binder till dokumentet men inte till sina
+   sekvensgrannar, alltså står det antagligen på fel plats. Svagare
+   signal än ensamhet, därför en tunn ring och ingen färgändring.
+   De två attributen sätts aldrig samtidigt, se vavr-kohesion.js. */
+.nod[data-flodesbrott] .prick {
+  box-shadow: 0 0 0 3px var(--ljus-harfin), 0 0 7px var(--ljus-svag);
+}
+
+.nod:hover, .nod:focus-visible, .nod.grann { color: var(--papper); }
+.nod:hover .prick, .nod:focus-visible .prick {
+  box-shadow: 0 0 18px var(--ljus-glod), 0 0 4px var(--ljus-stark);
+  transform: scale(1.15);
+}
+
+/* Noden som just committades pulserar en gång */
+@keyframes tandning {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.nod.ny .prick { animation: tandning 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ── Trappan som vy, med utfällningsreglaget ─────────────────── */
+
+.trappvy { max-width: var(--lasmatt); margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+.trappvy .rubrik-1 { font-size: 1.375rem; font-weight: 500; margin: 1.75rem 0 0.4rem; }
+.trappvy .rubrik-2 { font-size: 1.125rem; font-weight: 500; margin: 1.25rem 0 0.35rem; padding-left: 1rem; }
+.trappvy .rubrik-3 { font-size: 1rem;     font-weight: 500; margin: 1rem 0 0.3rem;     padding-left: 2rem; }
+
+.trappvy .stycke {
+  font-family: var(--serif);
+  line-height: var(--radavstand, 1.72);
+  color: var(--papper);
+  margin: 0 0 0.85rem;
+  padding-left: var(--indrag, 0);
+  border-left: 2px solid transparent;
+  transition: border-color var(--rorelse-snabb), background var(--rorelse-snabb);
+  cursor: grab;
+}
+
+.trappvy .stycke:hover { border-left-color: var(--ljus-svag); background: var(--sot-2); }
+.trappvy .stycke[data-ensam] { border-left-color: var(--orange-svag); }
+.trappvy .stycke.dras { opacity: 0.5; cursor: grabbing; }
+
+/* Utfällningsnivåerna. Nivå 0 döljer stycken, nivå 1 visar bara ingressen,
+   nivå 2 visar allt. Ingen egen vy behövs för läsning. */
+.trappvy[data-utfallning="0"] .stycke { display: none; }
+.trappvy[data-utfallning="1"] .stycke .rest { display: none; }
+.trappvy[data-utfallning="1"] .stycke { color: var(--papper-dim); font-size: 0.9375rem; }
+
+/* Släppmarkör vid omordning */
+.slappmark {
+  height: 2px;
+  background: var(--ljus);
+  box-shadow: 0 0 8px var(--ljus-glod);
+  border-radius: 1px;
+  margin: 0.3rem 0;
+}
+
+/* ── Studion: ett stycke i helskärm ─────────────────────────── */
+
+.studio { max-width: var(--lasmatt); margin: 0 auto; padding: 3rem 1.25rem; }
+
+.studio .grannskap {
+  font-family: var(--serif);
+  color: var(--papper-svag);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.studio textarea {
+  width: 100%;
+  min-height: 40vh;
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--ljus-svag);
+  outline: none;
+  resize: none;
+  padding: 0 0 0 1.25rem;
+  color: var(--ljus);
+  font-family: var(--serif);
+  font-size: 1.1875rem;
+  line-height: 1.72;
+}
+
+.studio textarea:focus { border-left-color: var(--ljus); }
+
+/* ── Kommentarer ────────────────────────────────────────────── */
+
+.kommentar {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0.75rem;
+  background: rgba(232, 145, 63, 0.06);
+  border-left: 2px solid var(--orange);
+  border-radius: 0;
+  color: var(--orange-lj);
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.kommentar .etikett {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  color: var(--orange);
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+/* Kommentarsmärke i Trappan och på noden */
+.kommentarsmarke {
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin-left: 0.4rem;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 6px var(--orange-svag);
+  vertical-align: 0.1em;
+}
+
+/* ── Sidopanelen ────────────────────────────────────────────── */
+
+.sidopanel {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 4;
+  width: min(21rem, 86vw);
+  background: rgba(19, 19, 23, 0.96);
+  backdrop-filter: blur(6px);
+  border-right: 1px solid var(--harfin-2);
+  padding: 1.25rem 1rem;
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform var(--rorelse-vy);
+  pointer-events: auto;
+}
+
+.sidopanel[data-oppen] { transform: translateX(0); }
+
+.sidopanel .avdelning {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  color: var(--papper-dim);
+  margin: 1.5rem 0 0.6rem;
+}
+.sidopanel .avdelning:first-child { margin-top: 0; }
+
+/* Ordlistan */
+.ordrad {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 0.25rem;
+  background: none;
+  border: 0;
+  color: var(--papper);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.ordrad:hover { color: var(--ljus-stark); background: var(--sot-3); }
+.ordrad[data-vald] { color: var(--ljus); }
+.ordrad .ledare { flex: 1; border-bottom: 1px dotted var(--harfin-2); margin: 0 0.4em; transform: translateY(-0.28em); }
+.ordrad .antal { font-family: var(--mono); font-size: 0.75rem; color: var(--ljus); opacity: 0.8; }
+.ordrad .oga { color: var(--papper-svag); font-size: 0.75rem; padding: 0 0.2rem; }
+.ordrad[data-dolt] { color: var(--papper-svag); text-decoration: line-through; text-decoration-color: var(--harfin-2); }
+
+/* Nyckeltal */
+.tal { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.75rem; color: var(--papper-dim); padding: 0.2rem 0.25rem; }
+.tal b { color: var(--papper); font-weight: 400; }
+
+/* Skrivmål */
+.malstapel { height: 3px; background: var(--sot-3); border-radius: 2px; overflow: hidden; margin: 0.4rem 0.25rem; }
+.malstapel i { display: block; height: 100%; background: var(--ljus); box-shadow: 0 0 8px var(--ljus-glod); transition: width var(--rorelse-lugn); }
+
+/* ── Brödrost ───────────────────────────────────────────────── */
+
+.brodrost {
+  position: fixed;
+  left: 50%; bottom: 2rem;
+  z-index: 5;
+  transform: translate(-50%, 1rem);
+  padding: 0.7rem 1.1rem;
+  background: var(--ljus);
+  color: var(--sot);
+  border-radius: var(--r);
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--rorelse-snabb), transform var(--rorelse-snabb);
+}
+.brodrost.syns { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── Brytpunkter och rörelsehänsyn ──────────────────────────── */
+
+@media (max-width: 599px) {
+  .nod { font-size: 0.625rem; letter-spacing: 0.06em; }
+  #skrivfalt { font-size: 1.0625rem; }
+}
+
+@media (min-width: 1000px) { :root { --spalt: 48rem; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

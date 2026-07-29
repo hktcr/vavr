@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>VävR</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="vavr-tokens.css">
+  <script type="module">
+    import { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik } from './vavr-dokument.js';
+    import { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD } from './vavr-kohesion.js';
+    import { TextContext } from './vavr-textcontext.js';
+    import { ValsangEngine } from './valsang-engine.js';
+    import { SkogsklangEngine } from './skogsklang-engine.js';
+    import { HardForkEngine } from './hardfork-engine.js';
+    import { SpaceOdysseyEngine } from './space-engine.js';
+
+    window.VavrDokument = { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik };
+    window.VavrKohesion = { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD };
+    window.TextContext = TextContext;
+    window.ValsangEngine = ValsangEngine;
+    window.SkogsklangEngine = SkogsklangEngine;
+    window.HardForkEngine = HardForkEngine;
+    window.SpaceOdysseyEngine = SpaceOdysseyEngine;
+  </script>
+</head>
+<body data-lage="raden">
+
+  <!-- Huvud-header / Navigationsfält -->
+  <header class="huvudbar">
+    <button id="paneltoggle" class="knapp-ikon" title="Öppna sidopanel (Cmd+B)" aria-label="Sidopanel">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+
+    <div class="dok-titel-container">
+      <input type="text" id="dok-titel-input" class="dok-titel-falt" value="Namnlöst" aria-label="Dokumenttitel">
+    </div>
+
+    <nav class="vynav" aria-label="Vyer">
+      <button class="vyknapp aktiv" data-vy="raden" title="Raden (Cmd+1)">Raden</button>
+      <button class="vyknapp" data-vy="vaven" title="Väven (Cmd+2)">Väven</button>
+      <button class="vyknapp" data-vy="trappan" title="Trappan (Cmd+3)">Trappan</button>
+      <button class="vyknapp" data-vy="studion" title="Studion (Cmd+4)">Studion</button>
+    </nav>
+  </header>
+
+  <!-- Nätverksvy canvas (Väven) -->
+  <canvas id="vaven" aria-hidden="true"></canvas>
+  <div id="nodlager"></div>
+
+  <!-- Huvudinnehållsytor -->
+  <main id="huvudomrade">
+    <!-- LÄGE 1: RADEN (skrivläge) -->
+    <section id="vy-raden" class="skrivyta">
+      <div class="trappa" id="skrivtrappa"></div>
+      <div class="raden aktiv" id="radcontainer">
+        <div class="marke"></div>
+        <textarea id="skrivfalt" placeholder="Skriv ett stycke eller # Rubrik..." rows="1" spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <!-- LÄGE 3: TRAPPAN (disposition / läsning) -->
+    <section id="vy-trappan" class="trappvy" data-utfallning="2" style="display:none;">
+      <div class="utfallningsreglage">
+        <span class="etikett">Visning:</span>
+        <button class="reglage-knapp" data-ut="0">Rubriker</button>
+        <button class="reglage-knapp" data-ut="1">Ingresser</button>
+        <button class="reglage-knapp aktiv" data-ut="2">Hela texten</button>
+      </div>
+      <div id="trappan-innehall"></div>
+    </section>
+
+    <!-- LÄGE 4: STUDION (enskilt block) -->
+    <section id="vy-studion" class="studio" style="display:none;">
+      <div class="studio-nav">
+        <button id="studio-tillbaka" class="knapp-sekundar">← Tillbaka (Esc)</button>
+        <span id="studio-block-typ" class="studio-info"></span>
+      </div>
+      <div id="studio-foralder" class="grannskap"></div>
+      <textarea id="studio-falt" rows="6" placeholder="Redigera stycke..."></textarea>
+      <div id="studio-efterföljande" class="grannskap"></div>
+      <div class="studio-kommentarer">
+        <h3>Kommentarer</h3>
+        <div id="studio-kommentarer-lista"></div>
+        <div class="ny-kommentar-form">
+          <input type="text" id="ny-kommentar-input" placeholder="Skriv en kommentar till blocket..." aria-label="Ny kommentar">
+          <button id="ny-kommentar-knapp" class="knapp-primar">Lägg till</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Sidopanel -->
+  <aside id="sidopanel" class="sidopanel">
+    <div class="paneltopp">
+      <h2>VävR</h2>
+      <button id="panel-stang" class="knapp-ikon" aria-label="Stäng panel">✕</button>
+    </div>
+
+    <!-- 1. Dokument -->
+    <div class="avdelning">DOKUMENT</div>
+    <div class="panel-sektion">
+      <div id="dok-lista" class="dok-lista"></div>
+      <div class="knapprad">
+        <button id="nytt-dok-knapp" class="knapp-sekundar">+ Nytt</button>
+        <button id="ladda-ner-alla-knapp" class="knapp-sekundar">Ladda ner alla</button>
+      </div>
+    </div>
+
+    <!-- 2. Ordlistan -->
+    <div class="avdelning">ORDLISTAN</div>
+    <div class="panel-sektion">
+      <div id="dolda-ord-notis" class="dolda-notis" style="display:none;">
+        <span id="dolda-antal">0 dolda ord</span>
+        <button id="rensa-dolda" class="knapp-liten">Återställ alla</button>
+      </div>
+      <div id="ordlista-container" class="ordlista-container"></div>
+    </div>
+
+    <!-- 3. Nyckeltal -->
+    <div class="avdelning">NYCKELTAL</div>
+    <div class="panel-sektion">
+      <div class="tal"><span>Ord</span><b id="stat-ord">0</b></div>
+      <div class="tal"><span>Tecken</span><b id="stat-tecken">0</b></div>
+      <div class="tal"><span>Stycken</span><b id="stat-stycken">0</b></div>
+      <div class="tal"><span>Rubriker</span><b id="stat-rubriker">0</b></div>
+      <div class="tal"><span>Lästid</span><b id="stat-lastid">1 min</b></div>
+      <div class="tal"><span>LIX</span><b id="stat-lix">0</b></div>
+    </div>
+
+    <!-- 4. Skrivmål -->
+    <div class="avdelning">SKRIVMÅL</div>
+    <div class="panel-sektion">
+      <div class="malform">
+        <select id="mal-typ" aria-label="Måltyp">
+          <option value="ord">Ord</option>
+          <option value="tecken">Tecken</option>
+        </select>
+        <input type="number" id="mal-varde" value="800" min="50" step="50" aria-label="Målvärde">
+      </div>
+      <div class="malstapel"><i id="mal-framgang" style="width: 0%;"></i></div>
+      <div class="tal"><span id="mal-text">0 / 800 ord</span><b id="mal-procent">0%</b></div>
+    </div>
+
+    <!-- 5. Timer -->
+    <div class="avdelning">TIMER</div>
+    <div class="panel-sektion">
+      <div class="timer-display" id="timer-display">25:00</div>
+      <div class="knapprad">
+        <button id="timer-start" class="knapp-sekundar">Starta</button>
+        <button id="timer-nollstall" class="knapp-sekundar">Nollställ</button>
+      </div>
+    </div>
+
+    <!-- 6. Ljud -->
+    <div class="avdelning">LJUDTEMA</div>
+    <div class="panel-sektion">
+      <select id="ljud-select" class="panel-select" aria-label="Ljudtema">
+        <option value="inget">Inget (tyst)</option>
+        <option value="valsang">Valsång</option>
+        <option value="skogsklang">Skogsklang</option>
+        <option value="hardfork">HardFork</option>
+        <option value="space">Space Odyssey</option>
+      </select>
+      <div class="reglage-rad">
+        <label for="ljud-volym">Volym</label>
+        <input type="range" id="ljud-volym" min="0" max="1" step="0.05" value="0.5">
+      </div>
+      <div class="reglage-rad">
+        <label for="ljud-djup">Djup</label>
+        <input type="range" id="ljud-djup" min="0" max="1" step="0.05" value="0.5">
+      </div>
+    </div>
+
+    <!-- 7. Inställningar -->
+    <div class="avdelning">INSTÄLLNINGAR</div>
+    <div class="panel-sektion">
+      <div class="reglage-rad">
+        <label for="inst-paus">Paus (ms)</label>
+        <input type="number" id="inst-paus" value="800" min="400" max="3000" step="100">
+      </div>
+      <div class="reglage-rad">
+        <label for="inst-troskel">Kohesionströskel</label>
+        <input type="number" id="inst-troskel" value="0.12" min="0.05" max="0.5" step="0.01">
+      </div>
+      <div class="reglage-rad">
+        <label for="inst-maxkanter">Max kanter/nod</label>
+        <input type="number" id="inst-maxkanter" value="3" min="1" max="10">
+      </div>
+    </div>
+
+    <!-- 8. Export -->
+    <div class="avdelning">EXPORT & VALV</div>
+    <div class="panel-sektion">
+      <label class="kryss-rad">
+        <input type="checkbox" id="export-kommentarer" checked>
+        <span>Ta med kommentarer</span>
+      </label>
+      <div class="knapp-vertikalsida">
+        <button id="export-kopiera" class="knapp-sekundar">Kopiera Markdown</button>
+        <button id="export-ladda-ner" class="knapp-primar">Ladda ner .md</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Brödrost (notis) -->
+  <div id="brodrost" class="brodrost"></div>
+
+  <!-- Applikationslogik -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik } = window.VavrDokument;
+      const { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD } = window.VavrKohesion;
+      const TextContext = window.TextContext;
+
+      /* ── 1. TILLSTÅND ─────────────────────────────────────────── */
+
+      let dokumenter = JSON.parse(localStorage.getItem('vavr-dokument') || '[]');
+      let aktivtId = localStorage.getItem('vavr-aktivt') || null;
+      let inst = Object.assign({
+        accentfarg: '#74d0ff',
+        typsnitt: 'serif',
+        textstorlek: 19,
+        pausMs: 800,
+        troskel: 0.12,
+        maxPerNod: 3,
+        volym: 0.5,
+        djup: 0.5
+      }, JSON.parse(localStorage.getItem('vavr-inst') || '{}'));
+
+      if (!dokumenter.length) {
+        const startDok = nyttDokument('Välkommen till VävR');
+        startDok.block = franMarkdown(
+`# VävR: Ett verktyg för den röda tråden
+
+VävR är utformat för att göra textens sammanhang och lexikala kohesion synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna speglar sekvens och ämnesöverlapp.
+
+# Hur kohesion beräknas
+
+Metoden bygger på lexikal kohesion och ordöverlapp mellan textblock. Genom tf-idf och cosinuslikhet mäts hur väl varje stycke knyter an till resten av dokumentet.
+
+Ett stycke som inte binder till någonting flaggas som ensamt. Ett stycke som binder starkt till stycken långt bort antyder ett flyttförslag.
+
+# De fyra lägena
+
+Du växlar enkelt mellan lägena med Cmd+1 till Cmd+4.
+
+Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hela textgrafen. Trappan ger disposition och läskontroll. Studion låter dig fördjupa dig i ett enskilt block med kommentarer.`
+        );
+        dokumenter.push(startDok);
+        aktivtId = startDok.id;
+        sparaDokumenter();
+      }
+
+      let dok = dokumenter.find(d => d.id === aktivtId) || dokumenter[0];
+      aktivtId = dok.id;
+
+      let nuvarandeLage = 'raden';
+      let lyftIndex = null; // index för block som lyfts in i skrivfältet
+      let studioBlockId = null;
+      let audioCtx = null;
+      let aktivMotor = null;
+      let timerInterval = null;
+      let timerSekunder = 25 * 60;
+      let timerKor = false;
+      let beraknatResultat = null;
+
+      /* ── 2. SINGLE SOURCE OF TRUTH & SPARA ────────────────────── */
+
+      function spara() {
+        if (!dok) return;
+        dok.andrad = new Date().toISOString();
+        const idx = dokumenter.findIndex(d => d.id === dok.id);
+        if (idx !== -1) dokumenter[idx] = dok;
+        sparaDokumenter();
+      }
+
+      function sparaDokumenter() {
+        localStorage.setItem('vavr-dokument', JSON.stringify(dokumenter));
+        localStorage.setItem('vavr-aktivt', aktivtId);
+        localStorage.setItem('vavr-inst', JSON.stringify(inst));
+      }
+
+      function visaBrodrost(meddelande) {
+        const b = document.getElementById('brodrost');
+        b.textContent = meddelande;
+        b.classList.add('syns');
+        setTimeout(() => b.classList.remove('syns'), 2600);
+      }
+
+      /* ── 3. TEXTCONTEXT & LJUDINTEGRATION ─────────────────────── */
+
+      window.getActiveDoc = () => ({
+        title: dok ? dok.titel : 'Namnlöst',
+        content: dok ? tillMarkdown(dok.block, false) : ''
+      });
+
+      function initTextContext() {
+        const skrivfalt = document.getElementById('skrivfalt');
+        TextContext.setKalla(() => tillMarkdown(dok.block, false) + '\n\n' + (skrivfalt ? skrivfalt.value : ''));
+      }
+
+      function uppdateraLjudmotor() {
+        const tema = dok.ljudtema || 'inget';
+        if (aktivMotor && typeof aktivMotor.destroy === 'function') {
+          try { aktivMotor.destroy(); } catch (e) {}
+          aktivMotor = null;
+        }
+
+        if (tema === 'inget') return;
+
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        let MotorKlass = null;
+        if (tema === 'valsang') MotorKlass = window.ValsangEngine;
+        else if (tema === 'skogsklang') MotorKlass = window.SkogsklangEngine;
+        else if (tema === 'hardfork') MotorKlass = window.HardForkEngine;
+        else if (tema === 'space') MotorKlass = window.SpaceOdysseyEngine;
+
+        if (MotorKlass) {
+          aktivMotor = MotorKlass;
+          if (typeof aktivMotor.init === 'function') aktivMotor.init(audioCtx);
+          if (typeof aktivMotor.setVolume === 'function') aktivMotor.setVolume(inst.volym);
+          if (typeof aktivMotor.setDepth === 'function') aktivMotor.setDepth(inst.djup);
+        }
+      }
+
+      /* ── 4. BYT LÄGE ──────────────────────────────────────────── */
+
+      function bytLage(nyttLage) {
+        nuvarandeLage = nyttLage;
+        document.body.setAttribute('data-lage', nyttLage);
+
+        document.querySelectorAll('.vyknapp').forEach(k => {
+          k.classList.toggle('aktiv', k.getAttribute('data-vy') === nyttLage);
+        });
+
+        document.getElementById('vy-raden').style.display = (nyttLage === 'raden') ? 'block' : 'none';
+        document.getElementById('vy-trappan').style.display = (nyttLage === 'trappan') ? 'block' : 'none';
+        document.getElementById('vy-studion').style.display = (nyttLage === 'studion') ? 'block' : 'none';
+
+        const vavenCanvas = document.getElementById('vaven');
+        const nodlager = document.getElementById('nodlager');
+        if (nyttLage === 'raden' || nyttLage === 'vaven') {
+          vavenCanvas.removeAttribute('data-dold');
+          nodlager.removeAttribute('data-dold');
+        } else {
+          vavenCanvas.setAttribute('data-dold', 'true');
+          nodlager.setAttribute('data-dold', 'true');
+        }
+
+        if (nyttLage === 'raden') {
+          const sf = document.getElementById('skrivfalt');
+          sf.focus();
+        } else if (nyttLage === 'trappan') {
+          renderaTrappan();
+        } else if (nyttLage === 'studion' && !studioBlockId && dok.block.length) {
+          opnaStudion(dok.block[0].id);
+        }
+
+        veckSimulering();
+      }
+
+      /* ── 5. RADEN (SKRIVLÄGET) ────────────────────────────────── */
+
+      const skrivfalt = document.getElementById('skrivfalt');
+      const skrivtrappa = document.getElementById('skrivtrappa');
+
+      function autoHojd() {
+        skrivfalt.style.height = 'auto';
+        skrivfalt.style.height = Math.max(38, skrivfalt.scrollHeight) + 'px';
+      }
+
+      function uppdateraRubrikNiva() {
+        const val = skrivfalt.value;
+        const m = /^(#{1,6})\s/.exec(val);
+        if (m) {
+          skrivfalt.setAttribute('data-niva', m[1].length);
+        } else {
+          skrivfalt.removeAttribute('data-niva');
+        }
+      }
+
+      function ritaTrappsteg() {
+        skrivtrappa.innerHTML = '';
+        let startIdx = lyftIndex !== null ? lyftIndex - 1 : dok.block.length - 1;
+        let count = 0;
+
+        for (let i = startIdx; i >= 0 && count < 2; i--) {
+          const b = dok.block[i];
+          const st = document.createElement('div');
+          st.className = 'trappsteg';
+          st.setAttribute('data-avstand', count + 1);
+          if (b.typ === 'rubrik') st.setAttribute('data-typ', 'rubrik');
+          st.textContent = (b.typ === 'rubrik' ? '#'.repeat(b.niva) + ' ' : '') + b.text;
+          const targetIndex = i;
+          st.addEventListener('click', () => lyftBlock(targetIndex));
+          skrivtrappa.prepend(st);
+          count++;
+        }
+      }
+
+      function commit() {
+        const ra = skrivfalt.value;
+        if (!ra.trim()) return;
+
+        let nyaBlock = [];
+        if (lyftIndex !== null) {
+          // Uppdatera ett tidigare lyft block
+          const tolkat = franMarkdown(ra);
+          if (tolkat.length) {
+            dok.block[lyftIndex].text = tolkat[0].text;
+            dok.block[lyftIndex].typ = tolkat[0].typ;
+            dok.block[lyftIndex].niva = tolkat[0].niva;
+            nyaBlock = [dok.block[lyftIndex]];
+          }
+          lyftIndex = null;
+        } else {
+          // Lägg till nya block i slutet
+          nyaBlock = franMarkdown(ra);
+          dok.block = dok.block.concat(nyaBlock);
+        }
+
+        skrivfalt.value = '';
+        skrivfalt.removeAttribute('data-niva');
+        autoHojd();
+        ritaTrappsteg();
+        spara();
+
+        TextContext.forceRescan();
+        analyseraOchUppdatera();
+
+        for (const b of nyaBlock) {
+          const el = document.querySelector(`.nod[data-id="${b.id}"]`);
+          if (el) {
+            el.classList.add('ny');
+            setTimeout(() => el.classList.remove('ny'), 600);
+          }
+        }
+      }
+
+      function lyftBlock(index) {
+        if (index < 0 || index >= dok.block.length) return;
+        lyftIndex = index;
+        const b = dok.block[index];
+        skrivfalt.value = (b.typ === 'rubrik' ? '#'.repeat(b.niva) + ' ' : '') + b.text;
+        autoHojd();
+        uppdateraRubrikNiva();
+        ritaTrappsteg();
+        skrivfalt.focus();
+      }
+
+      function slappLyftBlock() {
+        lyftIndex = null;
+        skrivfalt.value = '';
+        skrivfalt.removeAttribute('data-niva');
+        autoHojd();
+        ritaTrappsteg();
+      }
+
+      skrivfalt.addEventListener('input', (e) => {
+        autoHojd();
+        uppdateraRubrikNiva();
+        if (e.data && e.data.length === 1) {
+          TextContext.taTecken(e.data);
+          if (aktivMotor && typeof aktivMotor.handleChar === 'function') {
+            aktivMotor.handleChar(e.data);
+          }
+        }
+        uppdateraSkrivmal();
+      });
+
+      skrivfalt.addEventListener('keydown', (e) => {
+        if (aktivMotor && typeof aktivMotor.handleKey === 'function') {
+          aktivMotor.handleKey(e);
+        }
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          commit();
+        } else if (e.key === 'ArrowUp' && skrivfalt.selectionStart === 0 && skrivfalt.selectionEnd === 0) {
+          e.preventDefault();
+          if (lyftIndex === null) {
+            if (dok.block.length > 0) lyftBlock(dok.block.length - 1);
+          } else if (lyftIndex > 0) {
+            lyftBlock(lyftIndex - 1);
+          }
+        } else if (e.key === 'ArrowDown' && lyftIndex !== null) {
+          if (lyftIndex < dok.block.length - 1) {
+            lyftBlock(lyftIndex + 1);
+          } else {
+            slappLyftBlock();
+          }
+        } else if (e.key === 'Escape' && lyftIndex !== null) {
+          slappLyftBlock();
+        }
+      });
+
+      /* ── 6. VÄVEN (GRAFSIMULERING) ───────────────────────────── */
+
+      const vavenCanvas = document.getElementById('vaven');
+      const ctx = vavenCanvas.getContext('2d');
+      const nodlager = document.getElementById('nodlager');
+
+      let noderMap = new Map(); // id -> { id, x, y, vx, vy, d, typ, label }
+      let simKorer = false;
+      let simAnimFrame = null;
+      let dragenNodId = null;
+
+      function anpassaCanvas() {
+        vavenCanvas.width = window.innerWidth;
+        vavenCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', () => {
+        anpassaCanvas();
+        veckSimulering();
+      });
+      anpassaCanvas();
+
+      function analyseraOchUppdatera() {
+        const instTroskel = parseFloat(inst.troskel) || 0.12;
+        const instMaxKanter = parseInt(inst.maxPerNod, 10) || 3;
+
+        beraknatResultat = berakna(dok.block, {
+          doldaOrd: dok.doldaOrd || [],
+          troskel: instTroskel,
+          maxPerNod: instMaxKanter
+        });
+
+        renderaNodKnappar();
+        renderaOrdlista();
+        uppdateraNyckeltal();
+        uppdateraSkrivmal();
+        veckSimulering();
+      }
+
+      function renderaNodKnappar() {
+        if (!beraknatResultat) return;
+        nodlager.innerHTML = '';
+        nodlager.classList.add('framme');
+
+        const { noder } = beraknatResultat;
+        const maxOrd = Math.max(1, ...noder.map(n => n.ord || 1));
+
+        // Rensa bort gamla noder som inte finns kvar
+        const existerandeIds = new Set(noder.map(n => n.id));
+        for (const id of noderMap.keys()) {
+          if (!existerandeIds.has(id)) noderMap.delete(id);
+        }
+
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+
+        noder.forEach((n, idx) => {
+          const d = Math.round(7 + 14 * Math.sqrt((n.ord || 1) / maxOrd));
+          let pos = noderMap.get(n.id);
+          if (!pos) {
+            const vinkel = (idx / Math.max(1, noder.length)) * Math.PI * 2;
+            const r = 140 + Math.random() * 80;
+            pos = {
+              id: n.id,
+              x: cx + Math.cos(vinkel) * r,
+              y: cy + Math.sin(vinkel) * r,
+              vx: (Math.random() - 0.5) * 2,
+              vy: (Math.random() - 0.5) * 2,
+              d: d,
+              typ: n.typ
+            };
+            noderMap.set(n.id, pos);
+          } else {
+            pos.d = d;
+            pos.typ = n.typ;
+          }
+
+          const btn = document.createElement('button');
+          btn.className = 'nod';
+          btn.setAttribute('data-id', n.id);
+          btn.setAttribute('data-typ', n.typ);
+          if (n.ensam) btn.setAttribute('data-ensam', 'true');
+          if (n.flodesbrott) btn.setAttribute('data-flodesbrott', 'true');
+          btn.style.setProperty('--d', `${d}px`);
+
+          const block = dok.block.find(b => b.id === n.id);
+          const snippet = block ? block.text.slice(0, 30) : '';
+          const statusText = n.ensam ? 'saknar koppling' : (n.flodesbrott ? 'flödesbrott' : 'kopplad');
+          btn.setAttribute('aria-label', `${n.typ === 'rubrik' ? 'Rubrik' : 'Stycke'}, ${snippet}, ${statusText}`);
+
+          const prick = document.createElement('span');
+          prick.className = 'prick';
+          btn.appendChild(prick);
+
+          // Drag-and-drop & klick på noder
+          btn.addEventListener('click', (e) => {
+            if (n.typ === 'rubrik') {
+              bytLage('trappan');
+            } else {
+              opnaStudion(n.id);
+            }
+          });
+
+          // Musdragning
+          btn.addEventListener('mousedown', (e) => {
+            dragenNodId = n.id;
+            e.stopPropagation();
+          });
+
+          nodlager.appendChild(btn);
+        });
+      }
+
+      // Dra-nod i Väven
+      window.addEventListener('mousemove', (e) => {
+        if (!dragenNodId) return;
+        const pos = noderMap.get(dragenNodId);
+        if (pos) {
+          pos.x = e.clientX;
+          pos.y = e.clientY;
+          pos.vx = 0;
+          pos.vy = 0;
+          veckSimulering();
+        }
+      });
+      window.addEventListener('mouseup', () => {
+        dragenNodId = null;
+      });
+
+      function korSimuleringSteg() {
+        if (!beraknatResultat) return 0;
+        const { noder, kanter } = beraknatResultat;
+        const nList = Array.from(noderMap.values());
+        if (nList.length <= 1) return 0;
+
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const agareMap = agare(dok.block);
+
+        let totalEnergi = 0;
+
+        // Repulsion mellan noder
+        for (let i = 0; i < nList.length; i++) {
+          for (let j = i + 1; j < nList.length; j++) {
+            const a = nList[i];
+            const b = nList[j];
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            let dist = Math.hypot(dx, dy) || 1;
+            if (dist < 300) {
+              const f = 900 / (dist * dist);
+              const fx = (dx / dist) * f;
+              const fy = (dy / dist) * f;
+              if (a.id !== dragenNodId) { a.vx -= fx; a.vy -= fy; }
+              if (b.id !== dragenNodId) { b.vx += fx; b.vy += fy; }
+            }
+          }
+        }
+
+        // Kanter (sekvens & kohesion)
+        for (const k of kanter) {
+          const a = noderMap.get(k.a);
+          const b = noderMap.get(k.b);
+          if (!a || !b) continue;
+
+          let dx = b.x - a.x;
+          let dy = b.y - a.y;
+          let dist = Math.hypot(dx, dy) || 1;
+
+          let onskadDist = k.typ === 'sekvens' ? 75 : 120;
+          let stivhet = k.typ === 'sekvens' ? 0.04 : 0.02 * (k.vikt || 1);
+
+          let avvikelse = dist - onskadDist;
+          let fx = (dx / dist) * avvikelse * stivhet;
+          let fy = (dy / dist) * avvikelse * stivhet;
+
+          if (a.id !== dragenNodId) { a.vx += fx; a.vy += fy; }
+          if (b.id !== dragenNodId) { b.vx -= fx; b.vy -= fy; }
+        }
+
+        // Rubrikgravitation & centrumattraktion
+        for (const a of nList) {
+          if (a.id === dragenNodId) continue;
+
+          const agarId = agareMap.get(a.id);
+          if (agarId) {
+            const rubrikPos = noderMap.get(agarId);
+            if (rubrikPos) {
+              a.vx += (rubrikPos.x - a.x) * 0.015;
+              a.vy += (rubrikPos.y - a.y) * 0.015;
+            }
+          }
+
+          // Undvik skrivytan i Raden-läget
+          if (nuvarandeLage === 'raden') {
+            const skrivRect = document.getElementById('vy-raden').getBoundingClientRect();
+            if (a.x > skrivRect.left - 40 && a.x < skrivRect.right + 40 &&
+                a.y > skrivRect.top - 40 && a.y < skrivRect.bottom + 40) {
+              a.vy += (a.y < cy ? -2 : 2);
+            }
+          }
+
+          // Gravitation mot centrum
+          a.vx += (cx - a.x) * 0.004;
+          a.vy += (cy - a.y) * 0.004;
+
+          // Dämpning
+          a.vx *= 0.82;
+          a.vy *= 0.82;
+
+          // Uppdatera positioner
+          a.x += a.vx;
+          a.y += a.vy;
+
+          // Gränser på skärmen
+          const pad = 30;
+          a.x = Math.max(pad, Math.min(window.innerWidth - pad, a.x));
+          a.y = Math.max(pad, Math.min(window.innerHeight - pad, a.y));
+
+          totalEnergi += Math.abs(a.vx) + Math.abs(a.vy);
+        }
+
+        return totalEnergi;
+      }
+
+      function ritaVavenCanvas() {
+        ctx.clearRect(0, 0, vavenCanvas.width, vavenCanvas.height);
+        if (!beraknatResultat) return;
+
+        const { kanter } = beraknatResultat;
+
+        for (const k of kanter) {
+          const a = noderMap.get(k.a);
+          const b = noderMap.get(k.b);
+          if (!a || !b) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+
+          if (k.typ === 'sekvens') {
+            ctx.strokeStyle = 'rgba(116, 208, 255, 0.85)';
+            ctx.lineWidth = 2.5;
+          } else {
+            ctx.strokeStyle = 'rgba(155, 151, 142, ' + Math.min(0.7, 0.2 + (k.vikt || 0) * 0.8) + ')';
+            ctx.lineWidth = 0.8;
+          }
+          ctx.stroke();
+        }
+
+        // Uppdatera HTML-nodknapparnas placering
+        for (const [id, pos] of noderMap) {
+          const btn = document.querySelector(`.nod[data-id="${id}"]`);
+          if (btn) {
+            btn.style.transform = `translate3d(${Math.round(pos.x - 22)}px, ${Math.round(pos.y - 22)}px, 0)`;
+          }
+        }
+      }
+
+      function simLoop() {
+        if (!simKorer) return;
+        const energi = korSimuleringSteg();
+        ritaVavenCanvas();
+
+        if (energi < 0.15 && !dragenNodId) {
+          simKorer = false;
+          simAnimFrame = null;
+        } else {
+          simAnimFrame = requestAnimationFrame(simLoop);
+        }
+      }
+
+      function veckSimulering() {
+        if (!simKorer) {
+          simKorer = true;
+          simAnimFrame = requestAnimationFrame(simLoop);
+        }
+      }
+
+      /* ── 7. TRAPPAN (DISPOSITION & OMORDNING) ─────────────────── */
+
+      const trappanInnehall = document.getElementById('trappan-innehall');
+      let draKallaIndex = null;
+
+      function renderaTrappan() {
+        trappanInnehall.innerHTML = '';
+        const vyEl = document.getElementById('vy-trappan');
+        const utfallning = parseInt(vyEl.getAttribute('data-utfallning') || '2', 10);
+
+        dok.block.forEach((b, i) => {
+          if (b.typ === 'rubrik') {
+            const h = document.createElement('h' + Math.min(3, Math.max(1, b.niva)));
+            h.className = 'rubrik-' + Math.min(3, Math.max(1, b.niva));
+            h.textContent = '#'.repeat(b.niva) + ' ' + b.text;
+            h.draggable = true;
+            h.addEventListener('dragstart', (e) => {
+              draKallaIndex = i;
+              e.dataTransfer.setData('text/plain', i);
+            });
+            h.addEventListener('dragover', (e) => e.preventDefault());
+            h.addEventListener('drop', (e) => {
+              e.preventDefault();
+              handteraBlockDrop(i);
+            });
+            trappanInnehall.appendChild(h);
+          } else if (utfallning > 0) {
+            const p = document.createElement('p');
+            p.className = 'stycke';
+            p.draggable = true;
+
+            const resNode = beraknatResultat && beraknatResultat.noder.find(n => n.id === b.id);
+            if (resNode && resNode.ensam) p.setAttribute('data-ensam', 'true');
+
+            // Meningssplittning med regex enligt spec
+            const m = /^(.*?[.!?])(\s+)([\s\S]*)$/.exec(b.text);
+            if (m) {
+              const ing = document.createElement('span');
+              ing.className = 'ingress';
+              ing.textContent = m[1];
+
+              const rest = document.createElement('span');
+              rest.className = 'rest';
+              rest.textContent = m[2] + m[3];
+
+              p.appendChild(ing);
+              p.appendChild(rest);
+            } else {
+              p.textContent = b.text;
+            }
+
+            if (b.kommentarer && b.kommentarer.length) {
+              const km = document.createElement('span');
+              km.className = 'kommentarsmarke';
+              km.title = `${b.kommentarer.length} kommentar(er)`;
+              p.appendChild(km);
+            }
+
+            p.addEventListener('click', () => opnaStudion(b.id));
+
+            p.addEventListener('dragstart', (e) => {
+              draKallaIndex = i;
+              p.classList.add('dras');
+              e.dataTransfer.setData('text/plain', i);
+            });
+
+            p.addEventListener('dragend', () => p.classList.remove('dras'));
+
+            p.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              visaLiveKohesionMarkor(p, i);
+            });
+
+            p.addEventListener('drop', (e) => {
+              e.preventDefault();
+              handteraBlockDrop(i);
+            });
+
+            trappanInnehall.appendChild(p);
+          }
+        });
+      }
+
+      function visaLiveKohesionMarkor(targetEl, mIndex) {
+        document.querySelectorAll('.slappmark').forEach(m => m.remove());
+        const markor = document.createElement('div');
+        markor.className = 'slappmark';
+        targetEl.parentNode.insertBefore(markor, targetEl);
+      }
+
+      function handteraBlockDrop(tillIndex) {
+        document.querySelectorAll('.slappmark').forEach(m => m.remove());
+        if (draKallaIndex === null || draKallaIndex === tillIndex) return;
+
+        const franBlock = dok.block[draKallaIndex];
+        if (franBlock.typ === 'rubrik') {
+          // Sektionsflytt för rubriker
+          const sek = sektioner(dok.block).find(s => s.rubrikId === franBlock.id);
+          if (sek) {
+            const sektionsBlock = dok.block.slice(sek.fran, sek.till);
+            dok.block.splice(sek.fran, sektionsBlock.length);
+            const nyTill = tillIndex > sek.fran ? tillIndex - sektionsBlock.length : tillIndex;
+            dok.block.splice(nyTill, 0, ...sektionsBlock);
+          }
+        } else {
+          dok.block = flyttaBlock(dok.block, draKallaIndex, tillIndex);
+        }
+
+        draKallaIndex = null;
+        spara();
+        TextContext.forceRescan();
+        analyseraOchUppdatera();
+        renderaTrappan();
+      }
+
+      document.querySelectorAll('.reglage-knapp').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.reglage-knapp').forEach(b => b.classList.remove('aktiv'));
+          btn.classList.add('aktiv');
+          const ut = btn.getAttribute('data-ut');
+          document.getElementById('vy-trappan').setAttribute('data-utfallning', ut);
+          renderaTrappan();
+        });
+      });
+
+      /* ── 8. STUDION (SINGLE BLOCK FOCUS) ─────────────────────── */
+
+      function opnaStudion(blockId) {
+        studioBlockId = blockId;
+        const bIdx = dok.block.findIndex(b => b.id === blockId);
+        if (bIdx === -1) return;
+
+        const block = dok.block[bIdx];
+        document.getElementById('studio-block-typ').textContent = block.typ === 'rubrik' ? `Rubrik nivå ${block.niva}` : 'Stycke';
+
+        const foralderEl = document.getElementById('studio-foralder');
+        const efterEl = document.getElementById('studio-efterföljande');
+        foralderEl.textContent = bIdx > 0 ? dok.block[bIdx - 1].text : '(Starten på dokumentet)';
+        efterEl.textContent = bIdx < dok.block.length - 1 ? dok.block[bIdx + 1].text : '(Slutet på dokumentet)';
+
+        const sf = document.getElementById('studio-falt');
+        sf.value = block.text;
+
+        renderaStudioKommentarer(block);
+        bytLage('studion');
+      }
+
+      function renderaStudioKommentarer(block) {
+        const lista = document.getElementById('studio-kommentarer-lista');
+        lista.innerHTML = '';
+        if (!block.kommentarer || !block.kommentarer.length) {
+          lista.innerHTML = '<div class="tyst-text">Inga kommentarer ännu.</div>';
+          return;
+        }
+
+        block.kommentarer.forEach(k => {
+          const div = document.createElement('div');
+          div.className = 'kommentar';
+          div.innerHTML = `<span class="etikett">&gt; Kommentar:</span><span class="text">${escapeHtml(k.text)}</span>`;
+          lista.appendChild(div);
+        });
+      }
+
+      document.getElementById('studio-falt').addEventListener('input', (e) => {
+        if (!studioBlockId) return;
+        const b = dok.block.find(x => x.id === studioBlockId);
+        if (b) {
+          b.text = e.target.value;
+          spara();
+          TextContext.forceRescan();
+          analyseraOchUppdatera();
+        }
+      });
+
+      document.getElementById('ny-kommentar-knapp').addEventListener('click', () => {
+        const inp = document.getElementById('ny-kommentar-input');
+        const val = inp.value.trim();
+        if (!val || !studioBlockId) return;
+
+        const b = dok.block.find(x => x.id === studioBlockId);
+        if (b) {
+          if (!b.kommentarer) b.kommentarer = [];
+          b.kommentarer.push({
+            id: nyttId('k'),
+            text: val,
+            skapad: new Date().toISOString()
+          });
+          inp.value = '';
+          spara();
+          renderaStudioKommentarer(b);
+          visaBrodrost('Kommentar tillagd');
+        }
+      });
+
+      document.getElementById('studio-tillbaka').addEventListener('click', () => {
+        bytLage('raden');
+      });
+
+      /* ── 9. SIDOPANEL & ORDLISTA ─────────────────────────────── */
+
+      const panel = document.getElementById('sidopanel');
+
+      function togglePanel(oppen) {
+        if (oppen === undefined) oppen = !panel.hasAttribute('data-oppen');
+        if (oppen) panel.setAttribute('data-oppen', 'true');
+        else panel.removeAttribute('data-oppen');
+      }
+
+      document.getElementById('paneltoggle').addEventListener('click', () => togglePanel());
+      document.getElementById('panel-stang').addEventListener('click', () => togglePanel(false));
+
+      function renderaDokumentLista() {
+        const container = document.getElementById('dok-lista');
+        container.innerHTML = '';
+
+        dokumenter.forEach(d => {
+          const div = document.createElement('div');
+          div.className = 'dok-rad' + (d.id === aktivtId ? ' aktiv' : '');
+
+          const titleSpan = document.createElement('span');
+          titleSpan.className = 'titel';
+          titleSpan.textContent = d.titel || 'Namnlöst';
+          titleSpan.addEventListener('click', () => bytAktivtDokument(d.id));
+
+          const slettBtn = document.createElement('button');
+          slettBtn.className = 'knapp-liten-radera';
+          slettBtn.textContent = '✕';
+          slettBtn.title = 'Radera dokument';
+          slettBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            raderaDokument(d.id);
+          });
+
+          div.appendChild(titleSpan);
+          div.appendChild(slettBtn);
+          container.appendChild(div);
+        });
+      }
+
+      function bytAktivtDokument(id) {
+        const ny = dokumenter.find(d => d.id === id);
+        if (!ny) return;
+        dok = ny;
+        aktivtId = id;
+        sparaDokumenter();
+
+        document.getElementById('dok-titel-input').value = dok.titel;
+        document.getElementById('ljud-select').value = dok.ljudtema || 'inget';
+
+        noderMap.clear();
+        slappLyftBlock();
+        initTextContext();
+        uppdateraLjudmotor();
+        analyseraOchUppdatera();
+        renderaDokumentLista();
+        visaBrodrost(`Öppnade "${dok.titel}"`);
+      }
+
+      function raderaDokument(id) {
+        if (dokumenter.length <= 1) {
+          visaBrodrost('Kan inte radera sista dokumentet');
+          return;
+        }
+        if (!confirm('Vill du radera dokumentet?')) return;
+
+        dokumenter = dokumenter.filter(d => d.id !== id);
+        if (aktivtId === id) {
+          aktivtId = dokumenter[0].id;
+          dok = dokumenter[0];
+        }
+        sparaDokumenter();
+        bytAktivtDokument(aktivtId);
+      }
+
+      document.getElementById('nytt-dok-knapp').addEventListener('click', () => {
+        const ny = nyttDokument('Nytt dokument');
+        dokumenter.push(ny);
+        sparaDokumenter();
+        bytAktivtDokument(ny.id);
+      });
+
+      document.getElementById('dok-titel-input').addEventListener('input', (e) => {
+        if (dok) {
+          dok.titel = e.target.value;
+          spara();
+          renderaDokumentLista();
+        }
+      });
+
+      // Ordlistan & Dolda ord
+      function renderaOrdlista() {
+        const container = document.getElementById('ordlista-container');
+        container.innerHTML = '';
+
+        if (!beraknatResultat || !beraknatResultat.ordlista) return;
+        const { ordlista } = beraknatResultat;
+
+        const doldaSet = new Set(dok.doldaOrd || []);
+        const doldaNotis = document.getElementById('dolda-ord-notis');
+        if (doldaSet.size > 0) {
+          doldaNotis.style.display = 'flex';
+          document.getElementById('dolda-antal').textContent = `${doldaSet.size} dolda ord`;
+        } else {
+          doldaNotis.style.display = 'none';
+        }
+
+        ordlista.slice(0, 40).forEach(rad => {
+          const btn = document.createElement('button');
+          btn.className = 'ordrad';
+
+          const ordSpan = document.createElement('span');
+          ordSpan.textContent = rad.ord;
+
+          const ledare = document.createElement('span');
+          ledare.className = 'ledare';
+
+          const antal = document.createElement('span');
+          antal.className = 'antal';
+          antal.textContent = rad.antal;
+
+          const oga = document.createElement('span');
+          oga.className = 'oga';
+          oga.textContent = '👁';
+          oga.title = 'Dölj ord';
+          oga.addEventListener('click', (e) => {
+            e.stopPropagation();
+            doljOrd(rad.nyckel || rad.ord.toLowerCase());
+          });
+
+          btn.appendChild(ordSpan);
+          btn.appendChild(ledare);
+          btn.appendChild(antal);
+          btn.appendChild(oga);
+
+          // Klick tänder noderna där ordet finns
+          btn.addEventListener('click', () => {
+            const radBlockSet = new Set(rad.block);
+            document.querySelectorAll('.nod').forEach(el => {
+              const id = el.getAttribute('data-id');
+              if (radBlockSet.has(id)) {
+                el.classList.add('ny');
+                setTimeout(() => el.classList.remove('ny'), 1200);
+              }
+            });
+          });
+
+          container.appendChild(btn);
+        });
+      }
+
+      function doljOrd(ord) {
+        if (!dok.doldaOrd) dok.doldaOrd = [];
+        if (!dok.doldaOrd.includes(ord)) {
+          dok.doldaOrd.push(ord);
+          spara();
+          analyseraOchUppdatera();
+        }
+      }
+
+      document.getElementById('rensa-dolda').addEventListener('click', () => {
+        dok.doldaOrd = [];
+        spara();
+        analyseraOchUppdatera();
+      });
+
+      // Nyckeltal & Statistik
+      function uppdateraNyckeltal() {
+        const stats = statistik(dok.block);
+        const tcStats = TextContext.getStats();
+
+        document.getElementById('stat-ord').textContent = stats.ord;
+        document.getElementById('stat-tecken').textContent = stats.tecken;
+        document.getElementById('stat-stycken').textContent = stats.stycken;
+        document.getElementById('stat-rubriker').textContent = stats.rubriker;
+        document.getElementById('stat-lastid').textContent = `${stats.lastidMin} min`;
+        document.getElementById('stat-lix').textContent = tcStats.lix || 0;
+      }
+
+      // Skrivmål
+      function uppdateraSkrivmal() {
+        if (!dok.skrivmal) dok.skrivmal = { typ: 'ord', varde: 800 };
+        const typ = document.getElementById('mal-typ').value;
+        const varde = parseInt(document.getElementById('mal-varde').value, 10) || 800;
+        dok.skrivmal = { typ, varde };
+
+        const stats = statistik(dok.block);
+        const nuVarde = typ === 'ord' ? stats.ord : stats.tecken;
+        const proc = Math.min(100, Math.round((nuVarde / varde) * 100));
+
+        document.getElementById('mal-framgang').style.width = proc + '%';
+        document.getElementById('mal-text').textContent = `${nuVarde} / ${varde} ${typ}`;
+        document.getElementById('mal-procent').textContent = proc + '%';
+      }
+
+      document.getElementById('mal-typ').addEventListener('change', () => { spara(); uppdateraSkrivmal(); });
+      document.getElementById('mal-varde').addEventListener('input', () => { spara(); uppdateraSkrivmal(); });
+
+      // Timer (Pomodoro)
+      const timerDisplay = document.getElementById('timer-display');
+      const timerStartBtn = document.getElementById('timer-start');
+
+      function uppdateraTimerDisplay() {
+        const m = Math.floor(timerSekunder / 60);
+        const s = timerSekunder % 60;
+        timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      timerStartBtn.addEventListener('click', () => {
+        timerKor = !timerKor;
+        timerStartBtn.textContent = timerKor ? 'Pausa' : 'Starta';
+        if (timerKor) {
+          timerInterval = setInterval(() => {
+            if (timerSekunder > 0) {
+              timerSekunder--;
+              uppdateraTimerDisplay();
+            } else {
+              clearInterval(timerInterval);
+              timerKor = false;
+              timerStartBtn.textContent = 'Starta';
+              visaBrodrost('⏳ Timern har gått ut!');
+            }
+          }, 1000);
+        } else {
+          clearInterval(timerInterval);
+        }
+      });
+
+      document.getElementById('timer-nollstall').addEventListener('click', () => {
+        clearInterval(timerInterval);
+        timerKor = false;
+        timerSekunder = 25 * 60;
+        timerStartBtn.textContent = 'Starta';
+        uppdateraTimerDisplay();
+      });
+
+      // Ljudväljare & volym
+      document.getElementById('ljud-select').addEventListener('change', (e) => {
+        dok.ljudtema = e.target.value;
+        spara();
+        uppdateraLjudmotor();
+      });
+
+      document.getElementById('ljud-volym').addEventListener('input', (e) => {
+        inst.volym = parseFloat(e.target.value);
+        sparaDokumenter();
+        if (aktivMotor && typeof aktivMotor.setVolume === 'function') aktivMotor.setVolume(inst.volym);
+      });
+
+      document.getElementById('ljud-djup').addEventListener('input', (e) => {
+        inst.djup = parseFloat(e.target.value);
+        sparaDokumenter();
+        if (aktivMotor && typeof aktivMotor.setDepth === 'function') aktivMotor.setDepth(inst.djup);
+      });
+
+      // Inställningar (Paus, Tröskel, Maxkanter)
+      document.getElementById('inst-paus').value = inst.pausMs;
+      document.getElementById('inst-troskel').value = inst.troskel;
+      document.getElementById('inst-maxkanter').value = inst.maxPerNod;
+
+      document.getElementById('inst-paus').addEventListener('change', (e) => {
+        inst.pausMs = parseInt(e.target.value, 10);
+        sparaDokumenter();
+      });
+      document.getElementById('inst-troskel').addEventListener('change', (e) => {
+        inst.troskel = parseFloat(e.target.value);
+        sparaDokumenter();
+        analyseraOchUppdatera();
+      });
+      document.getElementById('inst-maxkanter').addEventListener('change', (e) => {
+        inst.maxPerNod = parseInt(e.target.value, 10);
+        sparaDokumenter();
+        analyseraOchUppdatera();
+      });
+
+      // Export
+      document.getElementById('export-kopiera').addEventListener('click', () => {
+        const medK = document.getElementById('export-kommentarer').checked;
+        const md = tillMarkdown(dok.block, medK);
+        navigator.clipboard.writeText(md).then(() => {
+          visaBrodrost('Kopierade Markdown till urklipp');
+        });
+      });
+
+      document.getElementById('export-ladda-ner').addEventListener('click', () => {
+        const medK = document.getElementById('export-kommentarer').checked;
+        const md = tillMarkdown(dok.block, medK);
+        laddaNerFil(`${dok.titel || 'dokument'}.md`, md);
+      });
+
+      document.getElementById('ladda-ner-alla-knapp').addEventListener('click', () => {
+        dokumenter.forEach(d => {
+          const md = tillMarkdown(d.block, true);
+          laddaNerFil(`${d.titel || 'dokument'}.md`, md);
+        });
+        visaBrodrost('Laddade ner alla dokument');
+      });
+
+      function laddaNerFil(filnamn, innehall) {
+        const blob = new Blob([innehall], { type: 'text/markdown;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filnamn;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      function escapeHtml(str) {
+        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      /* ── 10. TANGENTBORDSGENVÄGAR ──────────────────────────────── */
+
+      window.addEventListener('keydown', (e) => {
+        const isCmd = e.metaKey || e.ctrlKey;
+
+        if (isCmd && !e.shiftKey && e.key === '1') { e.preventDefault(); bytLage('raden'); }
+        if (isCmd && !e.shiftKey && e.key === '2') { e.preventDefault(); bytLage('vaven'); }
+        if (isCmd && !e.shiftKey && e.key === '3') { e.preventDefault(); bytLage('trappan'); }
+        if (isCmd && !e.shiftKey && e.key === '4') { e.preventDefault(); bytLage('studion'); }
+
+        if (isCmd && e.key.toLowerCase() === 'b') {
+          e.preventDefault();
+          togglePanel();
+        }
+        if (isCmd && !e.shiftKey && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          const medK = document.getElementById('export-kommentarer').checked;
+          laddaNerFil(`${dok.titel || 'dokument'}.md`, tillMarkdown(dok.block, medK));
+          visaBrodrost('Dokument sparat/nedladdat');
+        }
+        if (isCmd && e.shiftKey && e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          const medK = document.getElementById('export-kommentarer').checked;
+          navigator.clipboard.writeText(tillMarkdown(dok.block, medK));
+          visaBrodrost('Kopierade Markdown till urklipp');
+        }
+        if (e.key === 'Escape') {
+          if (panel.hasAttribute('data-oppen')) togglePanel(false);
+          else if (nuvarandeLage === 'studion') bytLage('raden');
+        }
+      });
+
+      // Vynav-knappar i toppen
+      document.querySelectorAll('.vyknapp').forEach(btn => {
+        btn.addEventListener('click', () => {
+          bytLage(btn.getAttribute('data-vy'));
+        });
+      });
+
+      /* ── 11. INITIALISERING ───────────────────────────────────── */
+
+      document.getElementById('dok-titel-input').value = dok.titel;
+      document.getElementById('ljud-select').value = dok.ljudtema || 'inget';
+
+      initTextContext();
+      uppdateraLjudmotor();
+      renderaDokumentLista();
+      ritaTrappsteg();
+      autoHojd();
+      analyseraOchUppdatera();
+    });
+  </script>
+</body>
+</html>
