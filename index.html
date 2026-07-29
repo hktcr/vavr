@@ -579,6 +579,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
       let simKorer = false;
       let simAnimFrame = null;
       let dragenNodId = null;
+      let hovradNodId = null;
 
       function anpassaCanvas() {
         vavenCanvas.width = window.innerWidth;
@@ -687,13 +688,56 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             if (n.typ === 'rubrik') bytLage('trappan');
             else opnaStudion(n.id);
           });
-
+          btn.addEventListener('mouseenter', () => {
+            hovradNodId = n.id;
+            uppdateraNodKlasser();
+            ritaVavenCanvas();
+          });
+          btn.addEventListener('mouseleave', () => {
+            hovradNodId = null;
+            uppdateraNodKlasser();
+            ritaVavenCanvas();
+          });
+          btn.addEventListener('focus', () => {
+            hovradNodId = n.id;
+            uppdateraNodKlasser();
+            ritaVavenCanvas();
+          });
+          btn.addEventListener('blur', () => {
+            hovradNodId = null;
+            uppdateraNodKlasser();
+            ritaVavenCanvas();
+          });
           btn.addEventListener('mousedown', (e) => {
             dragenNodId = n.id;
-            e.stopPropagation();
           });
+          btn.addEventListener('touchstart', (e) => {
+            dragenNodId = n.id;
+          }, { passive: true });
 
           nodlager.appendChild(btn);
+        });
+      }
+
+      function uppdateraNodKlasser() {
+        if (!beraknatResultat) return;
+        const { kanter } = beraknatResultat;
+        const grannar = new Set();
+        if (hovradNodId) {
+          grannar.add(hovradNodId);
+          kanter.forEach(k => {
+            if (k.a === hovradNodId) grannar.add(k.b);
+            if (k.b === hovradNodId) grannar.add(k.a);
+          });
+        }
+
+        document.querySelectorAll('#nodlager .nod').forEach(btn => {
+          const id = btn.getAttribute('data-id');
+          if (hovradNodId && !grannar.has(id)) {
+            btn.classList.add('avlagsen');
+          } else {
+            btn.classList.remove('avlagsen');
+          }
         });
       }
 
@@ -823,12 +867,23 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
 
-          if (k.typ === 'sekvens') {
-            ctx.strokeStyle = 'rgba(116, 208, 255, 0.85)';
-            ctx.lineWidth = 2.5;
+          let o = Math.min(0.7, 0.2 + (k.vikt || 0) * 0.8);
+          if (hovradNodId) {
+            if (k.a === hovradNodId || k.b === hovradNodId) {
+              ctx.strokeStyle = `rgba(197, 160, 89, ${Math.min(1, o + 0.4)})`;
+              ctx.lineWidth = 2.0;
+            } else {
+              ctx.strokeStyle = `rgba(155, 151, 142, ${o * 0.15})`;
+              ctx.lineWidth = 0.5;
+            }
           } else {
-            ctx.strokeStyle = 'rgba(155, 151, 142, ' + Math.min(0.7, 0.2 + (k.vikt || 0) * 0.8) + ')';
-            ctx.lineWidth = 0.8;
+            if (k.typ === 'sekvens') {
+              ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
+              ctx.lineWidth = 2.0;
+            } else {
+              ctx.strokeStyle = `rgba(155, 151, 142, ${o})`;
+              ctx.lineWidth = 0.8;
+            }
           }
           ctx.stroke();
         }
