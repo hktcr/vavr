@@ -58,7 +58,7 @@
       <div class="trappa" id="skrivtrappa"></div>
       <div class="raden aktiv" id="radcontainer">
         <div class="marke"></div>
-        <textarea id="skrivfalt" placeholder="Skriv ett stycke eller # Rubrik..." rows="1" spellcheck="false" aria-label="Skrivfält"></textarea>
+        <textarea id="skrivfalt" rows="1" spellcheck="false" aria-label="Skrivfält"></textarea>
       </div>
     </section>
 
@@ -80,13 +80,13 @@
         <span id="studio-block-typ" class="studio-info"></span>
       </div>
       <div id="studio-foralder" class="grannskap"></div>
-      <textarea id="studio-falt" rows="6" placeholder="Redigera stycke..." aria-label="Redigera stycke"></textarea>
+      <textarea id="studio-falt" rows="6" aria-label="Redigera stycke"></textarea>
       <div id="studio-efterfoljande" class="grannskap"></div>
       <div class="studio-kommentarer">
         <h3>Kommentarer</h3>
         <div id="studio-kommentarer-lista"></div>
         <div class="ny-kommentar-form">
-          <input type="text" id="ny-kommentar-input" placeholder="Skriv en kommentar till blocket..." aria-label="Ny kommentar">
+          <input type="text" id="ny-kommentar-input" aria-label="Ny kommentar">
           <button id="ny-kommentar-knapp" class="knapp-primar">Lägg till</button>
         </div>
       </div>
@@ -524,6 +524,7 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         ritaTrappsteg();
       }
 
+      let skrivTimer = null;
       skrivfalt.addEventListener('input', (e) => {
         autoHojd();
         uppdateraRubrikNiva();
@@ -534,6 +535,12 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           }
         }
         uppdateraSkrivmal();
+        
+        // Debouncad realtidsanalys så grafen lever när man skriver
+        clearTimeout(skrivTimer);
+        skrivTimer = setTimeout(() => {
+          analyseraOchUppdatera();
+        }, 150);
       });
 
       skrivfalt.addEventListener('keydown', (e) => {
@@ -587,7 +594,28 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         const instTroskel = parseFloat(inst.troskel) || 0.12;
         const instMaxKanter = parseInt(inst.maxPerNod, 10) || 3;
 
-        beraknatResultat = berakna(dok.block, {
+        // Inkludera pågående text i Raden som ett virtuellt block för realtidsfeedback i nätverket
+        let blockAttAnalysera = dok.block.slice();
+        if (skrivfalt && document.body.getAttribute('data-lage') === 'raden') {
+          const pagaendeText = skrivfalt.value.trim();
+          if (pagaendeText.length > 0) {
+            let niva = 0;
+            let typ = 'stycke';
+            const match = pagaendeText.match(/^(#{1,6})\s+(.*)$/);
+            if (match) {
+               niva = match[1].length;
+               typ = 'rubrik';
+            }
+            blockAttAnalysera.push({
+              id: 'virtuell_pagaende',
+              typ: typ,
+              niva: niva,
+              text: pagaendeText
+            });
+          }
+        }
+
+        beraknatResultat = berakna(blockAttAnalysera, {
           doldaOrd: dok.doldaOrd || [],
           troskel: instTroskel,
           maxPerNod: instMaxKanter
@@ -763,9 +791,9 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             a.vy += (cy - a.y) * 0.003;
           }
 
-          // Mycket hårdare dämpning så noderna lägger sig till ro direkt!
-          a.vx *= 0.65;
-          a.vy *= 0.65;
+          // Extrema magnetiska dämpningen så noderna stannar direkt!
+          a.vx *= 0.40;
+          a.vy *= 0.40;
 
           a.x += a.vx;
           a.y += a.vy;
@@ -818,7 +846,8 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
         const energi = korSimuleringSteg();
         ritaVavenCanvas();
 
-        if (energi < 0.15 && !dragenNodId) {
+        // Stanna extremt tidigt för statiskt nätverk
+        if (energi < 0.6 && !dragenNodId) {
           simKorer = false;
           simAnimFrame = null;
         } else {
