@@ -77,7 +77,7 @@ body {
   border: 0;
 }
 
-/* ── Svävande Osynlig Meny i Botten (VävR 2.0 Minimalism) ─── */
+/* ── Verktygs-piller i Botten (MärkR-estetik) ─── */
 
 .huvudbar {
   position: fixed;
@@ -88,22 +88,22 @@ body {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.35rem 0.6rem;
-  background: rgba(11, 11, 13, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(242, 239, 233, 0.05);
+  padding: 0.45rem 0.6rem;
+  background: rgba(19, 19, 23, 0.68);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(242, 239, 233, 0.12);
   border-radius: 999px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  opacity: 0.15;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(116, 208, 255, 0.1);
+  opacity: 0.25;
   transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s;
 }
 
 .huvudbar:hover, .huvudbar:focus-within {
   opacity: 1;
-  background: rgba(19, 19, 23, 0.75);
-  transform: translateX(-50%) translateY(-3px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(116, 208, 255, 0.3);
+  background: rgba(19, 19, 23, 0.85);
+  transform: translateX(-50%) translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(116, 208, 255, 0.25);
 }
 
 .dok-titel-container {
@@ -145,10 +145,9 @@ body {
   outline: none;
   color: var(--papper-dim);
   font-family: var(--sans);
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  padding: 0.3rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   cursor: pointer;
   transition: all var(--rorelse-snabb);
@@ -156,13 +155,13 @@ body {
 
 .vyknapp:hover {
   color: var(--papper);
-  background: rgba(242, 239, 233, 0.05);
+  background: rgba(242, 239, 233, 0.08);
 }
 
 .vyknapp.aktiv {
   color: var(--sot);
   background: var(--papper);
-  box-shadow: 0 0 16px rgba(242, 239, 233, 0.2);
+  box-shadow: 0 0 14px rgba(242, 239, 233, 0.15);
 }
 
 .knapp-ikon {
@@ -242,26 +241,26 @@ body[data-lage="raden"] #huvudomrade {
 .raden {
   display: flex;
   align-items: flex-start;
-  padding: 0;
+  gap: 1rem;
+  padding: 0.5rem 0;
   position: relative;
 }
 
 /* Osynlig markör i viloläge, lyser upp subtilt i aktivt */
 .raden .marke {
-  position: absolute;
-  left: -20px;
-  top: 6px;
-  width: 2px;
-  height: 1.8rem;
+  width: 3px;
+  align-self: stretch;
+  min-height: 2.2rem;
+  flex-shrink: 0;
   border-radius: 2px;
-  background: var(--ljus);
+  background: linear-gradient(var(--ljus-stark), var(--ljus));
   opacity: 0;
   transition: opacity 0.5s, box-shadow 0.5s;
 }
 
 .raden.aktiv .marke {
-  opacity: 0.7;
-  box-shadow: 0 0 16px var(--ljus-stark);
+  opacity: 0.6;
+  box-shadow: 0 0 12px var(--ljus-glod);
 }
 
 #skrivfalt {
@@ -272,7 +271,7 @@ body[data-lage="raden"] #huvudomrade {
   outline: none;
   resize: none;
   overflow: hidden;
-  color: var(--papper);
+  color: var(--papper-dim);
   font-family: var(--serif);
   font-size: 1.35rem;
   font-weight: 300;
@@ -283,7 +282,7 @@ body[data-lage="raden"] #huvudomrade {
 }
 
 #skrivfalt:focus {
-  color: var(--ljus-stark);
+  color: var(--papper);
 }
 
 #skrivfalt::placeholder { color: var(--papper-svag); }
@@ -413,21 +412,120 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
 .reglage-knapp.aktiv { color: var(--sot); background: var(--ljus); }
 
 .trappvy .stycke {
+  position: relative;
   font-family: var(--serif);
   line-height: 1.72;
   color: var(--papper);
-  margin: 0 0 0.85rem;
-  padding: 0.4rem 0.6rem;
-  border-left: 2px solid transparent;
-  border-radius: 4px;
-  transition: border-color var(--rorelse-snabb), background var(--rorelse-snabb);
+  margin: 0 0 1.25rem;
+  padding: 1.2rem 1.4rem;
+  background: rgba(19, 19, 23, 0.4);
+  border: 1px solid var(--harfin);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: all var(--rorelse-snabb);
   cursor: grab;
 }
 
-.trappvy .stycke:hover { border-left-color: var(--ljus-svag); background: rgba(242, 239, 233, 0.04); }
-.trappvy .stycke[data-ensam] { border-left-color: var(--orange-svag); }
+.trappvy .stycke::before {
+  content: "";
+  position: absolute;
+  left: -1px; top: 1.2rem; bottom: 1.2rem;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--rorelse-snabb);
+}
 
-.studio { max-width: var(--lasmatt); margin: 0 auto; padding: 5rem 1.25rem 3rem; }
+.trappvy .stycke:hover { 
+  border-color: var(--harfin-2); 
+  background: rgba(19, 19, 23, 0.7);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.trappvy .stycke:hover::before { background: var(--ljus-svag); }
+.trappvy .stycke[data-ensam]::before { background: var(--orange-svag); }
+
+.studio { 
+  max-width: var(--lasmatt); 
+  margin: 0 auto; 
+  padding: 5rem 1.25rem 3rem; 
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.studio-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(116, 208, 255, 0.2);
+  padding-bottom: 1rem;
+}
+
+.studio-info {
+  font-family: var(--mono);
+  color: rgba(116, 208, 255, 0.6);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+#studio-falt {
+  width: 100%;
+  background: rgba(19, 19, 23, 0.85);
+  border: 1px solid var(--harfin);
+  color: var(--papper);
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  line-height: 1.6;
+  padding: 1.5rem;
+  border-radius: 12px;
+  resize: vertical;
+  outline: none;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  transition: all var(--rorelse-snabb);
+}
+
+#studio-falt:focus {
+  border-color: rgba(116, 208, 255, 0.3);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 0 2px rgba(116, 208, 255, 0.15);
+}
+
+.grannskap {
+  font-family: var(--serif);
+  color: var(--papper-dim);
+  opacity: 0.6;
+  font-size: 1.05rem;
+  padding: 1rem 1.5rem;
+  background: rgba(19, 19, 23, 0.3);
+  border: 1px solid var(--harfin);
+  border-radius: 12px;
+  line-height: 1.6;
+}
+
+.studio-kommentarer h3 {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--papper-dim);
+  border-bottom: 1px dashed rgba(242, 239, 233, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+#ny-kommentar-input {
+  background: transparent;
+  border: 1px solid rgba(116, 208, 255, 0.2);
+  color: var(--ljus);
+  padding: 0.5rem;
+  font-family: var(--sans);
+  border-radius: 4px;
+  flex: 1;
+}
+
+.ny-kommentar-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
 
 /* ── Sidopanelen med Glassmorphism ──────────────────────────── */
 
@@ -471,30 +569,41 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
   margin: 1.5rem 0 0.6rem;
 }
 
-.knapp-primar, .knapp-sekundar {
+.knapp-primar {
+  background: var(--ljus);
+  color: var(--sot);
   border: none;
   font-family: var(--sans);
-  font-size: 0.8125rem;
   font-weight: 500;
+  font-size: 0.8125rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--rorelse-snabb);
+  box-shadow: 0 0 12px var(--ljus-glod);
+}
+.knapp-primar:hover {
+  background: var(--ljus-stark);
+}
+
+.knapp-sekundar {
+  background: rgba(242, 239, 233, 0.08);
+  border: 1px solid var(--harfin);
+  color: var(--papper);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.8125rem;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all var(--rorelse-snabb);
 }
-
-.knapp-primar {
-  background: var(--ljus);
-  color: var(--sot);
-  box-shadow: 0 0 12px var(--ljus-glod);
+.knapp-sekundar:hover {
+  background: rgba(242, 239, 233, 0.15);
+  border-color: rgba(242, 239, 233, 0.3);
 }
-.knapp-primar:hover { background: var(--ljus-stark); }
 
-.knapp-sekundar {
-  background: rgba(242, 239, 233, 0.08);
-  color: var(--papper);
-  border: 1px solid var(--harfin);
-}
-.knapp-sekundar:hover { background: rgba(242, 239, 233, 0.14); }
+/* Rensa upp gamla knappar */
 
 .brodrost {
   position: fixed;
@@ -507,6 +616,7 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
   border: 1px solid var(--ljus);
   color: var(--ljus-stark);
   border-radius: 999px;
+  font-family: var(--sans);
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
