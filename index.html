@@ -743,11 +743,29 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
             }
           }
 
-          a.vx += (cx - a.x) * 0.004;
-          a.vy += (cy - a.y) * 0.004;
+          // Håll noder borta från mitten där texten är (Halo-effekt i Raden-läge)
+          if (document.body.getAttribute('data-lage') === 'raden') {
+            let dcx = a.x - cx;
+            let dcy = a.y - cy;
+            let dCenter = Math.hypot(dcx, dcy) || 1;
+            if (dCenter < 380) {
+              let force = (380 - dCenter) * 0.08;
+              a.vx += (dcx / dCenter) * force;
+              a.vy += (dcy / dCenter) * force;
+            } else {
+              // Svag dragning inåt så de håller sig kring kanten
+              a.vx += (cx - a.x) * 0.001;
+              a.vy += (cy - a.y) * 0.001;
+            }
+          } else {
+            // Normal dragning inåt i Väven-läget
+            a.vx += (cx - a.x) * 0.003;
+            a.vy += (cy - a.y) * 0.003;
+          }
 
-          a.vx *= 0.82;
-          a.vy *= 0.82;
+          // Mycket hårdare dämpning så noderna lägger sig till ro direkt!
+          a.vx *= 0.65;
+          a.vy *= 0.65;
 
           a.x += a.vx;
           a.y += a.vy;
