@@ -53,12 +53,16 @@ class FakeAudioContext {
   static deferResume = false;
   static pendingResumes = [];
   static bufferCreations = 0;
+  static waveShaperCreations = 0;
+  static instances = [];
 
   constructor() {
     this.sampleRate = 8000;
     this.currentTime = 0;
     this.state = 'running';
     this.destination = new FakeNode();
+    this.resumeCalls = 0;
+    FakeAudioContext.instances.push(this);
   }
 
   createBuffer(channels, length) {
@@ -73,9 +77,20 @@ class FakeAudioContext {
   createOscillator() { return new FakeNode(); }
   createStereoPanner() { return new FakeNode(); }
   createDynamicsCompressor() { return new FakeNode(); }
+  createWaveShaper() {
+    FakeAudioContext.waveShaperCreations += 1;
+    return new FakeNode();
+  }
   resume() {
-    if (!FakeAudioContext.deferResume) return Promise.resolve();
-    return new Promise(resolve => FakeAudioContext.pendingResumes.push(resolve));
+    this.resumeCalls += 1;
+    if (!FakeAudioContext.deferResume) {
+      this.state = 'running';
+      return Promise.resolve();
+    }
+    return new Promise(resolve => FakeAudioContext.pendingResumes.push(() => {
+      this.state = 'running';
+      resolve();
+    }));
   }
   close() {
     this.state = 'closed';
@@ -84,7 +99,7 @@ class FakeAudioContext {
 
   static releaseResumes() {
     const pending = FakeAudioContext.pendingResumes.splice(0);
-    pending.forEach(resolve => resolve());
+    pending.forEach(release => release());
   }
 }
 
@@ -104,7 +119,17 @@ vm.createContext(sandbox);
 vm.runInContext(soundSource, sandbox);
 
 const engine = sandbox.testSoundscape;
-const themes = ['glantan', 'regnvav', 'djupstrom', 'nattljus', 'ordfalt', 'sambandsvav', 'strukturklang'];
+const themes = [
+  'glantan',
+  'regnvav',
+  'djupstrom',
+  'nattljus',
+  'ordfalt',
+  'sambandsvav',
+  'strukturklang',
+  'valsang',
+  'hardfork'
+];
 let passed = 0;
 
 for (const theme of themes) {
@@ -120,7 +145,7 @@ for (const theme of themes) {
     cohesion: .38,
     connectedness: .72
   })) throw new Error('Start misslyckades: ' + theme);
-  if (!engine.isPlaying() || engine.theme() !== theme) {
+  if (!engine.isPlaying() || !engine.isReady() || engine.theme() !== theme) {
     throw new Error('Fel aktivt tema: ' + theme);
   }
 
@@ -154,11 +179,16 @@ let typewriterPassed = 0;
 for (const theme of typewriterThemes) {
   if (!sandbox.testTypewriterThemes[theme]) throw new Error('Skrivmaskinstemat saknas: ' + theme);
   if (!await typewriter.start(theme, 18)) throw new Error('Skrivmaskinsstart misslyckades: ' + theme);
-  if (!typewriter.isPlaying() || typewriter.theme() !== theme) {
+  if (!typewriter.isPlaying() || !typewriter.isReady() || typewriter.theme() !== theme) {
     throw new Error('Fel aktivt skrivmaskinstema: ' + theme);
   }
 
+  const buffersAfterPreparation = FakeAudioContext.bufferCreations;
+  typewriter.preview();
   for (const key of ['a', ' ', 'Backspace', '.', 'Enter']) typewriter.handleKey(key);
+  if (FakeAudioContext.bufferCreations !== buffersAfterPreparation) {
+    throw new Error('Skrivmaskinen byggde nya ljudbufferter under tangenttryckning: ' + theme);
+  }
   typewriter.setVolume(10);
   typewriter.stop(true);
 
@@ -167,17 +197,51 @@ for (const theme of typewriterThemes) {
   console.log('  ok   ' + theme + ' ger tangentfeedback och stängs');
 }
 
+if (FakeAudioContext.waveShaperCreations < typewriterThemes.length) {
+  throw new Error('Skrivmaskinens soft clipper testades inte för varje tema.');
+}
+console.log('  ok   skrivmaskinens soft clipper används');
+
+await engine.start('valsang', 24, {});
+const interruptedSoundContext = FakeAudioContext.instances.at(-1);
+interruptedSoundContext.state = 'interrupted';
+const soundResumeCalls = interruptedSoundContext.resumeCalls;
+engine.handleKey('a');
+if (
+  interruptedSoundContext.resumeCalls !== soundResumeCalls + 1 ||
+  interruptedSoundContext.state !== 'running'
+) {
+  throw new Error('Valsång återväckte inte en avbruten ljudkontext.');
+}
+engine.stop(true);
+console.log('  ok   dynamiskt ljudrum återväcks efter ljudavbrott');
+
+await typewriter.start('reseskrivare', 18);
+const suspendedTypewriterContext = FakeAudioContext.instances.at(-1);
+suspendedTypewriterContext.state = 'suspended';
+const typewriterResumeCalls = suspendedTypewriterContext.resumeCalls;
+typewriter.handleKey('a');
+if (
+  suspendedTypewriterContext.resumeCalls !== typewriterResumeCalls + 1 ||
+  suspendedTypewriterContext.state !== 'running'
+) {
+  throw new Error('Skrivmaskinen återväckte inte en pausad ljudkontext.');
+}
+typewriter.stop(true);
+console.log('  ok   skrivmaskinen återväcks efter ljudavbrott');
+
 FakeAudioContext.deferResume = true;
 
 const soundBuffersBeforeCancel = FakeAudioContext.bufferCreations;
 const cancelledSoundStart = engine.start('glantan', 24, {});
+if (engine.isReady()) throw new Error('Ljudrummet var klart innan ljudkontexten hade väckts.');
 engine.stop(true);
 FakeAudioContext.releaseResumes();
 if (await cancelledSoundStart || engine.isPlaying()) {
   throw new Error('Ett stoppat ljudrum rapporterade ändå en färdig start.');
 }
-if (FakeAudioContext.bufferCreations !== soundBuffersBeforeCancel) {
-  throw new Error('Ljudrummet byggdes trots att starten avbröts.');
+if (FakeAudioContext.bufferCreations !== soundBuffersBeforeCancel + 1) {
+  throw new Error('Ljudrummet byggde mer än den tysta väckningsbufferten trots att starten avbröts.');
 }
 console.log('  ok   ljudrummets väntande start kan avbrytas');
 
@@ -192,13 +256,14 @@ console.log('  ok   senaste ljudrumsstarten vinner vid snabb växling');
 
 const typewriterBuffersBeforeCancel = FakeAudioContext.bufferCreations;
 const cancelledTypewriterStart = typewriter.start('mekanisk', 18);
+if (typewriter.isReady()) throw new Error('Skrivmaskinsljudet var klart innan ljudkontexten hade väckts.');
 typewriter.stop(true);
 FakeAudioContext.releaseResumes();
 if (await cancelledTypewriterStart || typewriter.isPlaying()) {
   throw new Error('Ett stoppat skrivmaskinsljud rapporterade ändå en färdig start.');
 }
-if (FakeAudioContext.bufferCreations !== typewriterBuffersBeforeCancel) {
-  throw new Error('Skrivmaskinsljudet byggdes trots att starten avbröts.');
+if (FakeAudioContext.bufferCreations !== typewriterBuffersBeforeCancel + 1) {
+  throw new Error('Skrivmaskinsljudet byggde mer än den tysta väckningsbufferten trots att starten avbröts.');
 }
 console.log('  ok   skrivmaskinens väntande start kan avbrytas');
 
