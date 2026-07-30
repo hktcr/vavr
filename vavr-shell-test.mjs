@@ -107,13 +107,20 @@ for (const id of [
   'sound-theme',
   'sound-reactive',
   'sound-volume',
-  'sound-toggle'
+  'sound-toggle',
+  'typewriter-theme',
+  'typewriter-volume',
+  'typewriter-toggle'
 ]) {
   check(html.includes(`id="${id}"`), '#' + id + ' finns');
 }
 
-for (const theme of ['glantan', 'regnvav', 'djupstrom', 'nattljus']) {
+for (const theme of ['glantan', 'regnvav', 'djupstrom', 'nattljus', 'ordfalt', 'sambandsvav', 'strukturklang']) {
   check(html.includes(`${theme}: {`), 'ljudtemat ' + theme + ' finns');
+}
+
+for (const theme of ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad']) {
+  check(html.includes(`${theme}: {`), 'skrivmaskinsljudet ' + theme + ' finns');
 }
 
 check(
@@ -122,7 +129,19 @@ check(
 );
 check(html.includes("soundTheme: 'none'"), 'ljud är av som standard');
 check(html.includes('Soundscape.commit(block.kind)'), 'invävda block kan påverka ljudrummet');
-check(html.includes("window.addEventListener('pagehide', () => Soundscape.stop(true))"), 'ljudmotorn stängs när sidan lämnas');
+check(html.includes('Soundscape.updateText(soundTextProfile())'), 'ljudbilden kan följa hela textprofilen');
+check(html.includes('Typewriter.handleKey(event.key)'), 'skrivfältet skickar tangenter till skrivmaskinsmotorn');
+check(
+  html.includes('Soundscape.stop(true);') && html.includes('Typewriter.stop(true);'),
+  'ljudmotorerna stängs när sidan lämnas'
+);
+
+console.log('\nVävens linjer');
+
+check(html.includes('context.setLineDash([9, 6])'), 'lexikala kopplingar är streckade');
+check(html.includes('context.setLineDash([1.5, 5])'), 'rubrikhierarkin är prickad');
+check(html.includes('legend-line cohesion'), 'teckenförklaringen visar lexikal linje');
+check(html.includes('legend-line hierarchy'), 'teckenförklaringen visar hierarkisk linje');
 
 console.log('\nSammanfattning');
 console.log(`  ${passed} godkända, ${failed} fel av ${passed + failed} kontroller\n`);

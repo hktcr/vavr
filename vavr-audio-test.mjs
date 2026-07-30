@@ -11,7 +11,8 @@ if (soundStart < 0 || soundEnd < 0) {
 }
 
 const soundSource = inlineScript.slice(soundStart, soundEnd) +
-  '\nglobalThis.testSoundscape = Soundscape; globalThis.testThemes = SOUND_THEMES;';
+  '\nglobalThis.testSoundscape = Soundscape; globalThis.testThemes = SOUND_THEMES;' +
+  '\nglobalThis.testTypewriter = Typewriter; globalThis.testTypewriterThemes = TYPEWRITER_THEMES;';
 
 class FakeParam {
   constructor(value = 0) {
@@ -77,6 +78,7 @@ class FakeAudioContext {
 const sandbox = {
   window: { AudioContext: FakeAudioContext },
   Math,
+  Date,
   Promise,
   Set,
   Float32Array,
@@ -89,18 +91,39 @@ vm.createContext(sandbox);
 vm.runInContext(soundSource, sandbox);
 
 const engine = sandbox.testSoundscape;
-const themes = ['glantan', 'regnvav', 'djupstrom', 'nattljus'];
+const themes = ['glantan', 'regnvav', 'djupstrom', 'nattljus', 'ordfalt', 'sambandsvav', 'strukturklang'];
 let passed = 0;
 
 for (const theme of themes) {
   if (!sandbox.testThemes[theme]) throw new Error('Temat saknas: ' + theme);
-  if (!await engine.start(theme, 24)) throw new Error('Start misslyckades: ' + theme);
+  if (!await engine.start(theme, 24, {
+    words: 640,
+    averageWordLength: 5.8,
+    vowelRatio: .42,
+    averageSentenceWords: 14,
+    paragraphs: 9,
+    headings: 3,
+    headingDepth: 2,
+    cohesion: .38,
+    connectedness: .72
+  })) throw new Error('Start misslyckades: ' + theme);
   if (!engine.isPlaying() || engine.theme() !== theme) {
     throw new Error('Fel aktivt tema: ' + theme);
   }
 
   engine.handleKey('a');
   engine.handleKey('.');
+  engine.updateText({
+    words: 820,
+    averageWordLength: 6.2,
+    vowelRatio: .39,
+    averageSentenceWords: 17,
+    paragraphs: 12,
+    headings: 4,
+    headingDepth: 1,
+    cohesion: .52,
+    connectedness: .81
+  });
   engine.commit('paragraph');
   engine.commit('heading');
   engine.setVolume(12);
@@ -111,4 +134,25 @@ for (const theme of themes) {
   console.log('  ok   ' + theme + ' startar, reagerar och stängs');
 }
 
-console.log(`\nLjudrum: ${passed} av ${themes.length} teman godkända.\n`);
+const typewriter = sandbox.testTypewriter;
+const typewriterThemes = ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad'];
+let typewriterPassed = 0;
+
+for (const theme of typewriterThemes) {
+  if (!sandbox.testTypewriterThemes[theme]) throw new Error('Skrivmaskinstemat saknas: ' + theme);
+  if (!await typewriter.start(theme, 18)) throw new Error('Skrivmaskinsstart misslyckades: ' + theme);
+  if (!typewriter.isPlaying() || typewriter.theme() !== theme) {
+    throw new Error('Fel aktivt skrivmaskinstema: ' + theme);
+  }
+
+  for (const key of ['a', ' ', 'Backspace', '.', 'Enter']) typewriter.handleKey(key);
+  typewriter.setVolume(10);
+  typewriter.stop(true);
+
+  if (typewriter.isPlaying()) throw new Error('Skrivmaskinsstopp misslyckades: ' + theme);
+  typewriterPassed += 1;
+  console.log('  ok   ' + theme + ' ger tangentfeedback och stängs');
+}
+
+console.log(`\nLjudrum: ${passed} av ${themes.length} ljudlandskap godkända.`);
+console.log(`Skrivmaskiner: ${typewriterPassed} av ${typewriterThemes.length} teman godkända.\n`);

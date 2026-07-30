@@ -28,7 +28,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger alla fyra ljudteman |
+| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger sju ljudlandskap och fyra skrivmaskinsteman |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
@@ -86,13 +86,18 @@ Ljudinställningarna är också appövergripande:
 
 ```js
 settings = {
-  soundTheme: 'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus',
+  soundTheme:
+    'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
+    'ordfalt' | 'sambandsvav' | 'strukturklang',
   soundVolume: 0..60,
-  soundReactive: boolean
+  soundReactive: boolean,
+  typewriterTheme:
+    'none' | 'mekanisk' | 'reseskrivare' | 'elektrisk' | 'dampad',
+  typewriterVolume: 0..60
 }
 ```
 
-Endast inställningarna sparas. Ett aktivt ljudrum sparas inte som körande
+Endast inställningarna sparas. Aktiva ljudsessioner sparas inte som körande
 status och startar därför aldrig automatiskt efter omladdning.
 
 ## Lokal lagring och säkerhetskopiering
@@ -118,7 +123,7 @@ Målet räknar endast committad text.
 
 ### Ljudrum
 
-`Soundscape` i `index.html` bygger alla ljud med Web Audio API. Varje tema
+`Soundscape` i `index.html` bygger ljudlandskapen med Web Audio API. Varje tema
 består av lokalt genererade brusbufferter, oscillatorer, filter och långsamma
 modulationer. En gemensam kompressor och en försiktigt skalad mastervolym
 minskar risken för plötsliga nivåsprång.
@@ -127,7 +132,21 @@ Gläntan och Nattljus använder glesa tonala glimtar. Regnväv använder ett
 filtrerat brusfält och små dropptransienter. Djupström är avsiktligt utan
 melodi och tydlig rytm. Om textrespons är påslagen öppnar bokstavsaktivitet
 filtren marginellt, medan skiljetecken och invävda block kan ge en lågmäld
-klang. Ingen tangent får ett eget klick eller belöningsljud.
+klang.
+
+De textlevande landskapen använder en begränsad textprofil som härleds lokalt.
+Ordfält använder ordlängd, vokalandel och genomsnittlig meningslängd.
+Sambandsväv använder medelvärdet av kvalificerade TF/IDF-kopplingar och
+andelen lexikalt anslutna stycken. Strukturklang använder rubrikantal, senaste
+rubriknivå, styckeantal och ordmängd. Dessa värden styr långsamma
+filterförändringar, brusnivåer och oscillatorfrekvenser. De innebär ingen
+tolkning av textens betydelse eller kvalitet.
+
+`Typewriter` är en separat Web Audio-motor för direkt tangentfeedback.
+Mekanisk, Reseskrivare, Elektrisk och Dämpad använder olika kombinationer av
+korta filtrerade brusanslag och låga tontransienter. Mellanslag, backsteg,
+interpunktion och Enter har egna profiler. Enter kan dessutom ge vagnretur
+och klockton. Motorn tar endast emot tangenttryckningar från skrivfältet.
 
 En AudioContext skapas först av ett uttryckligt användartryck. Byte av tema
 tonar ut den gamla sessionen, och alla oscillatorer, tidtagare och
@@ -139,6 +158,16 @@ Kanterna ritas på canvas. Noderna är absolut positionerade knappar i DOM.
 Fysiken kombinerar repulsion, kohesionsfjädrar, sekvenslänkar och
 rubrikgravitation. Den fullständiga kohesionsmatrisen används för analys,
 medan ett begränsat urval används för ritning.
+
+Linjerna har separata visuella grammatiker:
+
+- dokumentordning är en sammanhängande gråblå linje
+- lexikal koppling är en streckad cyan linje vars bredd och opacitet följer
+  kopplingens relativa styrka
+- rubrikhierarki är en prickad mässingslinje
+
+Alla tre linjetyperna blir starkare när en ansluten nod är vald eller har
+fokus. Teckenförklaringen visar både nod- och linjesymboler.
 
 ### Struktur
 
@@ -169,7 +198,7 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 - Status förmedlas med text och inte enbart med färg.
 - Timerdisplayen använder `role="timer"` och läser inte upp varje sekund.
 - Ljudknapparna exponerar uppspelningsstatus med text och `aria-pressed`.
-- Ljudtemat startar aldrig automatiskt och kan stängas av från toppbaren.
+- Ljud startar aldrig automatiskt och kan stängas av samlat från toppbaren.
 - Viktiga händelser köas i en polite live-region.
 - Sektionstavlans kort nås med Tab. Pilar flyttar fokus, Alt + pil flyttar ett
   kort, E redigerar, Enter öppnar eller väljer och Delete raderar efter

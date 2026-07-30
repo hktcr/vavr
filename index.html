@@ -680,10 +680,12 @@
       bottom: max(18px, env(safe-area-inset-bottom));
       left: max(18px, env(safe-area-inset-left));
       display: flex;
+      max-width: calc(100vw - 36px);
+      flex-wrap: wrap;
       gap: 14px;
       padding: 9px 12px;
       border: 1px solid var(--line);
-      border-radius: 999px;
+      border-radius: 14px;
       background: rgba(9, 11, 17, .72);
       color: var(--paper-faint);
       font: 9px/1 var(--mono);
@@ -719,6 +721,21 @@
       border: 1.5px solid var(--orange);
       background: rgba(232, 93, 74, .12);
       border-radius: 2px;
+    }
+
+    .legend-line {
+      width: 24px;
+      height: 0;
+      border-top: 2px solid rgba(120, 151, 172, .8);
+    }
+
+    .legend-line.cohesion {
+      border-top: 2px dashed var(--cyan);
+      filter: drop-shadow(0 0 3px rgba(89, 194, 255, .45));
+    }
+
+    .legend-line.hierarchy {
+      border-top: 2px dotted var(--amber);
     }
 
     #structure-view {
@@ -1544,6 +1561,10 @@
       overflow: hidden;
     }
 
+    .sound-card + .sound-card {
+      margin-top: 10px;
+    }
+
     .sound-theme-copy {
       min-height: 3.5em;
       margin: 0;
@@ -2040,6 +2061,9 @@
         <span class="legend-item"><i class="legend-mark"></i><span>Stycke</span></span>
         <span class="legend-item"><i class="legend-mark heading"></i><span>Rubrik</span></span>
         <span class="legend-item"><i class="legend-mark lonely"></i><span>Saknar lexikal återkoppling</span></span>
+        <span class="legend-item"><i class="legend-line"></i><span>Dokumentordning</span></span>
+        <span class="legend-item"><i class="legend-line cohesion"></i><span>Lexikal koppling</span></span>
+        <span class="legend-item"><i class="legend-line hierarchy"></i><span>Rubrikhierarki</span></span>
       </div>
     </section>
 
@@ -2210,22 +2234,29 @@
         <div class="support-card sound-card">
           <div class="support-card-head">
             <div class="support-card-title">
-              <strong>Frivilligt ljudtema</strong>
+              <strong>Ljudlandskap</strong>
               <span id="sound-state">Tyst</span>
             </div>
             <label class="check-control">
               <input id="sound-reactive" type="checkbox" checked>
-              <span>Följ texten varsamt</span>
+              <span>Små svar vid skrivning</span>
             </label>
           </div>
           <div class="field">
             <label for="sound-theme">Ljudtema</label>
             <select id="sound-theme">
               <option value="none">Inget ljud</option>
-              <option value="glantan">Gläntan</option>
-              <option value="regnvav">Regnväv</option>
-              <option value="djupstrom">Djupström</option>
-              <option value="nattljus">Nattljus</option>
+              <optgroup label="Stilla ljudrum">
+                <option value="glantan">Gläntan</option>
+                <option value="regnvav">Regnväv</option>
+                <option value="djupstrom">Djupström</option>
+                <option value="nattljus">Nattljus</option>
+              </optgroup>
+              <optgroup label="Textlevande ljudrum">
+                <option value="ordfalt">Ordfält</option>
+                <option value="sambandsvav">Sambandsväv</option>
+                <option value="strukturklang">Strukturklang</option>
+              </optgroup>
             </select>
           </div>
           <p id="sound-theme-description" class="sound-theme-copy">Välj ett ljudrum. Ingenting startar automatiskt.</p>
@@ -2237,6 +2268,33 @@
             <button id="sound-toggle" class="plain-button primary" type="button">Starta ljud</button>
           </div>
           <p id="sound-support-note" class="method-note">Ljuden skapas lokalt i webbläsaren och fungerar offline. Börja gärna lågt med hörlurar.</p>
+        </div>
+        <div class="support-card sound-card">
+          <div class="support-card-head">
+            <div class="support-card-title">
+              <strong>Skrivmaskinsljud</strong>
+              <span id="typewriter-state">Tyst</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="typewriter-theme">Tangentkaraktär</label>
+            <select id="typewriter-theme">
+              <option value="none">Inget tangentljud</option>
+              <option value="mekanisk">Mekanisk</option>
+              <option value="reseskrivare">Reseskrivare</option>
+              <option value="elektrisk">Elektrisk</option>
+              <option value="dampad">Dämpad</option>
+            </select>
+          </div>
+          <p id="typewriter-description" class="sound-theme-copy">Välj ett skrivmaskinsljud. Tangenterna är tysta tills du själv aktiverar det.</p>
+          <div class="sound-controls">
+            <label class="sound-volume" for="typewriter-volume">
+              <span class="range-label"><span>Volym</span><output id="typewriter-volume-output" for="typewriter-volume">18 %</output></span>
+              <input id="typewriter-volume" type="range" min="0" max="60" step="1" value="18">
+            </label>
+            <button id="typewriter-toggle" class="plain-button primary" type="button">Aktivera</button>
+          </div>
+          <p class="method-note">Bokstäver, mellanslag, backsteg och Enter får olika mekaniska svar. Inga ljud spelas utanför skrivfältet.</p>
         </div>
         <p class="method-note">Ljud kan göra skrivmiljön behagligare eller maskera störningar, men påverkan på fokus varierar mellan personer.</p>
       </section>
@@ -2393,6 +2451,44 @@
       nattljus: {
         name: 'Nattljus',
         description: 'Långsamma övertoner, mörk rymd och svaga ljuspunkter. Mer stämning, fortfarande utan påträngande melodi.'
+      },
+      ordfalt: {
+        name: 'Ordfält',
+        adaptive: true,
+        description: 'Klangens ljus och grundton följer ordlängd, vokalbalans och meningsrytm i både utkastet och den skrivna texten.'
+      },
+      sambandsvav: {
+        name: 'Sambandsväv',
+        adaptive: true,
+        description: 'Ljudet blir mjukare och mer samstämt när styckena har starkare lexikal återkoppling, och öppnare när sambanden är glesa.'
+      },
+      strukturklang: {
+        name: 'Strukturklang',
+        adaptive: true,
+        description: 'Rubriknivåer, styckeantal och dokumentets tillväxt formar register, täthet och långsamma harmoniska skiften.'
+      }
+    };
+
+    const TYPEWRITER_THEMES = {
+      none: {
+        name: 'Inget tangentljud',
+        description: 'Välj ett skrivmaskinsljud. Tangenterna är tysta tills du själv aktiverar det.'
+      },
+      mekanisk: {
+        name: 'Mekanisk',
+        description: 'Fyllig metallisk anslagston, tydligt mellanslag och klassisk vagnretur med en diskret klocka.'
+      },
+      reseskrivare: {
+        name: 'Reseskrivare',
+        description: 'Lättare, torrare och något ljusare slag från en kompakt portabel skrivmaskin.'
+      },
+      elektrisk: {
+        name: 'Elektrisk',
+        description: 'Mjukare elektriskt anslag med ett kort motoriskt surr och jämn tangentkänsla.'
+      },
+      dampad: {
+        name: 'Dämpad',
+        description: 'Låga, träiga och återhållna slag utan klocka. Det minst framträdande alternativet.'
       }
     };
 
@@ -2487,6 +2583,8 @@
         filter.frequency.value = lowpass;
         filter.Q.value = .65;
         bus.connect(filter).connect(active.master);
+        const oscillators = [];
+        const levels = [];
         frequencies.forEach((frequency, index) => {
           const oscillator = registerSource(active, active.context.createOscillator());
           const level = active.context.createGain();
@@ -2496,8 +2594,10 @@
           level.gain.value = gain / Math.max(1, frequencies.length);
           oscillator.connect(level).connect(bus);
           oscillator.start();
+          oscillators.push(oscillator);
+          levels.push(level);
         });
-        return { bus, filter };
+        return { bus, filter, oscillators, levels };
       }
 
       function oneShot(active, {
@@ -2615,17 +2715,114 @@
           return;
         }
 
-        const air = addNoise(active, { color: 'brown', gain: .038, highpass: 90, lowpass: 2100, rate: .82 });
-        const pad = addPad(active, [55, 82.41, 110, 164.81], { gain: .061, lowpass: 520, detune: 3.5 });
-        addLfo(active, pad.filter.frequency, .022, 170);
-        addLfo(active, air.level.gain, .034, .009);
+        if (theme === 'nattljus') {
+          const air = addNoise(active, { color: 'brown', gain: .038, highpass: 90, lowpass: 2100, rate: .82 });
+          const pad = addPad(active, [55, 82.41, 110, 164.81], { gain: .061, lowpass: 520, detune: 3.5 });
+          addLfo(active, pad.filter.frequency, .022, 170);
+          addLfo(active, air.level.gain, .034, .009);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 520;
+          scheduleGlimmers(active, 'nattljus');
+          return;
+        }
+
+        if (theme === 'ordfalt') {
+          const air = addNoise(active, { color: 'brown', gain: .045, highpass: 120, lowpass: 2300 });
+          const pad = addPad(active, [82.41, 123.47, 164.81], { gain: .054, lowpass: 880, detune: 2 });
+          addLfo(active, air.level.gain, .041, .008);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 880;
+          active.adaptive = { kind: theme, air, pad };
+          return;
+        }
+
+        if (theme === 'sambandsvav') {
+          const air = addNoise(active, { color: 'brown', gain: .062, highpass: 80, lowpass: 1600 });
+          const pad = addPad(active, [73.42, 104, 126, 146.83], { gain: .058, lowpass: 760, detune: 1.5 });
+          addLfo(active, air.level.gain, .029, .008);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 760;
+          active.adaptive = { kind: theme, air, pad };
+          return;
+        }
+
+        const air = addNoise(active, { color: 'brown', gain: .044, highpass: 70, lowpass: 1900 });
+        const pad = addPad(active, [65.41, 98, 130.81], { gain: .057, lowpass: 680, detune: 2.5 });
+        addLfo(active, pad.bus.gain, .048, .08);
+        addLfo(active, air.level.gain, .024, .007);
         active.activityFilter = pad.filter;
-        active.baseFilter = 520;
-        scheduleGlimmers(active, 'nattljus');
+        active.baseFilter = 680;
+        active.adaptive = { kind: 'strukturklang', air, pad };
       }
 
       function outputLevel(value) {
         return clamp(Number(value) || 0, 0, 60) / 100 * .82;
+      }
+
+      function moveParameter(parameter, value, seconds = .8) {
+        if (!parameter || !Number.isFinite(value)) return;
+        const now = session?.context?.currentTime || 0;
+        parameter.cancelScheduledValues(now);
+        parameter.setTargetAtTime(value, now, Math.max(.04, seconds / 3));
+      }
+
+      function updateText(profile = {}) {
+        const active = session;
+        if (!active?.adaptive) return;
+        const words = Math.max(0, Number(profile.words) || 0);
+        const averageWord = clamp(Number(profile.averageWordLength) || 5, 2, 12);
+        const vowelRatio = clamp(Number(profile.vowelRatio) || .38, .2, .65);
+        const sentenceLength = clamp(Number(profile.averageSentenceWords) || 12, 3, 45);
+        const cohesion = clamp(Number(profile.cohesion) || 0, 0, 1);
+        const connectedness = clamp(Number(profile.connectedness) || 0, 0, 1);
+        const headings = Math.max(0, Number(profile.headings) || 0);
+        const paragraphs = Math.max(0, Number(profile.paragraphs) || 0);
+        const headingDepth = clamp(Number(profile.headingDepth) || 0, 0, 3);
+        const { air, pad, kind } = active.adaptive;
+
+        if (kind === 'ordfalt') {
+          const brightness = clamp(440 + averageWord * 105 + vowelRatio * 960 + sentenceLength * 8, 620, 2800);
+          const root = 76 + averageWord * 2.2 + (vowelRatio - .38) * 34;
+          const ratios = [1, 1.5 + (vowelRatio - .38) * .12, 2];
+          pad.oscillators.forEach((oscillator, index) => {
+            moveParameter(oscillator.frequency, root * ratios[index], 1.2);
+          });
+          moveParameter(pad.filter.frequency, brightness, 1);
+          moveParameter(air.level.gain, clamp(.033 + sentenceLength / 1800, .034, .056), 1.2);
+          active.baseFilter = brightness;
+          return;
+        }
+
+        if (kind === 'sambandsvav') {
+          const coherence = clamp(cohesion * .62 + connectedness * .38, 0, 1);
+          const root = 72 + Math.min(10, Math.log2(words + 1) * 1.4);
+          const ratios = [
+            1,
+            1.42 + coherence * .08,
+            1.7 + coherence * .3,
+            2 + coherence * .25
+          ];
+          pad.oscillators.forEach((oscillator, index) => {
+            moveParameter(oscillator.frequency, root * ratios[index], 1.8);
+          });
+          const brightness = 620 + coherence * 1550;
+          moveParameter(pad.filter.frequency, brightness, 1.5);
+          moveParameter(air.level.gain, .064 - coherence * .034, 1.8);
+          active.baseFilter = brightness;
+          return;
+        }
+
+        const roots = [65.41, 73.42, 82.41, 98];
+        const root = roots[Math.round(headingDepth)] * Math.pow(2, Math.min(1, headings / 18) / 12);
+        const ratios = [1, headings ? 1.5 : 1.42, 2 + Math.min(.24, paragraphs / 80)];
+        pad.oscillators.forEach((oscillator, index) => {
+          moveParameter(oscillator.frequency, root * ratios[index], 2.1);
+        });
+        const brightness = clamp(560 + paragraphs * 22 + headings * 34, 560, 2100);
+        moveParameter(pad.filter.frequency, brightness, 1.8);
+        moveParameter(pad.bus.gain, clamp(.82 + Math.log2(words + 1) * .025, .82, 1.08), 2);
+        moveParameter(air.level.gain, clamp(.034 + headings * .0015, .034, .056), 1.8);
+        active.baseFilter = brightness;
       }
 
       function dispose(active, immediate = false) {
@@ -2645,7 +2842,7 @@
         }, delay);
       }
 
-      function start(theme, volume) {
+      function start(theme, volume, profile = {}) {
         if (!AudioContextClass || !SOUND_THEMES[theme] || theme === 'none') {
           return Promise.resolve(false);
         }
@@ -2678,6 +2875,7 @@
         };
         session = active;
         buildTheme(active, theme);
+        updateText(profile);
         const now = context.currentTime;
         master.gain.setValueAtTime(0, now);
         master.gain.linearRampToValueAtTime(outputLevel(volume), now + .8);
@@ -2733,7 +2931,10 @@
           glantan: 523.25,
           regnvav: 880,
           djupstrom: 164.81,
-          nattljus: 329.63
+          nattljus: 329.63,
+          ordfalt: 440,
+          sambandsvav: 293.66,
+          strukturklang: 220
         };
         const base = bases[active.theme] || 440;
         oneShot(active, {
@@ -2752,7 +2953,10 @@
           glantan: 392,
           regnvav: 659.25,
           djupstrom: 110,
-          nattljus: 220
+          nattljus: 220,
+          ordfalt: 329.63,
+          sambandsvav: 246.94,
+          strukturklang: 164.81
         }[active.theme] || 220;
         const heading = kind === 'heading';
         oneShot(active, {
@@ -2782,6 +2986,244 @@
         setReactive(value) { reactive = value !== false; },
         handleKey,
         commit,
+        updateText,
+        isAdaptive() { return Boolean(session?.adaptive); },
+        isPlaying() { return Boolean(session); },
+        theme() { return session?.theme || null; }
+      };
+    })();
+
+    const Typewriter = (() => {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const profiles = {
+        mekanisk: { frequency: 1680, q: 2.8, gain: .12, duration: .044, tone: 92, bell: 1760 },
+        reseskrivare: { frequency: 2380, q: 3.4, gain: .092, duration: .03, tone: 118, bell: 2080 },
+        elektrisk: { frequency: 980, q: 1.7, gain: .075, duration: .052, tone: 132, bell: 1480 },
+        dampad: { frequency: 590, q: 1.25, gain: .088, duration: .058, tone: 74, bell: 0 }
+      };
+      let session = null;
+      let lastHitAt = 0;
+
+      function outputLevel(value) {
+        return clamp(Number(value) || 0, 0, 60) / 100 * .88;
+      }
+
+      function registerSource(active, source) {
+        active.sources.add(source);
+        source.addEventListener('ended', () => active.sources.delete(source), { once: true });
+        return source;
+      }
+
+      function createNoiseBuffer(context) {
+        const length = Math.max(1, Math.floor(context.sampleRate * .16));
+        const buffer = context.createBuffer(1, length, context.sampleRate);
+        const data = buffer.getChannelData(0);
+        let previous = 0;
+        for (let index = 0; index < length; index++) {
+          const white = Math.random() * 2 - 1;
+          previous = previous * .28 + white * .72;
+          data[index] = previous;
+        }
+        return buffer;
+      }
+
+      function noiseHit(active, {
+        frequency,
+        q,
+        gain,
+        duration,
+        playback = 1,
+        pan = 0,
+        delay = 0
+      }) {
+        if (session !== active || active.context.state === 'closed') return;
+        const now = active.context.currentTime + delay;
+        const source = registerSource(active, active.context.createBufferSource());
+        const filter = active.context.createBiquadFilter();
+        const level = active.context.createGain();
+        const panner = typeof active.context.createStereoPanner === 'function'
+          ? active.context.createStereoPanner()
+          : null;
+        source.buffer = active.noiseBuffer;
+        source.playbackRate.value = playback;
+        filter.type = 'bandpass';
+        filter.frequency.value = frequency;
+        filter.Q.value = q;
+        level.gain.setValueAtTime(0, now);
+        level.gain.linearRampToValueAtTime(gain, now + .003);
+        level.gain.exponentialRampToValueAtTime(.0001, now + duration);
+        if (panner) {
+          panner.pan.value = clamp(pan, -1, 1);
+          source.connect(filter).connect(level).connect(panner).connect(active.master);
+        } else {
+          source.connect(filter).connect(level).connect(active.master);
+        }
+        source.start(now);
+        source.stop(now + duration + .015);
+      }
+
+      function toneHit(active, frequency, gain, duration, delay = 0, pan = 0) {
+        if (session !== active || active.context.state === 'closed') return;
+        const now = active.context.currentTime + delay;
+        const oscillator = registerSource(active, active.context.createOscillator());
+        const level = active.context.createGain();
+        const panner = typeof active.context.createStereoPanner === 'function'
+          ? active.context.createStereoPanner()
+          : null;
+        oscillator.type = active.theme === 'elektrisk' ? 'triangle' : 'sine';
+        oscillator.frequency.setValueAtTime(frequency, now);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(32, frequency * .82), now + duration);
+        level.gain.setValueAtTime(0, now);
+        level.gain.linearRampToValueAtTime(gain, now + .004);
+        level.gain.exponentialRampToValueAtTime(.0001, now + duration);
+        if (panner) {
+          panner.pan.value = clamp(pan, -1, 1);
+          oscillator.connect(level).connect(panner).connect(active.master);
+        } else {
+          oscillator.connect(level).connect(active.master);
+        }
+        oscillator.start(now);
+        oscillator.stop(now + duration + .015);
+      }
+
+      function dispose(active, immediate = false) {
+        const now = active.context.currentTime;
+        active.master.gain.cancelScheduledValues(now);
+        active.master.gain.setTargetAtTime(0, now, immediate ? .004 : .025);
+        setTimeout(() => {
+          active.sources.forEach(source => {
+            try { source.stop(); } catch (error) { /* redan stoppad */ }
+            try { source.disconnect(); } catch (error) { /* redan frikopplad */ }
+          });
+          active.sources.clear();
+          active.context.close().catch(() => {});
+        }, immediate ? 12 : 110);
+      }
+
+      function start(theme, volume) {
+        if (!AudioContextClass || !profiles[theme]) return Promise.resolve(false);
+        if (session) dispose(session);
+        let context;
+        try {
+          context = new AudioContextClass({ latencyHint: 'interactive' });
+        } catch (error) {
+          context = new AudioContextClass();
+        }
+        const master = context.createGain();
+        const compressor = context.createDynamicsCompressor();
+        master.gain.value = outputLevel(volume);
+        compressor.threshold.value = -16;
+        compressor.knee.value = 18;
+        compressor.ratio.value = 4;
+        compressor.attack.value = .002;
+        compressor.release.value = .12;
+        master.connect(compressor).connect(context.destination);
+        const active = {
+          context,
+          master,
+          compressor,
+          sources: new Set(),
+          noiseBuffer: createNoiseBuffer(context),
+          theme
+        };
+        session = active;
+        return context.resume().then(() => true).catch(() => {
+          if (session === active) session = null;
+          dispose(active, true);
+          return false;
+        });
+      }
+
+      function stop(immediate = false) {
+        if (!session) return;
+        const active = session;
+        session = null;
+        dispose(active, immediate);
+      }
+
+      function setVolume(value) {
+        if (!session) return;
+        const now = session.context.currentTime;
+        session.master.gain.cancelScheduledValues(now);
+        session.master.gain.setTargetAtTime(outputLevel(value), now, .025);
+      }
+
+      function handleKey(key) {
+        const active = session;
+        if (!active || typeof key !== 'string') return;
+        const now = Date.now();
+        if (key !== 'Enter' && now - lastHitAt < 22) return;
+        const profile = profiles[active.theme];
+        const printable = key.length === 1;
+        if (!printable && !['Backspace', 'Enter', 'Tab'].includes(key)) return;
+        lastHitAt = now;
+
+        if (key === 'Enter') {
+          noiseHit(active, {
+            frequency: profile.frequency * .48,
+            q: Math.max(1, profile.q * .62),
+            gain: profile.gain * 1.3,
+            duration: profile.duration * 1.9,
+            playback: .72,
+            pan: -.5
+          });
+          noiseHit(active, {
+            frequency: profile.frequency * .82,
+            q: profile.q,
+            gain: profile.gain * .55,
+            duration: profile.duration * 1.2,
+            playback: 1.18,
+            pan: .48,
+            delay: .055
+          });
+          if (profile.bell) toneHit(active, profile.bell, .045, .34, .075, .3);
+          return;
+        }
+
+        let frequency = profile.frequency;
+        let gain = profile.gain;
+        let duration = profile.duration;
+        let playback = .92 + Math.random() * .16;
+
+        if (key === ' ') {
+          frequency *= .48;
+          gain *= .82;
+          duration *= 1.28;
+          playback *= .78;
+        } else if (key === 'Backspace') {
+          frequency *= .72;
+          gain *= 1.08;
+          duration *= 1.18;
+          playback *= .88;
+        } else if (key === 'Tab') {
+          frequency *= .62;
+          gain *= .9;
+          duration *= 1.5;
+        } else if (/[A-ZÅÄÖ]/.test(key)) {
+          gain *= 1.08;
+          frequency *= 1.05;
+        } else if (/[.,;:!?]/.test(key)) {
+          frequency *= 1.18;
+          duration *= .86;
+        }
+
+        noiseHit(active, {
+          frequency,
+          q: profile.q,
+          gain,
+          duration,
+          playback,
+          pan: Math.random() * .28 - .14
+        });
+        toneHit(active, profile.tone, active.theme === 'dampad' ? .016 : .011, duration * 1.18);
+      }
+
+      return {
+        supported: Boolean(AudioContextClass),
+        start,
+        stop,
+        setVolume,
+        handleKey,
         isPlaying() { return Boolean(session); },
         theme() { return session?.theme || null; }
       };
@@ -2857,6 +3299,12 @@
       soundVolumeOutput: $('#sound-volume-output'),
       soundToggle: $('#sound-toggle'),
       soundSupportNote: $('#sound-support-note'),
+      typewriterTheme: $('#typewriter-theme'),
+      typewriterDescription: $('#typewriter-description'),
+      typewriterState: $('#typewriter-state'),
+      typewriterVolume: $('#typewriter-volume'),
+      typewriterVolumeOutput: $('#typewriter-volume-output'),
+      typewriterToggle: $('#typewriter-toggle'),
       deviceSettings: $('#device-settings'),
       installCard: $('#install-card'),
       installTitle: $('#install-title'),
@@ -2897,6 +3345,7 @@
     let toastTimer = null;
     let titleSaveTimer = null;
     let draftSaveTimer = null;
+    let soundProfileTimer = null;
     let timerInterval = null;
     let announceTimer = null;
     let announceQueue = [];
@@ -2978,7 +3427,7 @@
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 6,
+        version: 7,
         activeId: document.id,
         documents: [document],
         settings: {
@@ -2990,7 +3439,9 @@
           showCountdown: true,
           soundTheme: 'none',
           soundVolume: 24,
-          soundReactive: true
+          soundReactive: true,
+          typewriterTheme: 'none',
+          typewriterVolume: 18
         },
         timer: createTimer(25)
       };
@@ -3030,7 +3481,9 @@
             showCountdown: true,
             soundTheme: 'none',
             soundVolume: 24,
-            soundReactive: true
+            soundReactive: true,
+            typewriterTheme: 'none',
+            typewriterVolume: 18
           }, stored.settings || {});
           stored.settings.focusMinutes = clamp(Math.round(Number(stored.settings.focusMinutes) || 25), 1, 180);
           stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
@@ -3046,7 +3499,17 @@
             60
           );
           stored.settings.soundReactive = stored.settings.soundReactive !== false;
-          stored.version = 6;
+          stored.settings.typewriterTheme = TYPEWRITER_THEMES[stored.settings.typewriterTheme]
+            ? stored.settings.typewriterTheme
+            : 'none';
+          stored.settings.typewriterVolume = clamp(
+            Number.isFinite(Number(stored.settings.typewriterVolume))
+              ? Math.round(Number(stored.settings.typewriterVolume))
+              : 18,
+            0,
+            60
+          );
+          stored.version = 7;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -3067,7 +3530,7 @@
             hiddenWords: document.doldaOrd || []
           }));
           return {
-            version: 6,
+            version: 7,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
@@ -3079,7 +3542,9 @@
               showCountdown: true,
               soundTheme: 'none',
               soundVolume: 24,
-              soundReactive: true
+              soundReactive: true,
+              typewriterTheme: 'none',
+              typewriterVolume: 18
             },
             timer: createTimer(25)
           };
@@ -3677,6 +4142,52 @@
       }
     }
 
+    function soundTextProfile() {
+      const document = activeDocument();
+      const draft = parseDraft(elements.draft.value || '').text;
+      const text = [...document.blocks.map(block => block.text), draft].filter(Boolean).join(' ');
+      const words = text.match(/[\p{L}\p{N}]+/gu) || [];
+      const letters = text.toLowerCase().match(/[a-zåäö]/g) || [];
+      const vowels = letters.filter(letter => 'aeiouyåäö'.includes(letter)).length;
+      const sentenceWordCounts = text
+        .split(/[.!?]+/)
+        .map(sentence => wordCount(sentence))
+        .filter(Boolean);
+      const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length;
+      const headings = document.blocks.filter(block => block.kind === 'heading');
+      const cohesionScores = analysis?.fullCohesion?.map(edge => edge.score) || [];
+      const connectedParagraphs = analysis?.nodes
+        ?.filter(node => node.kind === 'paragraph' && node.qualifiedDegree > 0)
+        .length || 0;
+
+      return {
+        words: words.length,
+        averageWordLength: words.length
+          ? words.reduce((sum, word) => sum + characterCount(word), 0) / words.length
+          : 5,
+        vowelRatio: letters.length ? vowels / letters.length : .38,
+        averageSentenceWords: sentenceWordCounts.length
+          ? sentenceWordCounts.reduce((sum, count) => sum + count, 0) / sentenceWordCounts.length
+          : 12,
+        paragraphs,
+        headings: headings.length,
+        headingDepth: headings[headings.length - 1]?.level || 0,
+        cohesion: cohesionScores.length
+          ? clamp(cohesionScores.reduce((sum, score) => sum + score, 0) / cohesionScores.length * 1.6, 0, 1)
+          : 0,
+        connectedness: paragraphs ? connectedParagraphs / paragraphs : 0
+      };
+    }
+
+    function scheduleSoundTextUpdate() {
+      if (!Soundscape.isAdaptive()) return;
+      clearTimeout(soundProfileTimer);
+      soundProfileTimer = setTimeout(() => {
+        soundProfileTimer = null;
+        Soundscape.updateText(soundTextProfile());
+      }, 240);
+    }
+
     function normalizeSoundSettings() {
       app.settings.soundTheme = SOUND_THEMES[app.settings.soundTheme]
         ? app.settings.soundTheme
@@ -3689,14 +4200,28 @@
         60
       );
       app.settings.soundReactive = app.settings.soundReactive !== false;
+      app.settings.typewriterTheme = TYPEWRITER_THEMES[app.settings.typewriterTheme]
+        ? app.settings.typewriterTheme
+        : 'none';
+      app.settings.typewriterVolume = clamp(
+        Number.isFinite(Number(app.settings.typewriterVolume))
+          ? Math.round(Number(app.settings.typewriterVolume))
+          : 18,
+        0,
+        60
+      );
       Soundscape.setReactive(app.settings.soundReactive);
     }
 
     function renderSound() {
       normalizeSoundSettings();
       const theme = SOUND_THEMES[app.settings.soundTheme];
+      const typewriterTheme = TYPEWRITER_THEMES[app.settings.typewriterTheme];
       const playing = Soundscape.isPlaying();
+      const typewriterPlaying = Typewriter.isPlaying();
+      const anyPlaying = playing || typewriterPlaying;
       const activeName = SOUND_THEMES[Soundscape.theme()]?.name || theme.name;
+      const activeTypewriterName = TYPEWRITER_THEMES[Typewriter.theme()]?.name || typewriterTheme.name;
 
       elements.soundTheme.value = app.settings.soundTheme;
       elements.soundThemeDescription.textContent = theme.description;
@@ -3706,18 +4231,26 @@
       elements.soundState.textContent = playing ? 'Spelar ' + activeName : 'Tyst';
       elements.soundToggle.textContent = playing ? 'Stäng av' : 'Starta ljud';
       elements.soundToggle.disabled = !Soundscape.supported || app.settings.soundTheme === 'none';
-      elements.soundButton.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      elements.typewriterTheme.value = app.settings.typewriterTheme;
+      elements.typewriterDescription.textContent = typewriterTheme.description;
+      elements.typewriterVolume.value = app.settings.typewriterVolume;
+      elements.typewriterVolumeOutput.textContent = app.settings.typewriterVolume + ' %';
+      elements.typewriterState.textContent = typewriterPlaying ? 'Aktiv ' + activeTypewriterName : 'Tyst';
+      elements.typewriterToggle.textContent = typewriterPlaying ? 'Stäng av' : 'Aktivera';
+      elements.typewriterToggle.disabled = !Typewriter.supported || app.settings.typewriterTheme === 'none';
+      elements.soundButton.setAttribute('aria-pressed', anyPlaying ? 'true' : 'false');
       elements.soundButton.setAttribute(
         'aria-label',
-        playing
-          ? 'Stäng av ljudtemat ' + activeName
-          : (app.settings.soundTheme === 'none'
-            ? 'Välj ljudtema'
-            : 'Starta ljudtemat ' + theme.name)
+        anyPlaying
+          ? 'Stäng av allt ljud'
+          : (app.settings.soundTheme === 'none' && app.settings.typewriterTheme === 'none'
+            ? 'Välj ljud'
+            : 'Starta valda ljud')
       );
-      elements.soundButton.title = playing ? 'Stäng av ' + activeName : 'Ljudrum';
-      elements.soundSupportNote.dataset.warning = Soundscape.supported ? 'false' : 'true';
-      elements.soundSupportNote.textContent = Soundscape.supported
+      elements.soundButton.title = anyPlaying ? 'Stäng av allt ljud' : 'Ljudrum';
+      const soundSupported = Soundscape.supported && Typewriter.supported;
+      elements.soundSupportNote.dataset.warning = soundSupported ? 'false' : 'true';
+      elements.soundSupportNote.textContent = soundSupported
         ? 'Ljuden skapas lokalt i webbläsaren och fungerar offline. Börja gärna lågt med hörlurar.'
         : 'Den här webbläsaren saknar stöd för VävR:s lokala ljudmotor.';
     }
@@ -3744,7 +4277,11 @@
         toast('Ljud stöds inte i den här webbläsaren');
         return false;
       }
-      const started = await Soundscape.start(app.settings.soundTheme, app.settings.soundVolume);
+      const started = await Soundscape.start(
+        app.settings.soundTheme,
+        app.settings.soundVolume,
+        soundTextProfile()
+      );
       renderSound();
       if (started) {
         const name = SOUND_THEMES[app.settings.soundTheme].name;
@@ -3762,6 +4299,95 @@
         return;
       }
       startSound();
+    }
+
+    function stopTypewriter(message = true) {
+      if (!Typewriter.isPlaying()) return;
+      Typewriter.stop();
+      renderSound();
+      if (message) {
+        toast('Skrivmaskinen tystnade');
+        announce('Skrivmaskinsljudet stängdes av');
+      }
+    }
+
+    async function startTypewriter() {
+      normalizeSoundSettings();
+      if (app.settings.typewriterTheme === 'none') {
+        openUtility(elements.typewriterTheme);
+        elements.soundSettings.scrollIntoView({ block: 'center' });
+        return false;
+      }
+      if (!Typewriter.supported) {
+        renderSound();
+        toast('Tangentljud stöds inte i den här webbläsaren');
+        return false;
+      }
+      const started = await Typewriter.start(
+        app.settings.typewriterTheme,
+        app.settings.typewriterVolume
+      );
+      renderSound();
+      if (started) {
+        const name = TYPEWRITER_THEMES[app.settings.typewriterTheme].name;
+        toast(name + ' skrivmaskinsljud aktivt');
+        announce('Skrivmaskinsljudet ' + name + ' aktiverades');
+      } else {
+        toast('Webbläsaren kunde inte starta tangentljudet');
+      }
+      return started;
+    }
+
+    function toggleTypewriter() {
+      if (Typewriter.isPlaying()) {
+        stopTypewriter();
+        return;
+      }
+      startTypewriter();
+    }
+
+    function stopAllSound() {
+      const hadSound = Soundscape.isPlaying() || Typewriter.isPlaying();
+      Soundscape.stop();
+      Typewriter.stop();
+      renderSound();
+      if (hadSound) {
+        toast('Allt ljud stängdes av');
+        announce('Allt ljud stängdes av');
+      }
+    }
+
+    async function toggleAllSound() {
+      if (Soundscape.isPlaying() || Typewriter.isPlaying()) {
+        stopAllSound();
+        return;
+      }
+      normalizeSoundSettings();
+      const starts = [];
+      if (app.settings.soundTheme !== 'none') {
+        starts.push(Soundscape.start(
+          app.settings.soundTheme,
+          app.settings.soundVolume,
+          soundTextProfile()
+        ));
+      }
+      if (app.settings.typewriterTheme !== 'none') {
+        starts.push(Typewriter.start(
+          app.settings.typewriterTheme,
+          app.settings.typewriterVolume
+        ));
+      }
+      if (!starts.length) {
+        openUtility(elements.soundTheme);
+        elements.soundSettings.scrollIntoView({ block: 'center' });
+        return;
+      }
+      const results = await Promise.all(starts);
+      renderSound();
+      if (results.some(Boolean)) {
+        toast('Valda ljud startade');
+        announce('Valda ljud startade');
+      }
     }
 
     function setFocusMinutes(value) {
@@ -3788,6 +4414,7 @@
         elements.blockKind.textContent = recalledBlock ? 'Återtaget stycke' : 'Nytt stycke';
         delete elements.draft.dataset.heading;
       }
+      scheduleSoundTextUpdate();
       autoSizeDraft();
       clearTimeout(draftSaveTimer);
       draftSaveTimer = setTimeout(() => {
@@ -4403,21 +5030,24 @@
           const mx = (line.x1 + line.x2) / 2 - dy / length * bend;
           const my = (line.y1 + line.y2) / 2 + dx / length * bend;
           context.quadraticCurveTo(mx, my, line.x2, line.y2);
-          context.strokeStyle = `rgba(89,194,255,${unrelated ? .035 : (focused ? .9 : .12 + .46 * quality)})`;
-          context.lineWidth = focused ? 2.4 : .55 + 2.4 * Math.pow(quality, 1.55);
+          context.setLineDash([9, 6]);
+          context.lineDashOffset = -2;
+          context.strokeStyle = `rgba(89,194,255,${unrelated ? .055 : (focused ? .96 : .26 + .54 * quality)})`;
+          context.lineWidth = focused ? 2.8 : .9 + 2.5 * Math.pow(quality, 1.45);
           if (focused) {
             context.shadowColor = 'rgba(179,229,255,.8)';
-            context.shadowBlur = 10;
+            context.shadowBlur = 12;
           }
         } else if (edge.type === 'hierarchy') {
           context.lineTo(line.x2, line.y2);
-          context.strokeStyle = `rgba(197,160,89,${unrelated ? .02 : (focused ? .48 : .12)})`;
-          context.lineWidth = focused ? 1.3 : .65;
+          context.setLineDash([1.5, 5]);
+          context.lineCap = 'round';
+          context.strokeStyle = `rgba(197,160,89,${unrelated ? .04 : (focused ? .78 : .34)})`;
+          context.lineWidth = focused ? 1.8 : 1.15;
         } else {
           context.lineTo(line.x2, line.y2);
-          context.setLineDash([3, 6]);
-          context.strokeStyle = `rgba(120,151,172,${unrelated ? .018 : (focused ? .44 : .15)})`;
-          context.lineWidth = focused ? 1.05 : .65;
+          context.strokeStyle = `rgba(120,151,172,${unrelated ? .035 : (focused ? .72 : .28)})`;
+          context.lineWidth = focused ? 1.55 : .9;
         }
         context.stroke();
         context.restore();
@@ -5183,6 +5813,7 @@
 
     function recalculate(bornId = null) {
       analysis = analyze(activeDocument().blocks);
+      Soundscape.updateText(soundTextProfile());
       syncGraph(bornId);
       renderStats();
       renderOutline();
@@ -5366,13 +5997,22 @@
         60
       );
       settings.soundReactive = settings.soundReactive !== false;
+      settings.typewriterTheme = TYPEWRITER_THEMES[settings.typewriterTheme]
+        ? settings.typewriterTheme
+        : 'none';
+      settings.typewriterVolume = clamp(
+        Number.isFinite(Number(settings.typewriterVolume)) ? Math.round(Number(settings.typewriterVolume)) : 18,
+        0,
+        60
+      );
 
       stopTimerTicker();
       Soundscape.stop(true);
+      Typewriter.stop(true);
       app = {
         ...defaults,
         ...source,
-        version: 6,
+        version: 7,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
@@ -5560,7 +6200,10 @@
     function setupEvents() {
       elements.draft.addEventListener('input', updateDraftMeta);
       elements.draft.addEventListener('keydown', event => {
-        if (!event.ctrlKey && !event.metaKey && !event.altKey) Soundscape.handleKey(event.key);
+        if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+          Soundscape.handleKey(event.key);
+          Typewriter.handleKey(event.key);
+        }
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
           event.preventDefault();
           commitDraft();
@@ -5601,7 +6244,7 @@
       elements.utilityButton.addEventListener('click', () => elements.utility.dataset.open === 'true' ? closeUtility() : openUtility());
       $('#utility-close').addEventListener('click', closeUtility);
       elements.scrim.addEventListener('click', closeUtility);
-      elements.soundButton.addEventListener('click', toggleSound);
+      elements.soundButton.addEventListener('click', toggleAllSound);
       elements.goalCompact.addEventListener('click', () => openUtility(elements.goalEnabled));
       elements.timerCompact.addEventListener('click', () => {
         openUtility(app.timer.state === 'finished' ? elements.timerRestart : elements.timerPrimary);
@@ -5664,7 +6307,11 @@
         if (app.settings.soundTheme === 'none') {
           stopSound(false);
         } else if (wasPlaying) {
-          await Soundscape.start(app.settings.soundTheme, app.settings.soundVolume);
+          await Soundscape.start(
+            app.settings.soundTheme,
+            app.settings.soundVolume,
+            soundTextProfile()
+          );
         }
         renderSound();
       });
@@ -5684,6 +6331,30 @@
         renderSound();
       });
       elements.soundToggle.addEventListener('click', toggleSound);
+
+      elements.typewriterTheme.addEventListener('change', async event => {
+        const wasPlaying = Typewriter.isPlaying();
+        app.settings.typewriterTheme = TYPEWRITER_THEMES[event.target.value]
+          ? event.target.value
+          : 'none';
+        saveState('Skrivmaskinsljud sparat');
+        if (app.settings.typewriterTheme === 'none') {
+          stopTypewriter(false);
+        } else if (wasPlaying) {
+          await Typewriter.start(app.settings.typewriterTheme, app.settings.typewriterVolume);
+        }
+        renderSound();
+      });
+      elements.typewriterVolume.addEventListener('input', event => {
+        app.settings.typewriterVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 60);
+        elements.typewriterVolumeOutput.textContent = app.settings.typewriterVolume + ' %';
+        Typewriter.setVolume(app.settings.typewriterVolume);
+      });
+      elements.typewriterVolume.addEventListener('change', () => {
+        saveState('Skrivmaskinsvolym sparad');
+        renderSound();
+      });
+      elements.typewriterToggle.addEventListener('click', toggleTypewriter);
 
       elements.widthSlider.addEventListener('input', event => {
         applyWidth(event.target.value);
@@ -5721,7 +6392,10 @@
       window.addEventListener('pointercancel', endNodeDrag);
       window.addEventListener('resize', scheduleResize);
       window.visualViewport?.addEventListener('resize', scheduleResize);
-      window.addEventListener('pagehide', () => Soundscape.stop(true));
+      window.addEventListener('pagehide', () => {
+        Soundscape.stop(true);
+        Typewriter.stop(true);
+      });
       window.addEventListener('beforeinstallprompt', event => {
         event.preventDefault();
         deferredInstallPrompt = event;

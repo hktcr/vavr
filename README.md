@@ -28,15 +28,25 @@ eller att avsluta. Ingenting startar automatiskt.
 
 ## Ljudrum
 
-Fyra frivilliga ljudteman kan skapas direkt i webbläsaren:
+Sju frivilliga ljudlandskap kan skapas direkt i webbläsaren. Fyra är stilla:
 
 - **Gläntan** ger mjuk luft, varma grundtoner och sällsynta ljusglimtar.
 - **Regnväv** ger ett jämnt regnfält som kan maskera ljud i omgivningen.
 - **Djupström** är ett mörkt, neutralt brus utan melodi eller tydlig rytm.
 - **Nattljus** ger långsamma övertoner och ett mer stämningsfullt rum.
 
-Ljudet startar endast efter ett uttryckligt val. Tema, volym och den valfria
-textresponsen sparas, men uppspelning återupptas aldrig automatiskt efter en
+Tre textlevande landskap förändras långsamt med texten:
+
+- **Ordfält** följer ordlängd, vokalbalans och meningsrytm.
+- **Sambandsväv** följer styckenas uppmätta lexikala återkoppling.
+- **Strukturklang** följer rubriknivåer, styckeantal och dokumentets tillväxt.
+
+Ett separat skrivmaskinslager kan kombineras med vilket ljudlandskap som
+helst. Det har fyra karaktärer: Mekanisk, Reseskrivare, Elektrisk och Dämpad.
+Bokstäver, mellanslag, backsteg och Enter får skilda syntetiserade svar.
+
+Ljud startar endast efter ett uttryckligt val. Tema, volym och valfri
+skrivrespons sparas, men uppspelning återupptas aldrig automatiskt efter
 omladdning. Alla ljud syntetiseras med Web Audio API utan ljudfiler eller
 nätverksanrop och fungerar därför även offline.
 
@@ -49,6 +59,10 @@ stabiliseras genom att IDF-vikterna krymps mot neutral vikt.
 Analysen och ritningen är åtskilda. Varningsstatus bygger på den fullständiga
 kohesionsmatrisen, medan Väven bara ritar ett begränsat antal trådar per nod.
 Det hindrar ett visuellt kanttak från att skapa falska varningar.
+
+I Väven visas dokumentordning med en sammanhängande gråblå linje, lexikal
+återkoppling med en tydligt streckad cyan linje och rubrikhierarki med en
+prickad mässingslinje. Teckenförklaringen visar alla tre.
 
 VävR mäter lexikal återkoppling, alltså delade centrala ord. Det är inte ett
 mått på full semantisk betydelse, argumentativ kvalitet eller om en text är
