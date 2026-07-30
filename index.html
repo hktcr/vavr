@@ -390,7 +390,8 @@
         0 0 25px rgba(197, 160, 89, .55);
     }
 
-    .graph-node[data-dimmed="true"] {
+    .graph-node[data-dimmed="true"],
+    .graph-node[data-lens-dimmed="true"] {
       opacity: .12;
       filter: saturate(.25);
     }
@@ -455,7 +456,7 @@
 
     #composer {
       position: relative;
-      width: min(var(--composer-width), calc(100vw - 32px));
+      width: min(var(--composer-width), calc(100% - 48px));
       border: 1px solid rgba(179, 229, 255, .27);
       border-radius: var(--radius);
       background:
@@ -698,6 +699,84 @@
       display: none;
     }
 
+    #graph-lens {
+      position: fixed;
+      z-index: 9;
+      top: calc(var(--topbar-height) + max(24px, env(safe-area-inset-top)));
+      left: 50%;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: calc(100vw - 24px);
+      padding: 5px;
+      border: 1px solid rgba(179, 229, 255, .12);
+      border-radius: 999px;
+      background: rgba(9, 11, 17, .78);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .24);
+      pointer-events: auto;
+      transform: translateX(-50%);
+      backdrop-filter: blur(16px) saturate(125%);
+      -webkit-backdrop-filter: blur(16px) saturate(125%);
+    }
+
+    body:not([data-view="graph"]) #graph-lens {
+      display: none;
+    }
+
+    #graph-lens-status {
+      position: fixed;
+      z-index: 8;
+      top: calc(var(--topbar-height) + max(80px, env(safe-area-inset-top)));
+      left: 50%;
+      max-width: min(34rem, calc(100vw - 28px));
+      margin: 0;
+      padding: 7px 10px;
+      border: 1px solid rgba(179, 229, 255, .09);
+      border-radius: 9px;
+      background: rgba(9, 11, 17, .7);
+      color: var(--paper-faint);
+      font: 9px/1.35 var(--mono);
+      pointer-events: none;
+      text-align: center;
+      transform: translateX(-50%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    #graph-lens-status[hidden],
+    body:not([data-view="graph"]) #graph-lens-status {
+      display: none;
+    }
+
+    .graph-lens-label {
+      padding: 0 7px 0 9px;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .graph-lens-button {
+      min-width: 58px;
+      min-height: 44px;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--paper-dim);
+      cursor: pointer;
+      font: 600 10px/1 var(--mono);
+      letter-spacing: .025em;
+      transition: color .16s, background .16s, box-shadow .16s;
+    }
+
+    .graph-lens-button:hover,
+    .graph-lens-button[aria-pressed="true"] {
+      background: rgba(89, 194, 255, .12);
+      color: var(--cyan-bright);
+      box-shadow: inset 0 0 0 1px rgba(89, 194, 255, .16);
+    }
+
     .legend-item {
       display: flex;
       align-items: center;
@@ -852,6 +931,107 @@
     .breadcrumb-separator {
       color: rgba(154, 170, 181, .3);
       font: 12px/1 var(--mono);
+    }
+
+    .structure-pulse-panel {
+      margin: -5px 0 26px;
+      padding: 13px 14px 10px;
+      border: 1px solid rgba(179, 229, 255, .09);
+      border-radius: 15px;
+      background:
+        linear-gradient(110deg, rgba(89, 194, 255, .045), transparent 38%),
+        rgba(15, 19, 28, .46);
+    }
+
+    .structure-pulse-panel[hidden] {
+      display: none;
+    }
+
+    .structure-pulse-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 2px 9px;
+    }
+
+    .structure-pulse-head h2 {
+      margin: 0;
+      color: var(--paper-dim);
+      font: 600 10px/1 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .structure-pulse-head span {
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+    }
+
+    .structure-pulse {
+      display: flex;
+      overflow-x: auto;
+      align-items: stretch;
+      gap: 7px;
+      padding: 2px 2px 7px;
+      scrollbar-width: thin;
+    }
+
+    .pulse-segment {
+      position: relative;
+      min-width: 132px;
+      min-height: 68px;
+      flex: var(--pulse-grow, 1) 0 132px;
+      overflow: hidden;
+      padding: 11px 11px 13px;
+      border: 1px solid rgba(179, 229, 255, .11);
+      border-radius: 11px;
+      background: rgba(9, 11, 17, .58);
+      color: var(--paper-dim);
+      cursor: pointer;
+      text-align: left;
+      transition: color .16s, border-color .16s, background .16s, transform .16s;
+    }
+
+    .pulse-segment:hover,
+    .pulse-segment:focus-visible {
+      border-color: rgba(89, 194, 255, .38);
+      background: rgba(89, 194, 255, .07);
+      color: var(--paper);
+      transform: translateY(-1px);
+    }
+
+    .pulse-segment[data-has-issues="true"] {
+      border-style: dashed;
+      border-color: rgba(232, 93, 74, .28);
+    }
+
+    .pulse-title,
+    .pulse-meta {
+      display: block;
+    }
+
+    .pulse-title {
+      overflow: hidden;
+      margin-bottom: 8px;
+      font: 600 11px/1.2 var(--sans);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pulse-meta {
+      color: var(--paper-faint);
+      font: 9px/1.25 var(--mono);
+    }
+
+    .pulse-signal {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(90deg, var(--orange), #f2a46f);
+      box-shadow: 0 0 10px rgba(232, 93, 74, .34);
     }
 
     #structure-board {
@@ -1861,6 +2041,20 @@
       }
     }
 
+    @media (max-width: 900px), (hover: none), (pointer: coarse) {
+      #composer {
+        width: min(var(--composer-width), 100%);
+      }
+
+      .composer-grip {
+        display: none;
+      }
+
+      #width-slider {
+        min-height: 44px;
+      }
+    }
+
     @media (max-width: 560px) {
       :root { --topbar-height: 56px; }
 
@@ -1878,6 +2072,28 @@
       #composer {
         width: 100%;
         border-radius: 14px;
+      }
+
+      #graph-lens {
+        top: calc(var(--topbar-height) + max(18px, env(safe-area-inset-top)));
+      }
+
+      #graph-lens-status {
+        top: calc(var(--topbar-height) + max(75px, env(safe-area-inset-top)));
+      }
+
+      .graph-lens-label {
+        display: none;
+      }
+
+      .graph-lens-button {
+        min-width: 52px;
+        min-height: 44px;
+        padding: 0 8px;
+      }
+
+      .structure-pulse-head span {
+        display: none;
       }
 
       #draft-input {
@@ -2027,8 +2243,8 @@
   <main>
     <section id="write-view" class="view" aria-label="Skrivläge">
       <div id="composer">
-        <button class="composer-grip left" type="button" aria-label="Ändra skrivfältets bredd"></button>
-        <button class="composer-grip right" type="button" aria-label="Ändra skrivfältets bredd"></button>
+        <span class="composer-grip left" aria-hidden="true"></span>
+        <span class="composer-grip right" aria-hidden="true"></span>
         <div class="composer-top">
           <span id="block-kind">Nytt stycke</span>
           <span id="draft-count">0 ord</span>
@@ -2049,7 +2265,7 @@
           <label class="width-control" title="Skrivbredd">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>
             <span class="sr-only">Skrivfältets bredd</span>
-            <input id="width-slider" type="range" min="0" max="4" step="1" value="2">
+            <input id="width-slider" type="range" min="0" max="7" step="1" value="2">
           </label>
         </div>
       </div>
@@ -2057,6 +2273,14 @@
 
     <section id="graph-view" class="view" aria-label="Nätverksvy">
       <p id="empty-graph">Väven är tom. Gå till Skriv och väv in ditt första stycke.</p>
+      <div id="graph-lens" role="group" aria-label="Vävlins" aria-describedby="graph-lens-status">
+        <span class="graph-lens-label">Vävlins</span>
+        <button class="graph-lens-button" type="button" data-graph-lens="all" aria-pressed="true">Alla</button>
+        <button class="graph-lens-button" type="button" data-graph-lens="connections" aria-pressed="false">Samband</button>
+        <button class="graph-lens-button" type="button" data-graph-lens="structure" aria-pressed="false">Struktur</button>
+        <button class="graph-lens-button" type="button" data-graph-lens="gaps" aria-pressed="false">Glapp</button>
+      </div>
+      <p id="graph-lens-status" role="status" aria-live="polite" hidden></p>
       <div id="graph-legend" role="note" aria-label="Teckenförklaring">
         <span class="legend-item"><i class="legend-mark"></i><span>Stycke</span></span>
         <span class="legend-item"><i class="legend-mark heading"></i><span>Rubrik</span></span>
@@ -2090,6 +2314,13 @@
           </div>
         </div>
         <nav id="structure-breadcrumb" class="structure-breadcrumb" aria-label="Plats i dokumentstrukturen"></nav>
+        <section id="structure-pulse-panel" class="structure-pulse-panel" aria-labelledby="structure-pulse-title" hidden>
+          <header class="structure-pulse-head">
+            <h2 id="structure-pulse-title">Dokumentpuls</h2>
+            <span>Omfång och lexikala signaler</span>
+          </header>
+          <nav id="structure-pulse" class="structure-pulse" aria-label="Sektionernas omfång och glapp"></nav>
+        </section>
         <div id="structure-board">
           <section id="paragraph-zone" class="board-zone" aria-labelledby="paragraph-zone-title">
             <header class="board-zone-head">
@@ -2257,13 +2488,17 @@
                 <option value="sambandsvav">Sambandsväv</option>
                 <option value="strukturklang">Strukturklang</option>
               </optgroup>
+              <optgroup label="Dynamiska kompositioner">
+                <option value="valsang">Valsång</option>
+                <option value="hardfork">Hard Fork</option>
+              </optgroup>
             </select>
           </div>
-          <p id="sound-theme-description" class="sound-theme-copy">Välj ett ljudrum. Ingenting startar automatiskt.</p>
+          <p id="sound-theme-description" class="sound-theme-copy">Välj ett ljudrum. Ditt val startar det direkt.</p>
           <div class="sound-controls">
             <label class="sound-volume" for="sound-volume">
               <span class="range-label"><span>Volym</span><output id="sound-volume-output" for="sound-volume">24 %</output></span>
-              <input id="sound-volume" type="range" min="0" max="60" step="1" value="24">
+              <input id="sound-volume" type="range" min="0" max="100" step="1" value="24">
             </label>
             <button id="sound-toggle" class="plain-button primary" type="button">Starta ljud</button>
           </div>
@@ -2286,11 +2521,11 @@
               <option value="dampad">Dämpad</option>
             </select>
           </div>
-          <p id="typewriter-description" class="sound-theme-copy">Välj ett skrivmaskinsljud. Tangenterna är tysta tills du själv aktiverar det.</p>
+          <p id="typewriter-description" class="sound-theme-copy">Välj ett skrivmaskinsljud. Ditt val aktiverar det direkt och ger ett provslag.</p>
           <div class="sound-controls">
             <label class="sound-volume" for="typewriter-volume">
               <span class="range-label"><span>Volym</span><output id="typewriter-volume-output" for="typewriter-volume">18 %</output></span>
-              <input id="typewriter-volume" type="range" min="0" max="60" step="1" value="18">
+              <input id="typewriter-volume" type="range" min="0" max="100" step="1" value="18">
             </label>
             <button id="typewriter-toggle" class="plain-button primary" type="button">Aktivera</button>
           </div>
@@ -2387,7 +2622,7 @@
        Markdown används för import och export. Allt kör lokalt i webbläsaren. */
 
     const STORAGE_KEY = 'vavr-weaver-v5';
-    const WIDTHS = [540, 640, 720, 820, 940];
+    const WIDTHS = [540, 640, 720, 820, 940, 1080, 1240, 1440];
     const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const STOP_WORDS = new Set((
       'och att det som en ett på är av för med till den har de inte om men var jag sig så vi man kan när han hon hans hennes ' +
@@ -2418,6 +2653,16 @@
         : Array.from(value).length;
     };
     const formatNumber = value => Number(value || 0).toLocaleString('sv-SE');
+    const normalizeWidthIndex = value => {
+      const numeric = value == null || (typeof value === 'string' && !value.trim())
+        ? NaN
+        : Number(value);
+      return clamp(
+        Number.isFinite(numeric) ? Math.round(numeric) : 2,
+        0,
+        WIDTHS.length - 1
+      );
+    };
     const formatClock = seconds => {
       const safe = Math.max(0, Math.ceil(Number(seconds) || 0));
       const minutes = Math.floor(safe / 60);
@@ -2434,7 +2679,7 @@
     const SOUND_THEMES = {
       none: {
         name: 'Inget ljud',
-        description: 'Välj ett ljudrum. Ingenting startar automatiskt.'
+        description: 'Välj ett ljudrum. Ditt val startar det direkt.'
       },
       glantan: {
         name: 'Gläntan',
@@ -2466,13 +2711,25 @@
         name: 'Strukturklang',
         adaptive: true,
         description: 'Rubriknivåer, styckeantal och dokumentets tillväxt formar register, täthet och långsamma harmoniska skiften.'
+      },
+      valsang: {
+        name: 'Valsång',
+        adaptive: true,
+        dynamic: true,
+        description: 'En sjungande, textformad röstvärld. Bokstäver styr melodins rörelse, skrivtempo formar andningen och meningar lämnar klingande ekon.'
+      },
+      hardfork: {
+        name: 'Hard Fork',
+        adaptive: true,
+        dynamic: true,
+        description: 'En ombyggd rytmisk skrivmaskin där varje tecken svarar direkt och textens tempo, skiljetecken, rubriker och samband bygger ett föränderligt groove.'
       }
     };
 
     const TYPEWRITER_THEMES = {
       none: {
         name: 'Inget tangentljud',
-        description: 'Välj ett skrivmaskinsljud. Tangenterna är tysta tills du själv aktiverar det.'
+        description: 'Välj ett skrivmaskinsljud. Ditt val aktiverar det direkt och ger ett provslag.'
       },
       mekanisk: {
         name: 'Mekanisk',
@@ -2491,6 +2748,23 @@
         description: 'Låga, träiga och återhållna slag utan klocka. Det minst framträdande alternativet.'
       }
     };
+
+    function primeAudioContext(context) {
+      try {
+        const source = context.createBufferSource();
+        const silent = context.createGain();
+        source.buffer = context.createBuffer(1, 1, context.sampleRate);
+        silent.gain.value = 0;
+        source.connect(silent).connect(context.destination);
+        source.addEventListener('ended', () => {
+          try { source.disconnect(); } catch (error) { /* redan frikopplad */ }
+          try { silent.disconnect(); } catch (error) { /* redan frikopplad */ }
+        }, { once: true });
+        source.start(0);
+      } catch (error) {
+        /* Webbläsaren kan ändå lyckas med den vanliga resume-vägen. */
+      }
+    }
 
     const Soundscape = (() => {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -2607,7 +2881,8 @@
         duration = 1.8,
         pan = 0,
         type = 'sine',
-        delay = 0
+        delay = 0,
+        attack = null
       } = {}) {
         if (session !== active || active.context.state === 'closed') return;
         const now = active.context.currentTime + delay;
@@ -2622,7 +2897,10 @@
           oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency), now + duration);
         }
         level.gain.setValueAtTime(0, now);
-        level.gain.linearRampToValueAtTime(gain, now + Math.min(.08, duration * .2));
+        level.gain.linearRampToValueAtTime(
+          gain,
+          now + (attack == null ? Math.min(.08, duration * .2) : Math.max(.001, attack))
+        );
         level.gain.exponentialRampToValueAtTime(.0001, now + duration);
         if (panner) {
           panner.pan.value = clamp(pan, -1, 1);
@@ -2680,6 +2958,252 @@
           later(active, drop, 260 + Math.random() * 920);
         };
         later(active, drop, 380);
+      }
+
+      const dynamicScales = {
+        minor: [0, 3, 5, 7, 10],
+        open: [0, 2, 5, 7, 9]
+      };
+
+      function degreeFrequency(root, degree, scale = dynamicScales.minor) {
+        const size = scale.length;
+        const octave = Math.floor(degree / size);
+        const wrapped = ((degree % size) + size) % size;
+        return root * Math.pow(2, (scale[wrapped] + octave * 12) / 12);
+      }
+
+      function scheduleHardForkPulse(active) {
+        const dynamic = active.dynamic;
+        if (!dynamic || dynamic.kind !== 'hardfork' || dynamic.pulsing) return;
+        dynamic.pulsing = true;
+        const pulse = () => {
+          if (session !== active || !active.dynamic) return;
+          const state = active.dynamic;
+          const idleFor = Date.now() - state.lastKeyAt;
+          state.heat *= idleFor > 900 ? .84 : .94;
+          if (idleFor > 2800 && state.heat < .06) {
+            state.pulsing = false;
+            return;
+          }
+
+          const step = state.step % 16;
+          if (step === 0 || step === 8) {
+            oneShot(active, {
+              frequency: state.root * (step ? 1.5 : 1),
+              endFrequency: state.root * .72,
+              gain: .022 + state.heat * .016,
+              duration: .14,
+              type: 'sine',
+              attack: .002
+            });
+          }
+          if (step % 2 === 0 && state.memory.length) {
+            const degree = state.memory[(step / 2) % state.memory.length];
+            oneShot(active, {
+              frequency: degreeFrequency(state.root * 2, degree, dynamicScales.minor),
+              endFrequency: degreeFrequency(state.root * 2, degree, dynamicScales.minor) * .985,
+              gain: .008 + state.heat * .018,
+              duration: .09 + state.heat * .08,
+              pan: step % 4 ? .22 : -.22,
+              type: 'triangle',
+              attack: .002
+            });
+          }
+          if (state.heat > .55 && (step === 3 || step === 7 || step === 11 || step === 15)) {
+            oneShot(active, {
+              frequency: 4200 + step * 95,
+              endFrequency: 2600 + step * 60,
+              gain: .006 + state.heat * .007,
+              duration: .045,
+              pan: step % 4 === 3 ? -.34 : .34,
+              type: 'square',
+              attack: .001
+            });
+          }
+          state.step = (step + 1) % 16;
+          later(active, pulse, state.pulseMs);
+        };
+        pulse();
+      }
+
+      function handleValsangKey(active, key) {
+        const state = active.dynamic;
+        const lower = key.toLowerCase();
+        const alphabet = 'abcdefghijklmnopqrstuvwxyzåäö';
+        const index = alphabet.indexOf(lower);
+        if (
+          index < 0 &&
+          !['Backspace', 'Enter'].includes(key) &&
+          !/[.!?]/.test(key)
+        ) return;
+        const now = Date.now();
+        const interval = clamp(now - state.lastKeyAt, 45, 1600);
+        state.lastKeyAt = now;
+        state.tempo = state.tempo * .72 + interval * .28;
+        const scale = state.openScale ? dynamicScales.open : dynamicScales.minor;
+
+        if (index >= 0) {
+          const difference = state.lastLetter < 0 ? 0 : index - state.lastLetter;
+          state.lastLetter = index;
+          let step = clamp(Math.round(difference / 5), -3, 3);
+          if (!step && difference) step = difference > 0 ? 1 : -1;
+          state.degree = clamp(state.degree + step, 0, 14);
+          const frequency = degreeFrequency(state.root, state.degree, scale);
+          const vowel = 'aeiouyåäö'.includes(lower);
+          const duration = clamp(state.tempo / 900, .16, .72);
+          state.phrase.push(state.degree);
+          if (state.phrase.length > 18) state.phrase.shift();
+          oneShot(active, {
+            frequency,
+            endFrequency: frequency * (vowel ? 1.012 : .992),
+            gain: vowel ? .036 : .022,
+            duration: vowel ? duration * 1.35 : duration * .72,
+            pan: clamp((index - 14) / 34, -.42, .42),
+            type: vowel ? 'sine' : 'triangle',
+            attack: vowel ? .018 : .004
+          });
+          state.pad.oscillators.forEach((oscillator, oscillatorIndex) => {
+            const padDegree = state.degree + [0, 2, 4][oscillatorIndex];
+            moveParameter(oscillator.frequency, degreeFrequency(state.root / 2, padDegree, scale), .28);
+          });
+          return;
+        }
+
+        if (key === 'Backspace') {
+          state.phrase.pop();
+          oneShot(active, {
+            frequency: degreeFrequency(state.root, Math.max(0, state.degree - 1), scale),
+            endFrequency: state.root * .72,
+            gain: .018,
+            duration: .16,
+            pan: -.22,
+            type: 'triangle',
+            attack: .003
+          });
+          return;
+        }
+
+        if (key === 'Enter') {
+          oneShot(active, {
+            frequency: degreeFrequency(state.root / 2, state.degree, scale),
+            endFrequency: state.root * .48,
+            gain: .016,
+            duration: .34,
+            pan: -.12,
+            type: 'sine',
+            attack: .008
+          });
+          state.degree = 3;
+          state.lastLetter = -1;
+          return;
+        }
+
+        if (/[.!?]/.test(key)) {
+          const phrase = state.phrase.slice(-6);
+          phrase.forEach((degree, index) => oneShot(active, {
+            frequency: degreeFrequency(state.root * 2, degree + (key === '?' ? 1 : 0), scale),
+            endFrequency: degreeFrequency(state.root * 2, degree + (key === '?' ? 2 : 0), scale),
+            gain: .016,
+            duration: .5 + index * .06,
+            delay: index * .075,
+            pan: -0.36 + index * .14,
+            type: 'sine',
+            attack: .012
+          }));
+          state.phrase = [];
+          state.lastLetter = -1;
+        }
+      }
+
+      function handleHardForkKey(active, key) {
+        const state = active.dynamic;
+        const lower = key.toLowerCase();
+        const alphabet = 'abcdefghijklmnopqrstuvwxyzåäö';
+        const index = alphabet.indexOf(lower);
+        if (
+          index < 0 &&
+          ![' ', 'Backspace', 'Enter'].includes(key) &&
+          !/[.,;:!?]/.test(key)
+        ) return;
+        state.lastKeyAt = Date.now();
+        state.heat = clamp(state.heat + .12, 0, 1.15);
+        scheduleHardForkPulse(active);
+
+        if (index >= 0) {
+          const difference = state.lastLetter < 0 ? 0 : index - state.lastLetter;
+          state.lastLetter = index;
+          let step = clamp(Math.round(difference / 5), -2, 2);
+          if (!step && difference) step = difference > 0 ? 1 : -1;
+          state.degree = clamp(state.degree + step, 0, 9);
+          state.memory.push(state.degree);
+          if (state.memory.length > 8) state.memory.shift();
+          const frequency = degreeFrequency(state.root * 2, state.degree, dynamicScales.minor);
+          oneShot(active, {
+            frequency,
+            endFrequency: frequency * .93,
+            gain: .032 + state.heat * .018,
+            duration: .08 + state.heat * .055,
+            pan: index % 2 ? .18 : -.18,
+            type: index % 3 ? 'sawtooth' : 'square',
+            attack: .0015
+          });
+          return;
+        }
+
+        if (key === ' ') {
+          oneShot(active, {
+            frequency: state.root,
+            endFrequency: state.root * .55,
+            gain: .052,
+            duration: .13,
+            type: 'sine',
+            attack: .001
+          });
+          return;
+        }
+
+        if (key === 'Backspace') {
+          state.memory.pop();
+          oneShot(active, {
+            frequency: 980,
+            endFrequency: 180,
+            gain: .022,
+            duration: .075,
+            pan: -.28,
+            type: 'square',
+            attack: .001
+          });
+          return;
+        }
+
+        if (key === 'Enter') {
+          oneShot(active, {
+            frequency: state.root * 2,
+            endFrequency: state.root * .85,
+            gain: .034,
+            duration: .11,
+            pan: -.16,
+            type: 'sawtooth',
+            attack: .001
+          });
+          state.heat = clamp(state.heat + .1, 0, 1.15);
+          state.lastLetter = -1;
+          return;
+        }
+
+        if (/[.,;:!?]/.test(key)) {
+          const questionLift = key === '?' ? 2 : 0;
+          [0, 1, 3, 5].forEach((degree, index) => oneShot(active, {
+            frequency: degreeFrequency(state.root * 2, degree + questionLift, dynamicScales.minor),
+            endFrequency: degreeFrequency(state.root * 2, degree + questionLift, dynamicScales.minor) * .9,
+            gain: key === '!' ? .034 : .022,
+            duration: .08 + index * .035,
+            delay: index * .045,
+            pan: -0.42 + index * .28,
+            type: index % 2 ? 'square' : 'sawtooth',
+            attack: .001
+          }));
+        }
       }
 
       function buildTheme(active, theme) {
@@ -2746,6 +3270,53 @@
           return;
         }
 
+        if (theme === 'valsang') {
+          const air = addNoise(active, { color: 'brown', gain: .032, highpass: 110, lowpass: 2600, rate: .88 });
+          const pad = addPad(active, [55, 82.41, 110], { gain: .044, lowpass: 1450, detune: 4 });
+          addLfo(active, pad.filter.frequency, .035, 260);
+          addLfo(active, air.level.gain, .055, .007);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 1450;
+          active.adaptive = { kind: theme, air, pad };
+          active.dynamic = {
+            kind: theme,
+            air,
+            pad,
+            root: 98,
+            degree: 4,
+            lastLetter: -1,
+            lastKeyAt: Date.now(),
+            tempo: 420,
+            phrase: [],
+            openScale: false
+          };
+          return;
+        }
+
+        if (theme === 'hardfork') {
+          const air = addNoise(active, { color: 'brown', gain: .018, highpass: 150, lowpass: 1800, rate: .72 });
+          const pad = addPad(active, [49, 73.42, 98], { gain: .022, lowpass: 980, detune: 7 });
+          addLfo(active, pad.filter.frequency, .07, 220);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 980;
+          active.adaptive = { kind: theme, air, pad };
+          active.dynamic = {
+            kind: theme,
+            air,
+            pad,
+            root: 55,
+            degree: 4,
+            lastLetter: -1,
+            lastKeyAt: 0,
+            heat: 0,
+            step: 0,
+            pulseMs: 120,
+            pulsing: false,
+            memory: [0, 2, 4, 2, 0, 3, 4, 6]
+          };
+          return;
+        }
+
         const air = addNoise(active, { color: 'brown', gain: .044, highpass: 70, lowpass: 1900 });
         const pad = addPad(active, [65.41, 98, 130.81], { gain: .057, lowpass: 680, detune: 2.5 });
         addLfo(active, pad.bus.gain, .048, .08);
@@ -2756,7 +3327,7 @@
       }
 
       function outputLevel(value) {
-        return clamp(Number(value) || 0, 0, 60) / 100 * .82;
+        return clamp(Number(value) || 0, 0, 100) / 100 * .92;
       }
 
       function moveParameter(parameter, value, seconds = .8) {
@@ -2779,6 +3350,43 @@
         const paragraphs = Math.max(0, Number(profile.paragraphs) || 0);
         const headingDepth = clamp(Number(profile.headingDepth) || 0, 0, 3);
         const { air, pad, kind } = active.adaptive;
+
+        if (kind === 'valsang') {
+          const dynamic = active.dynamic;
+          dynamic.openScale = vowelRatio > .43;
+          dynamic.root = clamp(88 + averageWord * 1.8 + (vowelRatio - .38) * 42, 92, 112);
+          const scale = dynamic.openScale ? dynamicScales.open : dynamicScales.minor;
+          const center = clamp(Math.round(2 + averageWord * .55 + sentenceLength / 18), 3, 9);
+          pad.oscillators.forEach((oscillator, index) => {
+            moveParameter(
+              oscillator.frequency,
+              degreeFrequency(dynamic.root / 2, center + [0, 2, 4][index], scale),
+              1.25
+            );
+          });
+          const brightness = clamp(980 + vowelRatio * 1350 + connectedness * 460, 1150, 2600);
+          moveParameter(pad.filter.frequency, brightness, 1.2);
+          moveParameter(air.level.gain, clamp(.024 + sentenceLength / 2600, .026, .048), 1.4);
+          active.baseFilter = brightness;
+          return;
+        }
+
+        if (kind === 'hardfork') {
+          const dynamic = active.dynamic;
+          const roots = [49, 55, 61.74, 65.41];
+          dynamic.root = roots[Math.round(headingDepth)];
+          dynamic.pulseMs = clamp(142 - sentenceLength * 1.25 - cohesion * 22, 92, 136);
+          const tension = clamp(.08 + (1 - connectedness) * .3, .08, .38);
+          const ratios = [1, 1.5 - tension * .18, 2 + tension * .25];
+          pad.oscillators.forEach((oscillator, index) => {
+            moveParameter(oscillator.frequency, dynamic.root * ratios[index], 1.1);
+          });
+          const brightness = clamp(760 + averageWord * 95 + cohesion * 1150 + headings * 24, 920, 3100);
+          moveParameter(pad.filter.frequency, brightness, .8);
+          moveParameter(air.level.gain, clamp(.012 + (1 - cohesion) * .018, .012, .03), 1);
+          active.baseFilter = brightness;
+          return;
+        }
 
         if (kind === 'ordfalt') {
           const brightness = clamp(440 + averageWord * 105 + vowelRatio * 960 + sentenceLength * 8, 620, 2800);
@@ -2849,7 +3457,7 @@
         if (session) dispose(session);
         let context;
         try {
-          context = new AudioContextClass({ latencyHint: 'playback' });
+          context = new AudioContextClass({ latencyHint: 'interactive' });
         } catch (error) {
           context = new AudioContextClass();
         }
@@ -2874,6 +3482,7 @@
           baseFilter: 900
         };
         session = active;
+        primeAudioContext(context);
         let resumePromise;
         try {
           resumePromise = context.resume();
@@ -2889,6 +3498,7 @@
           const now = context.currentTime;
           master.gain.setValueAtTime(0, now);
           master.gain.linearRampToValueAtTime(outputLevel(volume), now + .8);
+          active.ready = true;
           return true;
         }).catch(() => {
           if (session === active) session = null;
@@ -2930,9 +3540,31 @@
         }, 620);
       }
 
+      function ensureRunning(active) {
+        if (!active || active.context.state === 'running') return;
+        primeAudioContext(active.context);
+        try {
+          const resume = active.context.resume();
+          resume?.catch?.(() => {});
+        } catch (error) {
+          /* Nästa uttryckliga tangentgest försöker igen. */
+        }
+      }
+
       function handleKey(key) {
         const active = session;
         if (!active || !reactive || typeof key !== 'string') return;
+        ensureRunning(active);
+        if (active.dynamic?.kind === 'valsang') {
+          liftForTyping(active);
+          handleValsangKey(active, key);
+          return;
+        }
+        if (active.dynamic?.kind === 'hardfork') {
+          liftForTyping(active);
+          handleHardForkKey(active, key);
+          return;
+        }
         if (/^[a-zåäö]$/i.test(key)) {
           liftForTyping(active);
           return;
@@ -2945,7 +3577,9 @@
           nattljus: 329.63,
           ordfalt: 440,
           sambandsvav: 293.66,
-          strukturklang: 220
+          strukturklang: 220,
+          valsang: 392,
+          hardfork: 196
         };
         const base = bases[active.theme] || 440;
         oneShot(active, {
@@ -2960,6 +3594,38 @@
       function commit(kind) {
         const active = session;
         if (!active || !reactive) return;
+        ensureRunning(active);
+        if (active.dynamic?.kind === 'valsang') {
+          const scale = active.dynamic.openScale ? dynamicScales.open : dynamicScales.minor;
+          const degrees = kind === 'heading' ? [0, 4, 7] : [0, 2, 4];
+          degrees.forEach((degree, index) => oneShot(active, {
+            frequency: degreeFrequency(active.dynamic.root, degree, scale),
+            endFrequency: degreeFrequency(active.dynamic.root, degree + (kind === 'heading' ? 2 : 0), scale),
+            gain: kind === 'heading' ? .028 : .018,
+            duration: kind === 'heading' ? 2.1 : 1.1,
+            delay: index * .07,
+            pan: (index - 1) * .28,
+            type: 'sine',
+            attack: .025
+          }));
+          return;
+        }
+        if (active.dynamic?.kind === 'hardfork') {
+          const degrees = kind === 'heading' ? [0, 4, 7, 9] : [0, 2, 4, 6];
+          degrees.forEach((degree, index) => oneShot(active, {
+            frequency: degreeFrequency(active.dynamic.root * 2, degree, dynamicScales.minor),
+            endFrequency: degreeFrequency(active.dynamic.root * 2, Math.max(0, degree - 1), dynamicScales.minor),
+            gain: kind === 'heading' ? .036 : .024,
+            duration: .1 + index * .045,
+            delay: index * .04,
+            pan: index % 2 ? .32 : -.32,
+            type: index % 2 ? 'square' : 'sawtooth',
+            attack: .001
+          }));
+          active.dynamic.heat = clamp(active.dynamic.heat + (kind === 'heading' ? .34 : .18), 0, 1.15);
+          scheduleHardForkPulse(active);
+          return;
+        }
         const base = {
           glantan: 392,
           regnvav: 659.25,
@@ -2967,7 +3633,9 @@
           nattljus: 220,
           ordfalt: 329.63,
           sambandsvav: 246.94,
-          strukturklang: 164.81
+          strukturklang: 164.81,
+          valsang: 293.66,
+          hardfork: 98
         }[active.theme] || 220;
         const heading = kind === 'heading';
         oneShot(active, {
@@ -3000,6 +3668,7 @@
         updateText,
         isAdaptive() { return Boolean(session?.adaptive); },
         isPlaying() { return Boolean(session); },
+        isReady() { return Boolean(session?.ready); },
         theme() { return session?.theme || null; }
       };
     })();
@@ -3016,7 +3685,7 @@
       let lastHitAt = 0;
 
       function outputLevel(value) {
-        return clamp(Number(value) || 0, 0, 60) / 100 * .88;
+        return clamp(Number(value) || 0, 0, 100) / 100 * .96;
       }
 
       function registerSource(active, source) {
@@ -3025,76 +3694,125 @@
         return source;
       }
 
-      function createNoiseBuffer(context) {
-        const length = Math.max(1, Math.floor(context.sampleRate * .16));
+      function sampleNoise(seed) {
+        let state = seed >>> 0;
+        return () => {
+          state = (state * 1664525 + 1013904223) >>> 0;
+          return state / 4294967296 * 2 - 1;
+        };
+      }
+
+      function createKeySample(context, profile, kind, variant = 0) {
+        const durations = {
+          letter: profile.duration,
+          space: profile.duration * 1.4,
+          backspace: profile.duration * 1.28,
+          punctuation: profile.duration * .92,
+          tab: profile.duration * 1.55,
+          enter: Math.max(.22, profile.duration * 5.2)
+        };
+        const duration = durations[kind] || profile.duration;
+        const length = Math.max(1, Math.ceil(context.sampleRate * duration));
         const buffer = context.createBuffer(1, length, context.sampleRate);
         const data = buffer.getChannelData(0);
+        const random = sampleNoise(
+          Math.round(profile.frequency * 31 + profile.tone * 17 + variant * 7919 + kind.length * 101)
+        );
+        const frequencyScale = {
+          letter: 1,
+          space: .5,
+          backspace: .72,
+          punctuation: 1.2,
+          tab: .62,
+          enter: .46
+        }[kind] || 1;
+        const brightness = profile.frequency * frequencyScale * (1 + (variant - 1) * .025);
+        const body = profile.tone * (kind === 'space' ? .78 : (kind === 'backspace' ? .9 : 1));
         let previous = 0;
+        let maximum = .001;
+
         for (let index = 0; index < length; index++) {
-          const white = Math.random() * 2 - 1;
-          previous = previous * .28 + white * .72;
-          data[index] = previous;
+          const time = index / context.sampleRate;
+          const progress = time / duration;
+          const white = random();
+          const high = white - previous * .82;
+          previous = white;
+          const attack = Math.min(1, time / .0012);
+          const envelope = attack * Math.exp(-progress * (kind === 'enter' ? 5.2 : 7.2));
+          const metal = Math.sin(Math.PI * 2 * brightness * time + variant * .7);
+          const low = Math.sin(Math.PI * 2 * body * time * (1 - progress * .12));
+          let value = envelope * (high * .68 + metal * .24 + low * .2);
+
+          if (kind === 'enter') {
+            const returnTime = time - .052;
+            if (returnTime >= 0) {
+              value += Math.exp(-returnTime * 55) * (
+                random() * .42 + Math.sin(Math.PI * 2 * brightness * .78 * returnTime) * .24
+              );
+            }
+            if (profile.bell) {
+              const bellTime = time - .072;
+              if (bellTime >= 0) {
+                value += Math.sin(Math.PI * 2 * profile.bell * bellTime)
+                  * Math.exp(-bellTime * 10.5) * .32;
+              }
+            }
+          }
+
+          data[index] = value;
+          maximum = Math.max(maximum, Math.abs(value));
         }
+
+        const target = {
+          letter: .72,
+          space: .6,
+          backspace: .78,
+          punctuation: .7,
+          tab: .64,
+          enter: .82
+        }[kind] || .72;
+        const scale = target / maximum;
+        for (let index = 0; index < length; index++) data[index] *= scale;
         return buffer;
       }
 
-      function noiseHit(active, {
-        frequency,
-        q,
-        gain,
-        duration,
-        playback = 1,
-        pan = 0,
-        delay = 0
-      }) {
-        if (session !== active || active.context.state === 'closed') return;
-        const now = active.context.currentTime + delay;
-        const source = registerSource(active, active.context.createBufferSource());
-        const filter = active.context.createBiquadFilter();
-        const level = active.context.createGain();
-        const panner = typeof active.context.createStereoPanner === 'function'
-          ? active.context.createStereoPanner()
-          : null;
-        source.buffer = active.noiseBuffer;
-        source.playbackRate.value = playback;
-        filter.type = 'bandpass';
-        filter.frequency.value = frequency;
-        filter.Q.value = q;
-        level.gain.setValueAtTime(0, now);
-        level.gain.linearRampToValueAtTime(gain, now + .003);
-        level.gain.exponentialRampToValueAtTime(.0001, now + duration);
-        if (panner) {
-          panner.pan.value = clamp(pan, -1, 1);
-          source.connect(filter).connect(level).connect(panner).connect(active.master);
-        } else {
-          source.connect(filter).connect(level).connect(active.master);
-        }
-        source.start(now);
-        source.stop(now + duration + .015);
+      function createSampleBank(context, profile) {
+        return {
+          letters: [0, 1, 2].map(variant => createKeySample(context, profile, 'letter', variant)),
+          space: createKeySample(context, profile, 'space'),
+          backspace: createKeySample(context, profile, 'backspace'),
+          punctuation: createKeySample(context, profile, 'punctuation'),
+          tab: createKeySample(context, profile, 'tab'),
+          enter: createKeySample(context, profile, 'enter')
+        };
       }
 
-      function toneHit(active, frequency, gain, duration, delay = 0, pan = 0) {
-        if (session !== active || active.context.state === 'closed') return;
-        const now = active.context.currentTime + delay;
-        const oscillator = registerSource(active, active.context.createOscillator());
-        const level = active.context.createGain();
-        const panner = typeof active.context.createStereoPanner === 'function'
-          ? active.context.createStereoPanner()
-          : null;
-        oscillator.type = active.theme === 'elektrisk' ? 'triangle' : 'sine';
-        oscillator.frequency.setValueAtTime(frequency, now);
-        oscillator.frequency.exponentialRampToValueAtTime(Math.max(32, frequency * .82), now + duration);
-        level.gain.setValueAtTime(0, now);
-        level.gain.linearRampToValueAtTime(gain, now + .004);
-        level.gain.exponentialRampToValueAtTime(.0001, now + duration);
-        if (panner) {
-          panner.pan.value = clamp(pan, -1, 1);
-          oscillator.connect(level).connect(panner).connect(active.master);
-        } else {
-          oscillator.connect(level).connect(active.master);
+      function createSampleBuses(context, master) {
+        if (typeof context.createStereoPanner !== 'function') {
+          return { left: master, center: master, right: master };
         }
-        oscillator.start(now);
-        oscillator.stop(now + duration + .015);
+        const left = context.createStereoPanner();
+        const right = context.createStereoPanner();
+        left.pan.value = -.12;
+        right.pan.value = .12;
+        left.connect(master);
+        right.connect(master);
+        return { left, center: master, right };
+      }
+
+      function sampleHit(active, buffer, {
+        playback = 1,
+        pan = 0
+      } = {}) {
+        if (!buffer || session !== active || active.context.state === 'closed') return;
+        const source = registerSource(active, active.context.createBufferSource());
+        source.buffer = buffer;
+        source.playbackRate.value = playback;
+        const bus = pan < -.04
+          ? active.sampleBuses.left
+          : (pan > .04 ? active.sampleBuses.right : active.sampleBuses.center);
+        source.connect(bus);
+        source.start();
       }
 
       function dispose(active, immediate = false) {
@@ -3111,6 +3829,30 @@
         }, immediate ? 12 : 110);
       }
 
+      function createSoftClipper(context) {
+        if (typeof context.createWaveShaper !== 'function') return null;
+        const shaper = context.createWaveShaper();
+        const curve = new Float32Array(2048);
+        for (let index = 0; index < curve.length; index++) {
+          const value = index / (curve.length - 1) * 2 - 1;
+          curve[index] = Math.tanh(value * 1.45) / Math.tanh(1.45);
+        }
+        shaper.curve = curve;
+        shaper.oversample = '2x';
+        return shaper;
+      }
+
+      function ensureRunning(active) {
+        if (!active || active.context.state === 'running') return;
+        primeAudioContext(active.context);
+        try {
+          const resume = active.context.resume();
+          resume?.catch?.(() => {});
+        } catch (error) {
+          /* Nästa uttryckliga tangentgest försöker igen. */
+        }
+      }
+
       function start(theme, volume) {
         if (!AudioContextClass || !profiles[theme]) return Promise.resolve(false);
         if (session) dispose(session);
@@ -3121,23 +3863,32 @@
           context = new AudioContextClass();
         }
         const master = context.createGain();
-        const compressor = context.createDynamicsCompressor();
+        const softClipper = createSoftClipper(context);
+        const compressor = softClipper ? null : context.createDynamicsCompressor();
         master.gain.value = outputLevel(volume);
-        compressor.threshold.value = -16;
-        compressor.knee.value = 18;
-        compressor.ratio.value = 4;
-        compressor.attack.value = .002;
-        compressor.release.value = .12;
-        master.connect(compressor).connect(context.destination);
+        if (softClipper) {
+          master.connect(softClipper).connect(context.destination);
+        } else {
+          compressor.threshold.value = -12;
+          compressor.knee.value = 12;
+          compressor.ratio.value = 6;
+          compressor.attack.value = .001;
+          compressor.release.value = .08;
+          master.connect(compressor).connect(context.destination);
+        }
         const active = {
           context,
           master,
           compressor,
+          softClipper,
           sources: new Set(),
-          noiseBuffer: null,
+          sampleBank: null,
+          sampleBuses: createSampleBuses(context, master),
+          sampleIndex: 0,
           theme
         };
         session = active;
+        primeAudioContext(context);
         let resumePromise;
         try {
           resumePromise = context.resume();
@@ -3148,7 +3899,8 @@
         }
         return Promise.resolve(resumePromise).then(() => {
           if (session !== active || context.state === 'closed') return false;
-          active.noiseBuffer = createNoiseBuffer(context);
+          active.sampleBank = createSampleBank(context, profiles[theme]);
+          active.ready = true;
           return true;
         }).catch(() => {
           if (session === active) session = null;
@@ -3173,72 +3925,50 @@
 
       function handleKey(key) {
         const active = session;
-        if (!active || typeof key !== 'string') return;
+        if (!active?.ready || typeof key !== 'string') return;
+        ensureRunning(active);
         const now = Date.now();
-        if (key !== 'Enter' && now - lastHitAt < 22) return;
-        const profile = profiles[active.theme];
+        if (key !== 'Enter' && now - lastHitAt < 8) return;
         const printable = key.length === 1;
         if (!printable && !['Backspace', 'Enter', 'Tab'].includes(key)) return;
         lastHitAt = now;
 
         if (key === 'Enter') {
-          noiseHit(active, {
-            frequency: profile.frequency * .48,
-            q: Math.max(1, profile.q * .62),
-            gain: profile.gain * 1.3,
-            duration: profile.duration * 1.9,
-            playback: .72,
-            pan: -.5
-          });
-          noiseHit(active, {
-            frequency: profile.frequency * .82,
-            q: profile.q,
-            gain: profile.gain * .55,
-            duration: profile.duration * 1.2,
-            playback: 1.18,
-            pan: .48,
-            delay: .055
-          });
-          if (profile.bell) toneHit(active, profile.bell, .045, .34, .075, .3);
+          sampleHit(active, active.sampleBank.enter, { pan: -.12 });
           return;
         }
 
-        let frequency = profile.frequency;
-        let gain = profile.gain;
-        let duration = profile.duration;
-        let playback = .92 + Math.random() * .16;
-
+        let sample;
+        let playback = .97 + Math.random() * .06;
         if (key === ' ') {
-          frequency *= .48;
-          gain *= .82;
-          duration *= 1.28;
-          playback *= .78;
+          sample = active.sampleBank.space;
+          playback *= .82;
         } else if (key === 'Backspace') {
-          frequency *= .72;
-          gain *= 1.08;
-          duration *= 1.18;
+          sample = active.sampleBank.backspace;
           playback *= .88;
         } else if (key === 'Tab') {
-          frequency *= .62;
-          gain *= .9;
-          duration *= 1.5;
-        } else if (/[A-ZÅÄÖ]/.test(key)) {
-          gain *= 1.08;
-          frequency *= 1.05;
+          sample = active.sampleBank.tab;
         } else if (/[.,;:!?]/.test(key)) {
-          frequency *= 1.18;
-          duration *= .86;
+          sample = active.sampleBank.punctuation;
+          playback *= 1.04;
+        } else {
+          sample = active.sampleBank.letters[active.sampleIndex % active.sampleBank.letters.length];
+          active.sampleIndex += 1;
+        }
+        if (/[A-ZÅÄÖ]/.test(key)) {
+          playback *= 1.025;
         }
 
-        noiseHit(active, {
-          frequency,
-          q: profile.q,
-          gain,
-          duration,
+        sampleHit(active, sample, {
           playback,
           pan: Math.random() * .28 - .14
         });
-        toneHit(active, profile.tone, active.theme === 'dampad' ? .016 : .011, duration * 1.18);
+      }
+
+      function preview() {
+        if (!session?.ready) return;
+        lastHitAt = 0;
+        handleKey('a');
       }
 
       return {
@@ -3247,7 +3977,9 @@
         stop,
         setVolume,
         handleKey,
+        preview,
         isPlaying() { return Boolean(session); },
+        isReady() { return Boolean(session?.ready); },
         theme() { return session?.theme || null; }
       };
     })();
@@ -3256,6 +3988,7 @@
       body: document.body,
       canvas: $('#edge-canvas'),
       nodeLayer: $('#node-layer'),
+      writeView: $('#write-view'),
       composer: $('#composer'),
       draft: $('#draft-input'),
       draftCount: $('#draft-count'),
@@ -3267,10 +4000,14 @@
       timerCompactLabel: $('#timer-compact-label'),
       widthSlider: $('#width-slider'),
       emptyGraph: $('#empty-graph'),
+      graphLens: $('#graph-lens'),
+      graphLensStatus: $('#graph-lens-status'),
       outline: $('#outline'),
       sectionGrid: $('#section-grid'),
       structureBoard: $('#structure-board'),
       structureBreadcrumb: $('#structure-breadcrumb'),
+      structurePulsePanel: $('#structure-pulse-panel'),
+      structurePulse: $('#structure-pulse'),
       paragraphZone: $('#paragraph-zone'),
       sectionZone: $('#section-zone'),
       paragraphZoneCount: $('#paragraph-zone-count'),
@@ -3360,6 +4097,7 @@
     let editingSnapshot = null;
     let draggedBlockIndex = null;
     let structureSectionId = null;
+    let graphLens = 'all';
     let pendingInsertContext = null;
     let commitsThisSession = 0;
     let recalledBlock = null;
@@ -3371,6 +4109,7 @@
     let soundProfileTimer = null;
     let soundActionId = 0;
     let typewriterActionId = 0;
+    let recentPhysicalSoundKeys = [];
     let timerInterval = null;
     let announceTimer = null;
     let announceQueue = [];
@@ -3512,6 +4251,7 @@
           }, stored.settings || {});
           stored.settings.focusMinutes = clamp(Math.round(Number(stored.settings.focusMinutes) || 25), 1, 180);
           stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
+          stored.settings.widthIndex = normalizeWidthIndex(stored.settings.widthIndex);
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
           stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
             ? stored.settings.soundTheme
@@ -3521,7 +4261,7 @@
               ? Math.round(Number(stored.settings.soundVolume))
               : 24,
             0,
-            60
+            100
           );
           stored.settings.soundReactive = stored.settings.soundReactive !== false;
           stored.settings.typewriterTheme = TYPEWRITER_THEMES[stored.settings.typewriterTheme]
@@ -3532,7 +4272,7 @@
               ? Math.round(Number(stored.settings.typewriterVolume))
               : 18,
             0,
-            60
+            100
           );
           stored.version = 7;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
@@ -4213,6 +4953,27 @@
       }, 240);
     }
 
+    function sendDraftSound(key, origin = 'direct') {
+      if (typeof key !== 'string' || !key) return;
+      const now = performance.now();
+      const allowedControl = ['Backspace', 'Enter', 'Tab'].includes(key);
+      if (!allowedControl && characterCount(key) !== 1) return;
+      recentPhysicalSoundKeys = recentPhysicalSoundKeys
+        .filter(item => now - item.at < 240)
+        .slice(-23);
+      if (origin === 'beforeinput') {
+        const matchingIndex = recentPhysicalSoundKeys.findIndex(item => item.key === key);
+        if (matchingIndex >= 0) {
+          recentPhysicalSoundKeys.splice(matchingIndex, 1);
+          return;
+        }
+      } else if (origin === 'keydown') {
+        recentPhysicalSoundKeys.push({ key, at: now });
+      }
+      Soundscape.handleKey(key);
+      Typewriter.handleKey(key);
+    }
+
     function normalizeSoundSettings() {
       app.settings.soundTheme = SOUND_THEMES[app.settings.soundTheme]
         ? app.settings.soundTheme
@@ -4222,7 +4983,7 @@
           ? Math.round(Number(app.settings.soundVolume))
           : 24,
         0,
-        60
+        100
       );
       app.settings.soundReactive = app.settings.soundReactive !== false;
       app.settings.typewriterTheme = TYPEWRITER_THEMES[app.settings.typewriterTheme]
@@ -4233,7 +4994,7 @@
           ? Math.round(Number(app.settings.typewriterVolume))
           : 18,
         0,
-        60
+        100
       );
       Soundscape.setReactive(app.settings.soundReactive);
     }
@@ -4244,6 +5005,8 @@
       const typewriterTheme = TYPEWRITER_THEMES[app.settings.typewriterTheme];
       const playing = Soundscape.isPlaying();
       const typewriterPlaying = Typewriter.isPlaying();
+      const soundReady = Soundscape.isReady();
+      const typewriterReady = Typewriter.isReady();
       const anyPlaying = playing || typewriterPlaying;
       const activeName = SOUND_THEMES[Soundscape.theme()]?.name || theme.name;
       const activeTypewriterName = TYPEWRITER_THEMES[Typewriter.theme()]?.name || typewriterTheme.name;
@@ -4253,15 +5016,21 @@
       elements.soundReactive.checked = app.settings.soundReactive;
       elements.soundVolume.value = app.settings.soundVolume;
       elements.soundVolumeOutput.textContent = app.settings.soundVolume + ' %';
-      elements.soundState.textContent = playing ? 'Spelar ' + activeName : 'Tyst';
-      elements.soundToggle.textContent = playing ? 'Stäng av' : 'Starta ljud';
+      elements.soundState.textContent = playing
+        ? (soundReady ? 'Spelar ' : 'Startar ') + activeName
+        : 'Tyst';
+      elements.soundToggle.textContent = playing ? (soundReady ? 'Stäng av' : 'Avbryt') : 'Starta ljud';
       elements.soundToggle.disabled = !Soundscape.supported || app.settings.soundTheme === 'none';
       elements.typewriterTheme.value = app.settings.typewriterTheme;
       elements.typewriterDescription.textContent = typewriterTheme.description;
       elements.typewriterVolume.value = app.settings.typewriterVolume;
       elements.typewriterVolumeOutput.textContent = app.settings.typewriterVolume + ' %';
-      elements.typewriterState.textContent = typewriterPlaying ? 'Aktiv ' + activeTypewriterName : 'Tyst';
-      elements.typewriterToggle.textContent = typewriterPlaying ? 'Stäng av' : 'Aktivera';
+      elements.typewriterState.textContent = typewriterPlaying
+        ? (typewriterReady ? 'Aktiv ' : 'Startar ') + activeTypewriterName
+        : 'Tyst';
+      elements.typewriterToggle.textContent = typewriterPlaying
+        ? (typewriterReady ? 'Stäng av' : 'Avbryt')
+        : 'Aktivera';
       elements.typewriterToggle.disabled = !Typewriter.supported || app.settings.typewriterTheme === 'none';
       elements.soundButton.setAttribute('aria-pressed', anyPlaying ? 'true' : 'false');
       elements.soundButton.setAttribute(
@@ -4304,11 +5073,13 @@
         toast('Ljud stöds inte i den här webbläsaren');
         return false;
       }
-      const started = await Soundscape.start(
+      const startPromise = Soundscape.start(
         app.settings.soundTheme,
         app.settings.soundVolume,
         soundTextProfile()
       );
+      renderSound();
+      const started = await startPromise;
       if (actionId !== soundActionId) return false;
       renderSound();
       if (started) {
@@ -4353,14 +5124,17 @@
         toast('Tangentljud stöds inte i den här webbläsaren');
         return false;
       }
-      const started = await Typewriter.start(
+      const startPromise = Typewriter.start(
         app.settings.typewriterTheme,
         app.settings.typewriterVolume
       );
+      renderSound();
+      const started = await startPromise;
       if (actionId !== typewriterActionId) return false;
       renderSound();
       if (started) {
         const name = TYPEWRITER_THEMES[app.settings.typewriterTheme].name;
+        Typewriter.preview();
         toast(name + ' skrivmaskinsljud aktivt');
         announce('Skrivmaskinsljudet ' + name + ' aktiverades');
       } else {
@@ -4606,7 +5380,12 @@
         focusLens(node.id, false);
         showNodeTooltip(node.id);
       });
-      button.addEventListener('blur', hideNodeTooltip);
+      button.addEventListener('blur', () => {
+        if (hoveredId === node.id) hoveredId = null;
+        hideNodeTooltip();
+        updateNodeFocus();
+        drawGraph();
+      });
       button.addEventListener('click', () => {
         if (suppressClickId === node.id) {
           suppressClickId = null;
@@ -4669,12 +5448,15 @@
       updateNodePositions();
       updateNodeInteractivity();
       updateNodeFocus();
+      updateGraphLensStatus();
     }
 
     function updateNodeInteractivity() {
       const interactive = view === 'graph';
-      for (const state of nodeStates.values()) {
-        state.element.tabIndex = interactive ? 0 : -1;
+      const lensNodeIds = analysis ? graphLensNodeIds() : null;
+      for (const [id, state] of nodeStates) {
+        const included = !lensNodeIds || lensNodeIds.has(id) || id === selectedId;
+        state.element.tabIndex = interactive && included ? 0 : -1;
         if (interactive) state.element.removeAttribute('aria-hidden');
         else state.element.setAttribute('aria-hidden', 'true');
       }
@@ -4735,11 +5517,108 @@
 
     function updateNodeFocus() {
       const focusId = hoveredId || selectedId;
-      const neighbors = focusId ? analysis.adjacency.get(focusId) || new Set() : new Set();
+      const neighbors = focusId ? graphLensNeighbors(focusId) : new Set();
+      const lensNodeIds = graphLensNodeIds();
       for (const [id, state] of nodeStates) {
         state.element.dataset.selected = String(id === selectedId);
         state.element.dataset.dimmed = String(Boolean(focusId && id !== focusId && !neighbors.has(id)));
+        state.element.dataset.lensDimmed = String(Boolean(
+          lensNodeIds &&
+          id !== focusId &&
+          id !== selectedId &&
+          !lensNodeIds.has(id)
+        ));
       }
+    }
+
+    function graphLensNeighbors(id) {
+      if (graphLens === 'all') return analysis.adjacency.get(id) || new Set();
+      const neighbors = new Set();
+      for (const edge of analysis.edges) {
+        if (!graphEdgeVisible(edge)) continue;
+        if (edge.a === id) neighbors.add(edge.b);
+        else if (edge.b === id) neighbors.add(edge.a);
+      }
+      return neighbors;
+    }
+
+    function graphLensNodeIds() {
+      if (graphLens === 'all') return null;
+      const ids = new Set();
+      if (graphLens === 'structure') {
+        analysis.nodes.forEach(node => ids.add(node.id));
+        return ids;
+      }
+      for (const edge of analysis.edges) {
+        if (!graphEdgeVisible(edge)) continue;
+        ids.add(edge.a);
+        ids.add(edge.b);
+      }
+      if (graphLens === 'gaps') {
+        analysis.nodes.forEach(node => {
+          if (node.lonely || node.flow) ids.add(node.id);
+        });
+      }
+      return ids;
+    }
+
+    function graphEdgeVisible(edge) {
+      if (graphLens === 'all') return true;
+      if (graphLens === 'connections') return edge.type === 'cohesion';
+      if (graphLens === 'structure') return edge.type === 'sequence' || edge.type === 'hierarchy';
+      if (graphLens === 'gaps') {
+        const a = analysis.nodesById.get(edge.a);
+        const b = analysis.nodesById.get(edge.b);
+        return Boolean(a?.lonely || a?.flow || b?.lonely || b?.flow);
+      }
+      return true;
+    }
+
+    function setGraphLens(nextLens, shouldAnnounce = true) {
+      if (!['all', 'connections', 'structure', 'gaps'].includes(nextLens)) return;
+      graphLens = nextLens;
+      $$('[data-graph-lens]', elements.graphLens).forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.graphLens === graphLens));
+      });
+      updateNodeFocus();
+      updateNodeInteractivity();
+      updateGraphLensStatus();
+      drawGraph();
+      if (shouldAnnounce) {
+        const labels = {
+          all: 'Alla lager',
+          connections: 'Lexikala samband',
+          structure: 'Dokumentstruktur',
+          gaps: 'Glapp och svaga återkopplingar'
+        };
+        announce('Vävlins: ' + labels[graphLens]);
+      }
+    }
+
+    function updateGraphLensStatus() {
+      if (!analysis || !elements.graphLensStatus) return;
+      let message = '';
+      const paragraphs = analysis.nodes.filter(node => node.kind === 'paragraph');
+      if (analysis.nodes.length && graphLens === 'connections' && !analysis.cohesionEdges.length) {
+        message = 'Inga ritade lexikala kopplingar med nuvarande känslighet.';
+      } else if (analysis.nodes.length && graphLens === 'structure' && !analysis.hierarchyEdges.length) {
+        message = 'Dokumentordningen visas. Lägg till rubriker för att se rubrikhierarkin.';
+      } else if (analysis.nodes.length && graphLens === 'gaps') {
+        const assessable = paragraphs.filter(node => !node.insufficient);
+        const unassessed = paragraphs.length - assessable.length;
+        const issues = paragraphs.filter(node => node.lonely || node.flow);
+        if (paragraphs.length < 4) {
+          message = 'Lexikala glapp bedöms först när dokumentet har minst fyra stycken.';
+        } else if (!assessable.length) {
+          message = 'Styckena har ännu för litet analysunderlag för glappbedömning.';
+        } else if (!issues.length) {
+          message = unassessed
+            ? `Inga signaler bland ${assessable.length} bedömda stycken. ${unassessed} kan inte bedömas ännu.`
+            : 'Inga uppmätta lexikala signaler att granska.';
+        }
+      }
+      elements.graphLensStatus.textContent = message;
+      elements.graphLensStatus.hidden = !message;
     }
 
     function startNodeDrag(event) {
@@ -5049,6 +5928,7 @@
       const focusId = hoveredId || selectedId;
 
       for (const edge of analysis.edges) {
+        if (!graphEdgeVisible(edge)) continue;
         const a = nodeStates.get(edge.a);
         const b = nodeStates.get(edge.b);
         if (!a || !b) continue;
@@ -5510,11 +6390,55 @@
       const blocks = activeDocument().blocks.slice(section.start, section.end);
       const paragraphs = blocks.filter(block => block.kind === 'paragraph');
       const words = paragraphs.reduce((sum, block) => sum + wordCount(block.text), 0);
-      const issues = paragraphs.reduce((sum, block) => {
+      const documentReady = analysis.nodes.filter(node => node.kind === 'paragraph').length >= 4;
+      let assessed = 0;
+      let issues = 0;
+      paragraphs.forEach(block => {
         const node = analysis.nodesById.get(block.id);
-        return sum + (node?.lonely || node?.flow ? 1 : 0);
-      }, 0);
-      return { paragraphs, words, issues };
+        if (!documentReady || !node || node.insufficient) return;
+        assessed += 1;
+        if (node.lonely || node.flow) issues += 1;
+      });
+      return {
+        paragraphs,
+        words,
+        assessed,
+        unassessed: paragraphs.length - assessed,
+        issues
+      };
+    }
+
+    function pulseAssessment(item) {
+      const issueRatio = item.assessed ? item.issues / item.assessed : 0;
+      if (!item.paragraphs) {
+        return { issueRatio, assessment: 'Tom sektion', shortAssessment: 'tom sektion' };
+      }
+      if (!item.assessed) {
+        return {
+          issueRatio,
+          assessment: 'För litet analysunderlag',
+          shortAssessment: 'för litet underlag'
+        };
+      }
+      if (item.issues) {
+        return {
+          issueRatio,
+          assessment: `${item.issues} lexikala signaler att granska`,
+          shortAssessment: `${item.issues} signaler`
+        };
+      }
+      if (item.unassessed) {
+        return {
+          issueRatio,
+          assessment: `Inga signaler bland bedömda stycken, ${item.unassessed} kan inte bedömas`,
+          shortAssessment: `${item.unassessed} ej bedömda`
+        };
+      }
+      return {
+        issueRatio,
+        assessment: 'Inga uppmätta lexikala signaler',
+        shortAssessment: 'inga signaler'
+      };
     }
 
     function structurePath(section, sections) {
@@ -5536,7 +6460,8 @@
       if (focusFirst) {
         requestAnimationFrame(() => {
           const first = $('.block-card', elements.structureBoard);
-          (first || elements.structureUp)?.focus();
+          const fallback = elements.structureUp.hidden ? $('#structure-add') : elements.structureUp;
+          (first || fallback)?.focus();
         });
       }
     }
@@ -5622,6 +6547,7 @@
             <span>Rubrik H${block.level}</span>
             <span>${stats.paragraphs.length} stycken</span>
             ${stats.issues ? `<span class="status-chip flow">${stats.issues} att granska</span>` : ''}
+            ${!stats.issues && stats.unassessed ? `<span class="status-chip">${stats.unassessed} ej bedömda</span>` : ''}
           </div>
           ${editing ? editMarkup(block) : `
             <button class="section-open" data-action="open">${escapeHtml(block.text)}</button>
@@ -5784,12 +6710,7 @@
       if (!sections.has(structureSectionId)) structureSectionId = null;
       const current = sections.get(structureSectionId) || root;
       const path = structurePath(current, sections);
-      const currentStats = current.id
-        ? sectionStats(current)
-        : {
-            paragraphs: document.blocks.filter(block => block.kind === 'paragraph'),
-            words: document.blocks.reduce((sum, block) => sum + (block.kind === 'paragraph' ? wordCount(block.text) : 0), 0)
-          };
+      const currentStats = sectionStats(current);
 
       elements.structureTitle.textContent = current.headingBlock?.text || document.title;
       elements.structureSummary.textContent = `${current.directParagraphs.length} direkta stycken, ${current.childSections.length} undersektioner och ${formatNumber(currentStats.words)} ord i ${current.id ? 'denna sektion' : 'dokumentet'}. Pilar flyttar fokus, Alt + pil flyttar kort och E redigerar.`;
@@ -5812,6 +6733,70 @@
       ).join('');
       $$('button', elements.structureBreadcrumb).forEach(button => {
         button.addEventListener('click', () => openStructureSection(button.dataset.sectionId || null));
+      });
+
+      const directBlocks = current.directParagraphs.map(item => item.block);
+      const documentReady = analysis.nodes.filter(node => node.kind === 'paragraph').length >= 4;
+      let directAssessed = 0;
+      let directIssues = 0;
+      directBlocks.forEach(block => {
+        const node = analysis.nodesById.get(block.id);
+        if (!documentReady || !node || node.insufficient) return;
+        directAssessed += 1;
+        if (node.lonely || node.flow) directIssues += 1;
+      });
+      const pulseItems = [
+        ...(current.directParagraphs.length ? [{
+          id: null,
+          direct: true,
+          title: 'Text på nivån',
+          words: directBlocks.reduce((sum, block) => sum + wordCount(block.text), 0),
+          paragraphs: directBlocks.length,
+          assessed: directAssessed,
+          unassessed: directBlocks.length - directAssessed,
+          issues: directIssues
+        }] : []),
+        ...current.childSections.map(section => {
+          const stats = sectionStats(section);
+          return {
+            id: section.id,
+            direct: false,
+            title: section.headingBlock.text,
+            words: stats.words,
+            paragraphs: stats.paragraphs.length,
+            assessed: stats.assessed,
+            unassessed: stats.unassessed,
+            issues: stats.issues
+          };
+        })
+      ];
+      const pulseWeight = item => Math.sqrt(Math.max(12, item.words));
+      const averageWeight = pulseItems.length
+        ? pulseItems.reduce((sum, item) => sum + pulseWeight(item), 0) / pulseItems.length
+        : 1;
+      elements.structurePulsePanel.hidden = pulseItems.length === 0;
+      elements.structurePulse.innerHTML = pulseItems.map(item => {
+        const grow = clamp(pulseWeight(item) / averageWeight, .58, 1.8).toFixed(2);
+        const { issueRatio, assessment, shortAssessment } = pulseAssessment(item);
+        return `<button class="pulse-segment" type="button"
+          data-section-id="${escapeHtml(item.id || '')}"
+          data-pulse-direct="${String(item.direct)}"
+          data-has-issues="${String(item.issues > 0)}"
+          style="--pulse-grow:${grow}"
+          aria-label="${escapeHtml(item.title)}, ${formatNumber(item.words)} ord, ${item.paragraphs} stycken, ${assessment}">
+            <span class="pulse-title">${escapeHtml(snippet(item.title, 42))}</span>
+            <span class="pulse-meta">${formatNumber(item.words)} ord · ${item.paragraphs} stycken · ${shortAssessment}</span>
+            <span class="pulse-signal" aria-hidden="true" style="width:${Math.round(issueRatio * 100)}%"></span>
+          </button>`;
+      }).join('');
+      $$('.pulse-segment', elements.structurePulse).forEach(button => {
+        button.addEventListener('click', () => {
+          if (button.dataset.pulseDirect === 'true') {
+            requestAnimationFrame(() => $('.block-card', elements.outline)?.focus());
+          } else {
+            openStructureSection(button.dataset.sectionId || null);
+          }
+        });
       });
 
       elements.paragraphZoneCount.textContent = current.directParagraphs.length + ' kort';
@@ -5885,21 +6870,31 @@
       } else if (nextView === 'graph') {
         renderOutline();
         startSimulation('graph');
-        const first = nodeStates.values().next().value;
-        requestAnimationFrame(() => (nodeStates.get(selectedId)?.element || first?.element)?.focus());
+        const selected = nodeStates.get(selectedId)?.element;
+        const first = [...nodeStates.values()].find(state => state.element.tabIndex === 0)?.element;
+        requestAnimationFrame(() => {
+          if (selected?.tabIndex === 0) selected.focus();
+          else (first || $('[data-graph-lens][aria-pressed="true"]', elements.graphLens))?.focus();
+        });
       } else {
         stopSimulation();
         renderOutline();
-        requestAnimationFrame(() => $('.block-card', elements.structureBoard)?.focus());
+        requestAnimationFrame(() => ($('.block-card', elements.structureBoard) || $('#structure-add'))?.focus());
       }
       announce('Växlade till ' + (nextView === 'write' ? 'Skriv' : (nextView === 'graph' ? 'Väven' : 'Struktur')));
     }
 
     function applyWidth(index) {
-      const safeIndex = clamp(Number(index) || 0, 0, WIDTHS.length - 1);
+      const safeIndex = normalizeWidthIndex(index);
+      const width = WIDTHS[safeIndex];
       app.settings.widthIndex = safeIndex;
+      elements.widthSlider.max = String(WIDTHS.length - 1);
       elements.widthSlider.value = safeIndex;
-      document.documentElement.style.setProperty('--composer-width', WIDTHS[safeIndex] + 'px');
+      elements.widthSlider.setAttribute(
+        'aria-valuetext',
+        (safeIndex === WIDTHS.length - 1 ? 'Maximal, ' : '') + formatNumber(width) + ' pixlar'
+      );
+      document.documentElement.style.setProperty('--composer-width', width + 'px');
     }
 
     function openUtility(focusTarget = elements.documentSelect) {
@@ -6027,12 +7022,13 @@
       const settings = Object.assign({}, defaults.settings, source.settings || {});
       settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
       settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
+      settings.widthIndex = normalizeWidthIndex(settings.widthIndex);
       settings.showCountdown = settings.showCountdown !== false;
       settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
       settings.soundVolume = clamp(
         Number.isFinite(Number(settings.soundVolume)) ? Math.round(Number(settings.soundVolume)) : 24,
         0,
-        60
+        100
       );
       settings.soundReactive = settings.soundReactive !== false;
       settings.typewriterTheme = TYPEWRITER_THEMES[settings.typewriterTheme]
@@ -6041,7 +7037,7 @@
       settings.typewriterVolume = clamp(
         Number.isFinite(Number(settings.typewriterVolume)) ? Math.round(Number(settings.typewriterVolume)) : 18,
         0,
-        60
+        100
       );
 
       stopTimerTicker();
@@ -6056,6 +7052,7 @@
         timer: normalizeTimer(source.timer, settings.focusMinutes)
       };
       if (!documents.some(document => document.id === app.activeId)) app.activeId = documents[0].id;
+      applyWidth(settings.widthIndex);
       changeActiveDocument(app.activeId, false);
       renderTimer();
       renderSound();
@@ -6238,9 +7235,8 @@
     function setupEvents() {
       elements.draft.addEventListener('input', updateDraftMeta);
       elements.draft.addEventListener('keydown', event => {
-        if (!event.ctrlKey && !event.metaKey && !event.altKey) {
-          Soundscape.handleKey(event.key);
-          Typewriter.handleKey(event.key);
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
+          sendDraftSound(event.key, 'keydown');
         }
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
           event.preventDefault();
@@ -6260,6 +7256,9 @@
         if (button.dataset.viewTarget === 'write') pendingInsertContext = null;
         switchView(button.dataset.viewTarget);
       }));
+      $$('[data-graph-lens]', elements.graphLens).forEach(button => {
+        button.addEventListener('click', () => setGraphLens(button.dataset.graphLens));
+      });
       $('#structure-add').addEventListener('click', beginContextualWriting);
       elements.structureUp.addEventListener('click', () => {
         const { sections } = buildStructureTree();
@@ -6339,21 +7338,14 @@
       elements.timerDone.addEventListener('click', endTimer);
 
       elements.soundTheme.addEventListener('change', async event => {
-        const wasPlaying = Soundscape.isPlaying();
-        const actionId = ++soundActionId;
         app.settings.soundTheme = SOUND_THEMES[event.target.value] ? event.target.value : 'none';
         saveState('Ljudtema sparat');
         if (app.settings.soundTheme === 'none') {
-          Soundscape.stop();
-        } else if (wasPlaying) {
-          await Soundscape.start(
-            app.settings.soundTheme,
-            app.settings.soundVolume,
-            soundTextProfile()
-          );
+          stopSound(false);
+          renderSound();
+        } else {
+          await startSound();
         }
-        if (actionId !== soundActionId) return;
-        renderSound();
       });
       elements.soundReactive.addEventListener('change', event => {
         app.settings.soundReactive = event.target.checked;
@@ -6362,7 +7354,7 @@
         renderSound();
       });
       elements.soundVolume.addEventListener('input', event => {
-        app.settings.soundVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 60);
+        app.settings.soundVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 100);
         elements.soundVolumeOutput.textContent = app.settings.soundVolume + ' %';
         Soundscape.setVolume(app.settings.soundVolume);
       });
@@ -6373,22 +7365,19 @@
       elements.soundToggle.addEventListener('click', toggleSound);
 
       elements.typewriterTheme.addEventListener('change', async event => {
-        const wasPlaying = Typewriter.isPlaying();
-        const actionId = ++typewriterActionId;
         app.settings.typewriterTheme = TYPEWRITER_THEMES[event.target.value]
           ? event.target.value
           : 'none';
         saveState('Skrivmaskinsljud sparat');
         if (app.settings.typewriterTheme === 'none') {
-          Typewriter.stop();
-        } else if (wasPlaying) {
-          await Typewriter.start(app.settings.typewriterTheme, app.settings.typewriterVolume);
+          stopTypewriter(false);
+          renderSound();
+        } else {
+          await startTypewriter();
         }
-        if (actionId !== typewriterActionId) return;
-        renderSound();
       });
       elements.typewriterVolume.addEventListener('input', event => {
-        app.settings.typewriterVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 60);
+        app.settings.typewriterVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 100);
         elements.typewriterVolumeOutput.textContent = app.settings.typewriterVolume + ' %';
         Typewriter.setVolume(app.settings.typewriterVolume);
       });
@@ -6408,12 +7397,24 @@
         grip.addEventListener('pointerdown', event => {
           grip.setPointerCapture(event.pointerId);
           const startX = event.clientX;
-          const startWidth = WIDTHS[app.settings.widthIndex];
+          const startIndex = app.settings.widthIndex;
+          const startWidth = elements.composer.getBoundingClientRect().width;
+          const writeStyle = getComputedStyle(elements.writeView);
+          const horizontalPadding =
+            (parseFloat(writeStyle.paddingLeft) || 0) +
+            (parseFloat(writeStyle.paddingRight) || 0);
+          const widthLimit = Math.max(
+            WIDTHS[0],
+            elements.writeView.clientWidth - horizontalPadding - 48
+          );
+          const renderedWidths = WIDTHS.map(width => Math.min(width, widthLimit));
           const side = grip.classList.contains('left') ? -1 : 1;
           const move = moveEvent => {
             const wanted = startWidth + (moveEvent.clientX - startX) * side * 2;
-            const closest = WIDTHS.reduce((best, width, index) =>
-              Math.abs(width - wanted) < Math.abs(WIDTHS[best] - wanted) ? index : best, 0);
+            const closest = renderedWidths.reduce((best, width, index) =>
+              Math.abs(width - wanted) < Math.abs(renderedWidths[best] - wanted)
+                ? index
+                : best, startIndex);
             applyWidth(closest);
           };
           const end = () => {
@@ -6462,6 +7463,15 @@
             serviceWorkerRegistration.update().catch(() => {});
           }
         }
+      });
+      elements.draft.addEventListener('beforeinput', event => {
+        if (event.isComposing) return;
+        const inputKey = event.inputType === 'deleteContentBackward'
+          ? 'Backspace'
+          : (event.inputType === 'insertParagraph'
+            ? 'Enter'
+            : (event.inputType === 'insertText' && characterCount(event.data || '') === 1 ? event.data : ''));
+        if (inputKey) sendDraftSound(inputKey, 'beforeinput');
       });
       navigator.serviceWorker?.addEventListener('controllerchange', () => {
         if (!reloadForUpdate) return;
