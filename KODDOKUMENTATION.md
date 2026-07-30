@@ -28,7 +28,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger sju ljudlandskap och fyra skrivmaskinsteman |
+| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
@@ -88,12 +88,12 @@ Ljudinställningarna är också appövergripande:
 settings = {
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
-    'ordfalt' | 'sambandsvav' | 'strukturklang',
-  soundVolume: 0..60,
+    'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
+  soundVolume: 0..100,
   soundReactive: boolean,
   typewriterTheme:
     'none' | 'mekanisk' | 'reseskrivare' | 'elektrisk' | 'dampad',
-  typewriterVolume: 0..60
+  typewriterVolume: 0..100
 }
 ```
 
@@ -121,6 +121,14 @@ tillbaka det senaste blocket.
 Dokumentmål och timer sammanfattas i en diskret statusrad när de är aktiva.
 Målet räknar endast committad text.
 
+Skrivbredden lagras som ett normaliserat heltalsindex i den append-only
+breddstabellen `[540, 640, 720, 820, 940, 1080, 1240, 1440]`. Äldre index
+behåller därför sin tidigare betydelse. Draghandtagen utgår från fältets
+faktiskt renderade bredd. Kandidatstegen jämförs också efter
+viewportklampning, så ett maximalt fält inte snäpper smalare vid första lilla
+dragrörelsen. Handtagen döljs på grova pekdon, där slidern är den entydiga
+kontrollen.
+
 ### Ljudrum
 
 `Soundscape` i `index.html` bygger ljudlandskapen med Web Audio API. Varje tema
@@ -142,19 +150,49 @@ rubriknivå, styckeantal och ordmängd. Dessa värden styr långsamma
 filterförändringar, brusnivåer och oscillatorfrekvenser. De innebär ingen
 tolkning av textens betydelse eller kvalitet.
 
+Valsång och Hard Fork har dessutom en dynamisk tillståndsmotor. Valsång
+mappar bokstavsrörelse till skalsteg, låter vokaler få längre anslag och
+bygger en kort fras som skiljetecken kan återkalla. Textprofilens vokalandel,
+ordlängd och meningslängd ändrar skala, grundton och andning. Hard Fork ger
+först ett okvantiserat teckensvar och driver därefter ett separat 16-stegs
+pulslager. Minnet, intensiteten och pulslängden formas av skrivaktivitet,
+rubrikdjup, meningslängd och lexikal återkoppling. Den omedelbara
+bekräftelsen väntar alltså aldrig på nästa rytmiska steg.
+
 `Typewriter` är en separat Web Audio-motor för direkt tangentfeedback.
 Mekanisk, Reseskrivare, Elektrisk och Dämpad använder olika kombinationer av
-korta filtrerade brusanslag och låga tontransienter. Mellanslag, backsteg,
-interpunktion och Enter har egna profiler. Enter kan dessutom ge vagnretur
-och klockton. Motorn tar endast emot tangenttryckningar från skrivfältet.
+korta brus- och tontransienter. Tre bokstavsvarianter samt egna svar för
+mellanslag, backsteg, interpunktion, tabb och Enter renderas till en
+`AudioBuffer`-bank när temat startar. Ett tangenttryck skapar därefter bara en
+`AudioBufferSourceNode` och kopplar den till en av tre förberedda
+panoreringsbussar. Enter kan ge både vagnretur och klockton i samma buffer.
+Motorn tar endast emot tangenttryckningar från skrivfältet. `keydown` ger den
+snabbaste vägen och `beforeinput` är en deduplicerad reservväg för
+skärmtangentbord på iOS. Ett uttryckligt temaval startar motorn och anropar
+`preview()` för ett omedelbart provslag.
 
-En AudioContext skapas först av ett uttryckligt användartryck och väcks innan
-ljudnoder eller brusbuffertar byggs. Varje startförsök har ett eget
-åtgärds-id. Ett senare stopp eller temabyte ogiltigförklarar därför äldre
-väntande starter, så att de inte kan återaktivera ljud eller ge ett felaktigt
-statusmeddelande. Byte av tema tonar ut den gamla sessionen, och alla
-oscillatorer, tidtagare och ljudkontexter stängs vid avstängning eller när
-sidan lämnas.
+En kort kö med fysiska `keydown`-signaturer hålls i 240 millisekunder.
+Matchande `beforeinput` konsumerar signaturen utan att spela ett nytt anslag.
+Det förhindrar att ett sent iOS-event uppfattas som ett fördröjt eko.
+Styrtangenter som Shift, pilar och Escape filtreras bort innan de når
+ljudmotorerna. Valsång och Hard Fork validerar dessutom tangenten innan tempo
+eller intensitet ändras.
+
+En AudioContext skapas först av ett uttryckligt användartryck. En tyst
+en-sampelskälla startas synkront i samma användargest för att väcka strikta
+mobila Web Audio-implementationer och `latencyHint: 'interactive'` begär
+lägsta praktiska renderingslatens. Kontexten återupptas sedan innan ljudnoder
+eller brusbufferter byggs. Masterreglagen använder intervallet 0 till 100 och
+har mjuk begränsning eller kompression före enhetens utgång. Varje
+startförsök har ett eget åtgärds-id. Ett
+senare stopp eller temabyte ogiltigförklarar därför äldre väntande starter, så
+att de inte kan återaktivera ljud eller ge ett felaktigt statusmeddelande.
+Under uppväckningen visar gränssnittet `Startar` och stoppknappen fungerar som
+`Avbryt`. Byte av tema tonar ut den gamla sessionen, och alla oscillatorer,
+tidtagare och ljudkontexter stängs vid avstängning eller när sidan lämnas.
+Vid ett senare iOS-avbrott, exempelvis bakgrundsläge eller byte av ljudrutt,
+försöker både ljudlandskapet och skrivmaskinen återväcka sin kontext i nästa
+uttryckliga tangentgest.
 
 ### Väven
 
@@ -173,11 +211,29 @@ Linjerna har separata visuella grammatiker:
 Alla tre linjetyperna blir starkare när en ansluten nod är vald eller har
 fokus. Teckenförklaringen visar både nod- och linjesymboler.
 
+`graphLens` är ett rent presentationsläge och sparas inte i dokumentet.
+Värdena `all`, `connections`, `structure` och `gaps` filtrerar ritade kanter
+med `graphEdgeVisible()`. Synliga noder härleds från ändpunkterna till de
+kanter som faktiskt ritas, inte från den fullständiga analysmatrisen. Den
+valda eller fokuserade noden förblir synlig, så ett linsbyte bryter inte
+orienteringen. Bortfiltrerade noder tas ur Tab-ordningen. En separat
+statusrad förklarar tomma resultat och skiljer brist på analysunderlag från
+ett faktiskt resultat utan signaler.
+
 ### Struktur
 
 Sektionstavlan härleder ett träd med en rubrikstack. Varje grid visar endast
 direkta stycken och direkta undersektioner på aktuell nivå. Breadcrumb och
 Upp en nivå navigerar hierarkin.
+
+Dokumentpulsen härleds från den aktuella nivåns direkta text och
+undersektioner. Segmentens flexvikt följer kvadratroten ur ordmängden, vilket
+visar relativa skillnader utan att en mycket lång sektion slår ut alla andra.
+En orange signal visar andelen bedömda stycken som är ensamma eller har svag
+återkoppling. Nämnaren omfattar alltså inte stycken med för litet
+analysunderlag. Tom sektion, för litet underlag, ej bedömda stycken och
+uppmätta signaler får olika textetiketter. Segmenten är knappar som flyttar
+fokus till direkttexten eller öppnar vald undersektion.
 
 Stycken kan bara flyttas mellan stycken med samma ägarrubrik. En rubrik kan
 bara flyttas mellan syskon med samma nivå och ägare. När en rubrik flyttas
