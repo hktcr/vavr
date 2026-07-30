@@ -48,7 +48,9 @@ Bokstäver, mellanslag, backsteg och Enter får skilda syntetiserade svar.
 Ljud startar endast efter ett uttryckligt val. Tema, volym och valfri
 skrivrespons sparas, men uppspelning återupptas aldrig automatiskt efter
 omladdning. Alla ljud syntetiseras med Web Audio API utan ljudfiler eller
-nätverksanrop och fungerar därför även offline.
+nätverksanrop och fungerar därför även offline. Start, stopp och snabba
+temabyten är avbrytbara, så ett äldre startförsök kan inte slå på ljudet igen
+efter ett stopp.
 
 ## Analys
 

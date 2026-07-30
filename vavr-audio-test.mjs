@@ -50,6 +50,10 @@ class FakeNode {
 }
 
 class FakeAudioContext {
+  static deferResume = false;
+  static pendingResumes = [];
+  static bufferCreations = 0;
+
   constructor() {
     this.sampleRate = 8000;
     this.currentTime = 0;
@@ -58,6 +62,7 @@ class FakeAudioContext {
   }
 
   createBuffer(channels, length) {
+    FakeAudioContext.bufferCreations += 1;
     const data = Array.from({ length: channels }, () => new Float32Array(length));
     return { getChannelData: index => data[index] };
   }
@@ -68,10 +73,18 @@ class FakeAudioContext {
   createOscillator() { return new FakeNode(); }
   createStereoPanner() { return new FakeNode(); }
   createDynamicsCompressor() { return new FakeNode(); }
-  resume() { return Promise.resolve(); }
+  resume() {
+    if (!FakeAudioContext.deferResume) return Promise.resolve();
+    return new Promise(resolve => FakeAudioContext.pendingResumes.push(resolve));
+  }
   close() {
     this.state = 'closed';
     return Promise.resolve();
+  }
+
+  static releaseResumes() {
+    const pending = FakeAudioContext.pendingResumes.splice(0);
+    pending.forEach(resolve => resolve());
   }
 }
 
@@ -153,6 +166,52 @@ for (const theme of typewriterThemes) {
   typewriterPassed += 1;
   console.log('  ok   ' + theme + ' ger tangentfeedback och stängs');
 }
+
+FakeAudioContext.deferResume = true;
+
+const soundBuffersBeforeCancel = FakeAudioContext.bufferCreations;
+const cancelledSoundStart = engine.start('glantan', 24, {});
+engine.stop(true);
+FakeAudioContext.releaseResumes();
+if (await cancelledSoundStart || engine.isPlaying()) {
+  throw new Error('Ett stoppat ljudrum rapporterade ändå en färdig start.');
+}
+if (FakeAudioContext.bufferCreations !== soundBuffersBeforeCancel) {
+  throw new Error('Ljudrummet byggdes trots att starten avbröts.');
+}
+console.log('  ok   ljudrummets väntande start kan avbrytas');
+
+const firstSoundStart = engine.start('regnvav', 24, {});
+const latestSoundStart = engine.start('djupstrom', 24, {});
+FakeAudioContext.releaseResumes();
+if (await firstSoundStart || !await latestSoundStart || engine.theme() !== 'djupstrom') {
+  throw new Error('Senaste ljudrumsvalet vann inte över en äldre väntande start.');
+}
+engine.stop(true);
+console.log('  ok   senaste ljudrumsstarten vinner vid snabb växling');
+
+const typewriterBuffersBeforeCancel = FakeAudioContext.bufferCreations;
+const cancelledTypewriterStart = typewriter.start('mekanisk', 18);
+typewriter.stop(true);
+FakeAudioContext.releaseResumes();
+if (await cancelledTypewriterStart || typewriter.isPlaying()) {
+  throw new Error('Ett stoppat skrivmaskinsljud rapporterade ändå en färdig start.');
+}
+if (FakeAudioContext.bufferCreations !== typewriterBuffersBeforeCancel) {
+  throw new Error('Skrivmaskinsljudet byggdes trots att starten avbröts.');
+}
+console.log('  ok   skrivmaskinens väntande start kan avbrytas');
+
+const firstTypewriterStart = typewriter.start('reseskrivare', 18);
+const latestTypewriterStart = typewriter.start('dampad', 18);
+FakeAudioContext.releaseResumes();
+if (await firstTypewriterStart || !await latestTypewriterStart || typewriter.theme() !== 'dampad') {
+  throw new Error('Senaste skrivmaskinsvalet vann inte över en äldre väntande start.');
+}
+typewriter.stop(true);
+console.log('  ok   senaste skrivmaskinsstarten vinner vid snabb växling');
+
+FakeAudioContext.deferResume = false;
 
 console.log(`\nLjudrum: ${passed} av ${themes.length} ljudlandskap godkända.`);
 console.log(`Skrivmaskiner: ${typewriterPassed} av ${typewriterThemes.length} teman godkända.\n`);

@@ -2874,12 +2874,23 @@
           baseFilter: 900
         };
         session = active;
-        buildTheme(active, theme);
-        updateText(profile);
-        const now = context.currentTime;
-        master.gain.setValueAtTime(0, now);
-        master.gain.linearRampToValueAtTime(outputLevel(volume), now + .8);
-        return context.resume().then(() => true).catch(() => {
+        let resumePromise;
+        try {
+          resumePromise = context.resume();
+        } catch (error) {
+          if (session === active) session = null;
+          dispose(active, true);
+          return Promise.resolve(false);
+        }
+        return Promise.resolve(resumePromise).then(() => {
+          if (session !== active || context.state === 'closed') return false;
+          buildTheme(active, theme);
+          updateText(profile);
+          const now = context.currentTime;
+          master.gain.setValueAtTime(0, now);
+          master.gain.linearRampToValueAtTime(outputLevel(volume), now + .8);
+          return true;
+        }).catch(() => {
           if (session === active) session = null;
           dispose(active, true);
           return false;
@@ -3123,11 +3134,23 @@
           master,
           compressor,
           sources: new Set(),
-          noiseBuffer: createNoiseBuffer(context),
+          noiseBuffer: null,
           theme
         };
         session = active;
-        return context.resume().then(() => true).catch(() => {
+        let resumePromise;
+        try {
+          resumePromise = context.resume();
+        } catch (error) {
+          if (session === active) session = null;
+          dispose(active, true);
+          return Promise.resolve(false);
+        }
+        return Promise.resolve(resumePromise).then(() => {
+          if (session !== active || context.state === 'closed') return false;
+          active.noiseBuffer = createNoiseBuffer(context);
+          return true;
+        }).catch(() => {
           if (session === active) session = null;
           dispose(active, true);
           return false;
@@ -3346,6 +3369,8 @@
     let titleSaveTimer = null;
     let draftSaveTimer = null;
     let soundProfileTimer = null;
+    let soundActionId = 0;
+    let typewriterActionId = 0;
     let timerInterval = null;
     let announceTimer = null;
     let announceQueue = [];
@@ -4256,6 +4281,7 @@
     }
 
     function stopSound(message = true) {
+      soundActionId += 1;
       if (!Soundscape.isPlaying()) return;
       Soundscape.stop();
       renderSound();
@@ -4266,6 +4292,7 @@
     }
 
     async function startSound() {
+      const actionId = ++soundActionId;
       normalizeSoundSettings();
       if (app.settings.soundTheme === 'none') {
         openUtility(elements.soundTheme);
@@ -4282,6 +4309,7 @@
         app.settings.soundVolume,
         soundTextProfile()
       );
+      if (actionId !== soundActionId) return false;
       renderSound();
       if (started) {
         const name = SOUND_THEMES[app.settings.soundTheme].name;
@@ -4302,6 +4330,7 @@
     }
 
     function stopTypewriter(message = true) {
+      typewriterActionId += 1;
       if (!Typewriter.isPlaying()) return;
       Typewriter.stop();
       renderSound();
@@ -4312,6 +4341,7 @@
     }
 
     async function startTypewriter() {
+      const actionId = ++typewriterActionId;
       normalizeSoundSettings();
       if (app.settings.typewriterTheme === 'none') {
         openUtility(elements.typewriterTheme);
@@ -4327,6 +4357,7 @@
         app.settings.typewriterTheme,
         app.settings.typewriterVolume
       );
+      if (actionId !== typewriterActionId) return false;
       renderSound();
       if (started) {
         const name = TYPEWRITER_THEMES[app.settings.typewriterTheme].name;
@@ -4347,6 +4378,8 @@
     }
 
     function stopAllSound() {
+      soundActionId += 1;
+      typewriterActionId += 1;
       const hadSound = Soundscape.isPlaying() || Typewriter.isPlaying();
       Soundscape.stop();
       Typewriter.stop();
@@ -4364,6 +4397,10 @@
       }
       normalizeSoundSettings();
       const starts = [];
+      const soundAction = app.settings.soundTheme !== 'none' ? ++soundActionId : soundActionId;
+      const typewriterAction = app.settings.typewriterTheme !== 'none'
+        ? ++typewriterActionId
+        : typewriterActionId;
       if (app.settings.soundTheme !== 'none') {
         starts.push(Soundscape.start(
           app.settings.soundTheme,
@@ -4383,6 +4420,7 @@
         return;
       }
       const results = await Promise.all(starts);
+      if (soundAction !== soundActionId || typewriterAction !== typewriterActionId) return;
       renderSound();
       if (results.some(Boolean)) {
         toast('Valda ljud startade');
@@ -6302,10 +6340,11 @@
 
       elements.soundTheme.addEventListener('change', async event => {
         const wasPlaying = Soundscape.isPlaying();
+        const actionId = ++soundActionId;
         app.settings.soundTheme = SOUND_THEMES[event.target.value] ? event.target.value : 'none';
         saveState('Ljudtema sparat');
         if (app.settings.soundTheme === 'none') {
-          stopSound(false);
+          Soundscape.stop();
         } else if (wasPlaying) {
           await Soundscape.start(
             app.settings.soundTheme,
@@ -6313,6 +6352,7 @@
             soundTextProfile()
           );
         }
+        if (actionId !== soundActionId) return;
         renderSound();
       });
       elements.soundReactive.addEventListener('change', event => {
@@ -6334,15 +6374,17 @@
 
       elements.typewriterTheme.addEventListener('change', async event => {
         const wasPlaying = Typewriter.isPlaying();
+        const actionId = ++typewriterActionId;
         app.settings.typewriterTheme = TYPEWRITER_THEMES[event.target.value]
           ? event.target.value
           : 'none';
         saveState('Skrivmaskinsljud sparat');
         if (app.settings.typewriterTheme === 'none') {
-          stopTypewriter(false);
+          Typewriter.stop();
         } else if (wasPlaying) {
           await Typewriter.start(app.settings.typewriterTheme, app.settings.typewriterVolume);
         }
+        if (actionId !== typewriterActionId) return;
         renderSound();
       });
       elements.typewriterVolume.addEventListener('input', event => {

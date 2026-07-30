@@ -148,9 +148,13 @@ korta filtrerade brusanslag och låga tontransienter. Mellanslag, backsteg,
 interpunktion och Enter har egna profiler. Enter kan dessutom ge vagnretur
 och klockton. Motorn tar endast emot tangenttryckningar från skrivfältet.
 
-En AudioContext skapas först av ett uttryckligt användartryck. Byte av tema
-tonar ut den gamla sessionen, och alla oscillatorer, tidtagare och
-ljudkontexter stängs vid avstängning eller när sidan lämnas.
+En AudioContext skapas först av ett uttryckligt användartryck och väcks innan
+ljudnoder eller brusbuffertar byggs. Varje startförsök har ett eget
+åtgärds-id. Ett senare stopp eller temabyte ogiltigförklarar därför äldre
+väntande starter, så att de inte kan återaktivera ljud eller ge ett felaktigt
+statusmeddelande. Byte av tema tonar ut den gamla sessionen, och alla
+oscillatorer, tidtagare och ljudkontexter stängs vid avstängning eller när
+sidan lämnas.
 
 ### Väven
 
