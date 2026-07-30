@@ -20,7 +20,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 
 | Fil | Roll |
 |---|---|
-| `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, analys, fysik, canvasritning, timer, mål och PWA-flöden |
+| `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
 | `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
 | `sw.js` | Versionsstyrd appskal-cache, offlinefallback och användarstyrd uppdatering |
 | `icons/` | Vanlig, maskable och Apple-anpassad VävR-ikon |
@@ -28,6 +28,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
+| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger alla fyra ljudteman |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
@@ -81,6 +82,19 @@ Körande tid räknas från absoluta `endAt`. Timern behöver därför inte skriv
 till lagringen varje sekund och återhämtar rätt återstående tid efter
 bakgrundsläge eller omladdning.
 
+Ljudinställningarna är också appövergripande:
+
+```js
+settings = {
+  soundTheme: 'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus',
+  soundVolume: 0..60,
+  soundReactive: boolean
+}
+```
+
+Endast inställningarna sparas. Ett aktivt ljudrum sparas inte som körande
+status och startar därför aldrig automatiskt efter omladdning.
+
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
@@ -101,6 +115,23 @@ tillbaka det senaste blocket.
 
 Dokumentmål och timer sammanfattas i en diskret statusrad när de är aktiva.
 Målet räknar endast committad text.
+
+### Ljudrum
+
+`Soundscape` i `index.html` bygger alla ljud med Web Audio API. Varje tema
+består av lokalt genererade brusbufferter, oscillatorer, filter och långsamma
+modulationer. En gemensam kompressor och en försiktigt skalad mastervolym
+minskar risken för plötsliga nivåsprång.
+
+Gläntan och Nattljus använder glesa tonala glimtar. Regnväv använder ett
+filtrerat brusfält och små dropptransienter. Djupström är avsiktligt utan
+melodi och tydlig rytm. Om textrespons är påslagen öppnar bokstavsaktivitet
+filtren marginellt, medan skiljetecken och invävda block kan ge en lågmäld
+klang. Ingen tangent får ett eget klick eller belöningsljud.
+
+En AudioContext skapas först av ett uttryckligt användartryck. Byte av tema
+tonar ut den gamla sessionen, och alla oscillatorer, tidtagare och
+ljudkontexter stängs vid avstängning eller när sidan lämnas.
 
 ### Väven
 
@@ -137,6 +168,8 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 - Interaktiva mål är minst 44 gånger 44 pixlar.
 - Status förmedlas med text och inte enbart med färg.
 - Timerdisplayen använder `role="timer"` och läser inte upp varje sekund.
+- Ljudknapparna exponerar uppspelningsstatus med text och `aria-pressed`.
+- Ljudtemat startar aldrig automatiskt och kan stängas av från toppbaren.
 - Viktiga händelser köas i en polite live-region.
 - Sektionstavlans kort nås med Tab. Pilar flyttar fokus, Alt + pil flyttar ett
   kort, E redigerar, Enter öppnar eller väljer och Delete raderar efter
@@ -148,6 +181,7 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 ```bash
 node vavr-test.mjs
 node vavr-shell-test.mjs
+node vavr-audio-test.mjs
 node --check sw.js
 python3 -m http.server 8000
 ```

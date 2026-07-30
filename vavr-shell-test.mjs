@@ -99,6 +99,31 @@ check(html.includes('function beginContextualWriting'), 'kontextuell infogning f
 check(html.includes('function downloadBackup'), 'säkerhetskopiering finns');
 check(html.includes("window.addEventListener('beforeinstallprompt'"), 'Chromiums installationssignal hanteras');
 
+console.log('\nLjudrum');
+
+for (const id of [
+  'sound-button',
+  'sound-settings',
+  'sound-theme',
+  'sound-reactive',
+  'sound-volume',
+  'sound-toggle'
+]) {
+  check(html.includes(`id="${id}"`), '#' + id + ' finns');
+}
+
+for (const theme of ['glantan', 'regnvav', 'djupstrom', 'nattljus']) {
+  check(html.includes(`${theme}: {`), 'ljudtemat ' + theme + ' finns');
+}
+
+check(
+  html.includes('window.AudioContext || window.webkitAudioContext'),
+  'ljudmotorn använder Web Audio med Safari-fallback'
+);
+check(html.includes("soundTheme: 'none'"), 'ljud är av som standard');
+check(html.includes('Soundscape.commit(block.kind)'), 'invävda block kan påverka ljudrummet');
+check(html.includes("window.addEventListener('pagehide', () => Soundscape.stop(true))"), 'ljudmotorn stängs när sidan lämnas');
+
 console.log('\nSammanfattning');
 console.log(`  ${passed} godkända, ${failed} fel av ${passed + failed} kontroller\n`);
 if (failed) process.exit(1);

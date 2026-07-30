@@ -245,6 +245,22 @@
       gap: 2px;
     }
 
+    #sound-button[aria-pressed="true"] {
+      border-color: rgba(89, 194, 255, .26);
+      background: rgba(89, 194, 255, .08);
+      color: var(--cyan-bright);
+      box-shadow: inset 0 0 18px rgba(89, 194, 255, .05);
+    }
+
+    #sound-button[aria-pressed="true"] .sound-wave {
+      animation: sound-breathe 1.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes sound-breathe {
+      from { opacity: .42; }
+      to { opacity: 1; }
+    }
+
     #edge-canvas,
     #node-layer {
       position: fixed;
@@ -1524,6 +1540,49 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .sound-card {
+      overflow: hidden;
+    }
+
+    .sound-theme-copy {
+      min-height: 3.5em;
+      margin: 0;
+      color: var(--paper-dim);
+      font: 12px/1.65 var(--serif);
+    }
+
+    .sound-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 8px;
+    }
+
+    .sound-controls .plain-button {
+      min-width: 104px;
+    }
+
+    .sound-volume {
+      display: grid;
+      gap: 7px;
+    }
+
+    .sound-volume input {
+      width: 100%;
+      margin: 0;
+      accent-color: var(--cyan);
+    }
+
+    #sound-volume-output {
+      color: var(--paper-dim);
+      font: 10px/1 var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #sound-support-note[data-warning="true"] {
+      color: var(--amber);
+    }
+
     #timer-display {
       padding: 15px 12px;
       border: 1px solid rgba(179, 229, 255, .1);
@@ -1711,7 +1770,7 @@
 
     @media (max-width: 820px) {
       #topbar {
-        grid-template-columns: 44px 1fr 44px;
+        grid-template-columns: 44px 1fr auto;
         padding: 6px;
       }
 
@@ -1860,6 +1919,14 @@
         grid-template-columns: 1fr;
       }
 
+      .sound-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .sound-controls .plain-button {
+        width: 100%;
+      }
+
       .structure-grid {
         grid-template-columns: 1fr;
       }
@@ -1918,6 +1985,12 @@
     </nav>
 
     <div class="top-actions">
+      <button id="sound-button" class="icon-button" type="button" title="Ljudrum" aria-label="Öppna ljudrum" aria-pressed="false">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+          <path d="M5 14h3l4 3V7L8 10H5v4Z"/>
+          <path class="sound-wave" d="M15 9.5a4 4 0 0 1 0 5M17.8 7a7.3 7.3 0 0 1 0 10"/>
+        </svg>
+      </button>
       <button id="help-button" class="icon-button" type="button" title="Kortkommandon och metod" aria-label="Visa hjälp">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.9 1.9c-1 .7-1.7 1.2-1.7 2.6M12 17h.01"/></svg>
       </button>
@@ -2132,6 +2205,42 @@
         </div>
       </section>
 
+      <section id="sound-settings" class="setting-group">
+        <h3>Ljudrum</h3>
+        <div class="support-card sound-card">
+          <div class="support-card-head">
+            <div class="support-card-title">
+              <strong>Frivilligt ljudtema</strong>
+              <span id="sound-state">Tyst</span>
+            </div>
+            <label class="check-control">
+              <input id="sound-reactive" type="checkbox" checked>
+              <span>Följ texten varsamt</span>
+            </label>
+          </div>
+          <div class="field">
+            <label for="sound-theme">Ljudtema</label>
+            <select id="sound-theme">
+              <option value="none">Inget ljud</option>
+              <option value="glantan">Gläntan</option>
+              <option value="regnvav">Regnväv</option>
+              <option value="djupstrom">Djupström</option>
+              <option value="nattljus">Nattljus</option>
+            </select>
+          </div>
+          <p id="sound-theme-description" class="sound-theme-copy">Välj ett ljudrum. Ingenting startar automatiskt.</p>
+          <div class="sound-controls">
+            <label class="sound-volume" for="sound-volume">
+              <span class="range-label"><span>Volym</span><output id="sound-volume-output" for="sound-volume">24 %</output></span>
+              <input id="sound-volume" type="range" min="0" max="60" step="1" value="24">
+            </label>
+            <button id="sound-toggle" class="plain-button primary" type="button">Starta ljud</button>
+          </div>
+          <p id="sound-support-note" class="method-note">Ljuden skapas lokalt i webbläsaren och fungerar offline. Börja gärna lågt med hörlurar.</p>
+        </div>
+        <p class="method-note">Ljud kan göra skrivmiljön behagligare eller maskera störningar, men påverkan på fokus varierar mellan personer.</p>
+      </section>
+
       <section class="setting-group">
         <h3>Vävens känslighet</h3>
         <div class="field">
@@ -2264,6 +2373,420 @@
       return clean.length > length ? clean.slice(0, length - 1) + '…' : clean;
     };
 
+    const SOUND_THEMES = {
+      none: {
+        name: 'Inget ljud',
+        description: 'Välj ett ljudrum. Ingenting startar automatiskt.'
+      },
+      glantan: {
+        name: 'Gläntan',
+        description: 'Mjuk luft, en varm grundton och sällsynta ljusglimtar. För ett stilla, organiskt skrivrum.'
+      },
+      regnvav: {
+        name: 'Regnväv',
+        description: 'Ett jämnt regnfält med avlägsna droppar. Utformat för att varsamt maskera ljud omkring dig.'
+      },
+      djupstrom: {
+        name: 'Djupström',
+        description: 'Mörkt, mjukt brus utan melodi eller tydlig rytm. Det mest neutrala temat för sammanhållet fokus.'
+      },
+      nattljus: {
+        name: 'Nattljus',
+        description: 'Långsamma övertoner, mörk rymd och svaga ljuspunkter. Mer stämning, fortfarande utan påträngande melodi.'
+      }
+    };
+
+    const Soundscape = (() => {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      let session = null;
+      let reactive = true;
+
+      function registerSource(active, source) {
+        active.sources.add(source);
+        source.addEventListener('ended', () => active.sources.delete(source), { once: true });
+        return source;
+      }
+
+      function registerTimer(active, timer) {
+        active.timers.add(timer);
+        return timer;
+      }
+
+      function later(active, callback, delay) {
+        const timer = setTimeout(() => {
+          active.timers.delete(timer);
+          if (session !== active) return;
+          callback();
+        }, delay);
+        return registerTimer(active, timer);
+      }
+
+      function makeNoiseBuffer(context, color = 'white', seconds = 4) {
+        const length = Math.max(1, Math.floor(context.sampleRate * seconds));
+        const buffer = context.createBuffer(1, length, context.sampleRate);
+        const data = buffer.getChannelData(0);
+        let previous = 0;
+        for (let index = 0; index < length; index++) {
+          const white = Math.random() * 2 - 1;
+          if (color === 'brown') {
+            previous = (previous + .025 * white) / 1.025;
+            data[index] = previous * 3.2;
+          } else {
+            data[index] = white;
+          }
+        }
+        return buffer;
+      }
+
+      function addNoise(active, {
+        color = 'white',
+        gain = .05,
+        highpass = 40,
+        lowpass = 9000,
+        rate = 1
+      } = {}) {
+        const source = registerSource(active, active.context.createBufferSource());
+        const high = active.context.createBiquadFilter();
+        const low = active.context.createBiquadFilter();
+        const level = active.context.createGain();
+        source.buffer = makeNoiseBuffer(active.context, color);
+        source.loop = true;
+        source.playbackRate.value = rate;
+        high.type = 'highpass';
+        high.frequency.value = highpass;
+        high.Q.value = .55;
+        low.type = 'lowpass';
+        low.frequency.value = lowpass;
+        low.Q.value = .45;
+        level.gain.value = gain;
+        source.connect(high).connect(low).connect(level).connect(active.master);
+        source.start();
+        return { source, high, low, level };
+      }
+
+      function addLfo(active, parameter, rate, depth) {
+        const oscillator = registerSource(active, active.context.createOscillator());
+        const amount = active.context.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = rate;
+        amount.gain.value = depth;
+        oscillator.connect(amount).connect(parameter);
+        oscillator.start();
+        return oscillator;
+      }
+
+      function addPad(active, frequencies, {
+        gain = .012,
+        lowpass = 850,
+        detune = 0
+      } = {}) {
+        const bus = active.context.createGain();
+        const filter = active.context.createBiquadFilter();
+        bus.gain.value = 1;
+        filter.type = 'lowpass';
+        filter.frequency.value = lowpass;
+        filter.Q.value = .65;
+        bus.connect(filter).connect(active.master);
+        frequencies.forEach((frequency, index) => {
+          const oscillator = registerSource(active, active.context.createOscillator());
+          const level = active.context.createGain();
+          oscillator.type = index % 2 ? 'triangle' : 'sine';
+          oscillator.frequency.value = frequency;
+          oscillator.detune.value = (index - (frequencies.length - 1) / 2) * detune;
+          level.gain.value = gain / Math.max(1, frequencies.length);
+          oscillator.connect(level).connect(bus);
+          oscillator.start();
+        });
+        return { bus, filter };
+      }
+
+      function oneShot(active, {
+        frequency = 660,
+        endFrequency = null,
+        gain = .018,
+        duration = 1.8,
+        pan = 0,
+        type = 'sine',
+        delay = 0
+      } = {}) {
+        if (session !== active || active.context.state === 'closed') return;
+        const now = active.context.currentTime + delay;
+        const oscillator = registerSource(active, active.context.createOscillator());
+        const level = active.context.createGain();
+        const panner = typeof active.context.createStereoPanner === 'function'
+          ? active.context.createStereoPanner()
+          : null;
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(Math.max(30, frequency), now);
+        if (endFrequency) {
+          oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency), now + duration);
+        }
+        level.gain.setValueAtTime(0, now);
+        level.gain.linearRampToValueAtTime(gain, now + Math.min(.08, duration * .2));
+        level.gain.exponentialRampToValueAtTime(.0001, now + duration);
+        if (panner) {
+          panner.pan.value = clamp(pan, -1, 1);
+          oscillator.connect(level).connect(panner).connect(active.master);
+        } else {
+          oscillator.connect(level).connect(active.master);
+        }
+        oscillator.start(now);
+        oscillator.stop(now + duration + .04);
+      }
+
+      function scheduleGlimmers(active, type) {
+        const run = () => {
+          if (type === 'glantan') {
+            const notes = [523.25, 659.25, 783.99, 880];
+            const frequency = notes[Math.floor(Math.random() * notes.length)];
+            oneShot(active, {
+              frequency,
+              endFrequency: frequency * 1.015,
+              gain: .012,
+              duration: 2.8,
+              pan: Math.random() * 1.5 - .75
+            });
+            later(active, run, 9000 + Math.random() * 9000);
+          } else {
+            const notes = [220, 246.94, 329.63, 440];
+            const frequency = notes[Math.floor(Math.random() * notes.length)];
+            oneShot(active, {
+              frequency,
+              endFrequency: frequency * .985,
+              gain: .009,
+              duration: 4.5,
+              pan: Math.random() * 1.6 - .8,
+              type: 'triangle'
+            });
+            later(active, run, 14000 + Math.random() * 12000);
+          }
+        };
+        later(active, run, type === 'glantan' ? 5200 : 8000);
+      }
+
+      function scheduleRain(active) {
+        const drop = () => {
+          const bright = Math.random() > .72;
+          const frequency = bright
+            ? 1650 + Math.random() * 1100
+            : 720 + Math.random() * 850;
+          oneShot(active, {
+            frequency,
+            endFrequency: frequency * (.48 + Math.random() * .16),
+            gain: bright ? .009 : .006,
+            duration: .12 + Math.random() * .16,
+            pan: Math.random() * 1.8 - .9
+          });
+          later(active, drop, 260 + Math.random() * 920);
+        };
+        later(active, drop, 380);
+      }
+
+      function buildTheme(active, theme) {
+        if (theme === 'glantan') {
+          const air = addNoise(active, { color: 'brown', gain: .055, highpass: 180, lowpass: 3200 });
+          const pad = addPad(active, [110, 146.83, 164.81], { gain: .052, lowpass: 720, detune: 2.5 });
+          addLfo(active, air.level.gain, .075, .014);
+          addLfo(active, pad.filter.frequency, .038, 190);
+          active.activityFilter = pad.filter;
+          active.baseFilter = 720;
+          scheduleGlimmers(active, 'glantan');
+          return;
+        }
+
+        if (theme === 'regnvav') {
+          const rain = addNoise(active, { gain: .105, highpass: 260, lowpass: 6500, rate: .96 });
+          const distance = addNoise(active, { color: 'brown', gain: .04, highpass: 70, lowpass: 780 });
+          addLfo(active, rain.level.gain, .055, .012);
+          addLfo(active, distance.low.frequency, .031, 160);
+          active.activityFilter = rain.low;
+          active.baseFilter = 6500;
+          scheduleRain(active);
+          return;
+        }
+
+        if (theme === 'djupstrom') {
+          const stream = addNoise(active, { color: 'brown', gain: .145, highpass: 38, lowpass: 1350 });
+          const hush = addNoise(active, { color: 'brown', gain: .048, highpass: 170, lowpass: 520, rate: .74 });
+          addLfo(active, stream.low.frequency, .026, 320);
+          addLfo(active, hush.level.gain, .041, .009);
+          active.activityFilter = stream.low;
+          active.baseFilter = 1350;
+          return;
+        }
+
+        const air = addNoise(active, { color: 'brown', gain: .038, highpass: 90, lowpass: 2100, rate: .82 });
+        const pad = addPad(active, [55, 82.41, 110, 164.81], { gain: .061, lowpass: 520, detune: 3.5 });
+        addLfo(active, pad.filter.frequency, .022, 170);
+        addLfo(active, air.level.gain, .034, .009);
+        active.activityFilter = pad.filter;
+        active.baseFilter = 520;
+        scheduleGlimmers(active, 'nattljus');
+      }
+
+      function outputLevel(value) {
+        return clamp(Number(value) || 0, 0, 60) / 100 * .82;
+      }
+
+      function dispose(active, immediate = false) {
+        const now = active.context.currentTime;
+        active.master.gain.cancelScheduledValues(now);
+        active.master.gain.setTargetAtTime(0, now, immediate ? .006 : .055);
+        const delay = immediate ? 20 : 260;
+        setTimeout(() => {
+          active.timers.forEach(clearTimeout);
+          active.timers.clear();
+          active.sources.forEach(source => {
+            try { source.stop(); } catch (error) { /* källan är redan stoppad */ }
+            try { source.disconnect(); } catch (error) { /* redan frikopplad */ }
+          });
+          active.sources.clear();
+          active.context.close().catch(() => {});
+        }, delay);
+      }
+
+      function start(theme, volume) {
+        if (!AudioContextClass || !SOUND_THEMES[theme] || theme === 'none') {
+          return Promise.resolve(false);
+        }
+        if (session) dispose(session);
+        let context;
+        try {
+          context = new AudioContextClass({ latencyHint: 'playback' });
+        } catch (error) {
+          context = new AudioContextClass();
+        }
+        const master = context.createGain();
+        const compressor = context.createDynamicsCompressor();
+        master.gain.value = 0;
+        compressor.threshold.value = -20;
+        compressor.knee.value = 16;
+        compressor.ratio.value = 3;
+        compressor.attack.value = .02;
+        compressor.release.value = .32;
+        master.connect(compressor).connect(context.destination);
+        const active = {
+          context,
+          master,
+          compressor,
+          sources: new Set(),
+          timers: new Set(),
+          theme,
+          activityTimer: null,
+          activityFilter: null,
+          baseFilter: 900
+        };
+        session = active;
+        buildTheme(active, theme);
+        const now = context.currentTime;
+        master.gain.setValueAtTime(0, now);
+        master.gain.linearRampToValueAtTime(outputLevel(volume), now + .8);
+        return context.resume().then(() => true).catch(() => {
+          if (session === active) session = null;
+          dispose(active, true);
+          return false;
+        });
+      }
+
+      function stop(immediate = false) {
+        if (!session) return;
+        const active = session;
+        session = null;
+        dispose(active, immediate);
+      }
+
+      function setVolume(value) {
+        if (!session) return;
+        const now = session.context.currentTime;
+        session.master.gain.cancelScheduledValues(now);
+        session.master.gain.setTargetAtTime(outputLevel(value), now, .06);
+      }
+
+      function liftForTyping(active) {
+        if (!active.activityFilter) return;
+        const now = active.context.currentTime;
+        const parameter = active.activityFilter.frequency;
+        parameter.cancelScheduledValues(now);
+        parameter.setTargetAtTime(active.baseFilter * 1.12, now, .12);
+        if (active.activityTimer) {
+          clearTimeout(active.activityTimer);
+          active.timers.delete(active.activityTimer);
+        }
+        active.activityTimer = later(active, () => {
+          if (!active.activityFilter) return;
+          const current = active.context.currentTime;
+          active.activityFilter.frequency.cancelScheduledValues(current);
+          active.activityFilter.frequency.setTargetAtTime(active.baseFilter, current, 1.4);
+          active.activityTimer = null;
+        }, 620);
+      }
+
+      function handleKey(key) {
+        const active = session;
+        if (!active || !reactive || typeof key !== 'string') return;
+        if (/^[a-zåäö]$/i.test(key)) {
+          liftForTyping(active);
+          return;
+        }
+        if (!/[.!?]/.test(key)) return;
+        const bases = {
+          glantan: 523.25,
+          regnvav: 880,
+          djupstrom: 164.81,
+          nattljus: 329.63
+        };
+        const base = bases[active.theme] || 440;
+        oneShot(active, {
+          frequency: key === '?' ? base * 1.25 : (key === '!' ? base * 1.5 : base),
+          endFrequency: key === '?' ? base * 1.5 : base * .985,
+          gain: active.theme === 'djupstrom' ? .006 : .011,
+          duration: active.theme === 'regnvav' ? .32 : 1.25,
+          pan: .18
+        });
+      }
+
+      function commit(kind) {
+        const active = session;
+        if (!active || !reactive) return;
+        const base = {
+          glantan: 392,
+          regnvav: 659.25,
+          djupstrom: 110,
+          nattljus: 220
+        }[active.theme] || 220;
+        const heading = kind === 'heading';
+        oneShot(active, {
+          frequency: heading ? base * 1.5 : base,
+          endFrequency: heading ? base * 2 : base * 1.01,
+          gain: active.theme === 'djupstrom' ? .006 : .013,
+          duration: heading ? 2.4 : 1.45,
+          pan: -.18
+        });
+        if (heading && active.theme !== 'regnvav') {
+          oneShot(active, {
+            frequency: base * 2,
+            endFrequency: base * 2.01,
+            gain: .007,
+            duration: 3,
+            pan: .22,
+            delay: .08
+          });
+        }
+      }
+
+      return {
+        supported: Boolean(AudioContextClass),
+        start,
+        stop,
+        setVolume,
+        setReactive(value) { reactive = value !== false; },
+        handleKey,
+        commit,
+        isPlaying() { return Boolean(session); },
+        theme() { return session?.theme || null; }
+      };
+    })();
+
     const elements = {
       body: document.body,
       canvas: $('#edge-canvas'),
@@ -2324,6 +2847,16 @@
       timerBreak: $('#timer-break'),
       timerRestart: $('#timer-restart'),
       timerDone: $('#timer-done'),
+      soundButton: $('#sound-button'),
+      soundSettings: $('#sound-settings'),
+      soundTheme: $('#sound-theme'),
+      soundThemeDescription: $('#sound-theme-description'),
+      soundState: $('#sound-state'),
+      soundReactive: $('#sound-reactive'),
+      soundVolume: $('#sound-volume'),
+      soundVolumeOutput: $('#sound-volume-output'),
+      soundToggle: $('#sound-toggle'),
+      soundSupportNote: $('#sound-support-note'),
       deviceSettings: $('#device-settings'),
       installCard: $('#install-card'),
       installTitle: $('#install-title'),
@@ -2445,7 +2978,7 @@
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 5,
+        version: 6,
         activeId: document.id,
         documents: [document],
         settings: {
@@ -2454,7 +2987,10 @@
           maxEdges: 3,
           focusMinutes: 25,
           breakMinutes: 5,
-          showCountdown: true
+          showCountdown: true,
+          soundTheme: 'none',
+          soundVolume: 24,
+          soundReactive: true
         },
         timer: createTimer(25)
       };
@@ -2491,11 +3027,26 @@
             maxEdges: 3,
             focusMinutes: 25,
             breakMinutes: 5,
-            showCountdown: true
+            showCountdown: true,
+            soundTheme: 'none',
+            soundVolume: 24,
+            soundReactive: true
           }, stored.settings || {});
           stored.settings.focusMinutes = clamp(Math.round(Number(stored.settings.focusMinutes) || 25), 1, 180);
           stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
+          stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
+            ? stored.settings.soundTheme
+            : 'none';
+          stored.settings.soundVolume = clamp(
+            Number.isFinite(Number(stored.settings.soundVolume))
+              ? Math.round(Number(stored.settings.soundVolume))
+              : 24,
+            0,
+            60
+          );
+          stored.settings.soundReactive = stored.settings.soundReactive !== false;
+          stored.version = 6;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -2516,7 +3067,7 @@
             hiddenWords: document.doldaOrd || []
           }));
           return {
-            version: 5,
+            version: 6,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
@@ -2525,7 +3076,10 @@
               maxEdges: 3,
               focusMinutes: 25,
               breakMinutes: 5,
-              showCountdown: true
+              showCountdown: true,
+              soundTheme: 'none',
+              soundVolume: 24,
+              soundReactive: true
             },
             timer: createTimer(25)
           };
@@ -3123,6 +3677,93 @@
       }
     }
 
+    function normalizeSoundSettings() {
+      app.settings.soundTheme = SOUND_THEMES[app.settings.soundTheme]
+        ? app.settings.soundTheme
+        : 'none';
+      app.settings.soundVolume = clamp(
+        Number.isFinite(Number(app.settings.soundVolume))
+          ? Math.round(Number(app.settings.soundVolume))
+          : 24,
+        0,
+        60
+      );
+      app.settings.soundReactive = app.settings.soundReactive !== false;
+      Soundscape.setReactive(app.settings.soundReactive);
+    }
+
+    function renderSound() {
+      normalizeSoundSettings();
+      const theme = SOUND_THEMES[app.settings.soundTheme];
+      const playing = Soundscape.isPlaying();
+      const activeName = SOUND_THEMES[Soundscape.theme()]?.name || theme.name;
+
+      elements.soundTheme.value = app.settings.soundTheme;
+      elements.soundThemeDescription.textContent = theme.description;
+      elements.soundReactive.checked = app.settings.soundReactive;
+      elements.soundVolume.value = app.settings.soundVolume;
+      elements.soundVolumeOutput.textContent = app.settings.soundVolume + ' %';
+      elements.soundState.textContent = playing ? 'Spelar ' + activeName : 'Tyst';
+      elements.soundToggle.textContent = playing ? 'Stäng av' : 'Starta ljud';
+      elements.soundToggle.disabled = !Soundscape.supported || app.settings.soundTheme === 'none';
+      elements.soundButton.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      elements.soundButton.setAttribute(
+        'aria-label',
+        playing
+          ? 'Stäng av ljudtemat ' + activeName
+          : (app.settings.soundTheme === 'none'
+            ? 'Välj ljudtema'
+            : 'Starta ljudtemat ' + theme.name)
+      );
+      elements.soundButton.title = playing ? 'Stäng av ' + activeName : 'Ljudrum';
+      elements.soundSupportNote.dataset.warning = Soundscape.supported ? 'false' : 'true';
+      elements.soundSupportNote.textContent = Soundscape.supported
+        ? 'Ljuden skapas lokalt i webbläsaren och fungerar offline. Börja gärna lågt med hörlurar.'
+        : 'Den här webbläsaren saknar stöd för VävR:s lokala ljudmotor.';
+    }
+
+    function stopSound(message = true) {
+      if (!Soundscape.isPlaying()) return;
+      Soundscape.stop();
+      renderSound();
+      if (message) {
+        toast('Ljudrummet tystnade');
+        announce('Ljudrummet tystnade');
+      }
+    }
+
+    async function startSound() {
+      normalizeSoundSettings();
+      if (app.settings.soundTheme === 'none') {
+        openUtility(elements.soundTheme);
+        elements.soundSettings.scrollIntoView({ block: 'center' });
+        return false;
+      }
+      if (!Soundscape.supported) {
+        renderSound();
+        toast('Ljud stöds inte i den här webbläsaren');
+        return false;
+      }
+      const started = await Soundscape.start(app.settings.soundTheme, app.settings.soundVolume);
+      renderSound();
+      if (started) {
+        const name = SOUND_THEMES[app.settings.soundTheme].name;
+        toast(name + ' spelar');
+        announce('Ljudtemat ' + name + ' startade');
+      } else {
+        toast('Webbläsaren kunde inte starta ljudet');
+      }
+      return started;
+    }
+
+    function toggleSound() {
+      if (Soundscape.isPlaying()) {
+        stopSound();
+        return;
+      }
+      startSound();
+    }
+
     function setFocusMinutes(value) {
       const minutes = clamp(Math.round(Number(value) || 25), 1, 180);
       app.settings.focusMinutes = minutes;
@@ -3204,6 +3845,7 @@
       commitsThisSession += 1;
       recalculate(block.id);
       animateCommit(block.id, ghostText);
+      Soundscape.commit(block.kind);
       announce((block.kind === 'heading' ? 'Rubrik' : 'Stycke') + ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.');
     }
 
@@ -4595,6 +5237,7 @@
       renderDocumentControls();
       renderGoal();
       renderTimer();
+      renderSound();
       configureInstallUI();
       utilityReturnFocus = document.activeElement;
       $('main').setAttribute('inert', '');
@@ -4716,12 +5359,20 @@
       settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
       settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
       settings.showCountdown = settings.showCountdown !== false;
+      settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
+      settings.soundVolume = clamp(
+        Number.isFinite(Number(settings.soundVolume)) ? Math.round(Number(settings.soundVolume)) : 24,
+        0,
+        60
+      );
+      settings.soundReactive = settings.soundReactive !== false;
 
       stopTimerTicker();
+      Soundscape.stop(true);
       app = {
         ...defaults,
         ...source,
-        version: 5,
+        version: 6,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
@@ -4729,6 +5380,7 @@
       if (!documents.some(document => document.id === app.activeId)) app.activeId = documents[0].id;
       changeActiveDocument(app.activeId, false);
       renderTimer();
+      renderSound();
       startTimerTicker();
       toast('Säkerhetskopian återställdes');
       announce('Säkerhetskopian återställdes');
@@ -4908,6 +5560,7 @@
     function setupEvents() {
       elements.draft.addEventListener('input', updateDraftMeta);
       elements.draft.addEventListener('keydown', event => {
+        if (!event.ctrlKey && !event.metaKey && !event.altKey) Soundscape.handleKey(event.key);
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
           event.preventDefault();
           commitDraft();
@@ -4948,6 +5601,7 @@
       elements.utilityButton.addEventListener('click', () => elements.utility.dataset.open === 'true' ? closeUtility() : openUtility());
       $('#utility-close').addEventListener('click', closeUtility);
       elements.scrim.addEventListener('click', closeUtility);
+      elements.soundButton.addEventListener('click', toggleSound);
       elements.goalCompact.addEventListener('click', () => openUtility(elements.goalEnabled));
       elements.timerCompact.addEventListener('click', () => {
         openUtility(app.timer.state === 'finished' ? elements.timerRestart : elements.timerPrimary);
@@ -5003,6 +5657,34 @@
       });
       elements.timerDone.addEventListener('click', endTimer);
 
+      elements.soundTheme.addEventListener('change', async event => {
+        const wasPlaying = Soundscape.isPlaying();
+        app.settings.soundTheme = SOUND_THEMES[event.target.value] ? event.target.value : 'none';
+        saveState('Ljudtema sparat');
+        if (app.settings.soundTheme === 'none') {
+          stopSound(false);
+        } else if (wasPlaying) {
+          await Soundscape.start(app.settings.soundTheme, app.settings.soundVolume);
+        }
+        renderSound();
+      });
+      elements.soundReactive.addEventListener('change', event => {
+        app.settings.soundReactive = event.target.checked;
+        Soundscape.setReactive(app.settings.soundReactive);
+        saveState('Ljudinställning sparad');
+        renderSound();
+      });
+      elements.soundVolume.addEventListener('input', event => {
+        app.settings.soundVolume = clamp(Math.round(Number(event.target.value) || 0), 0, 60);
+        elements.soundVolumeOutput.textContent = app.settings.soundVolume + ' %';
+        Soundscape.setVolume(app.settings.soundVolume);
+      });
+      elements.soundVolume.addEventListener('change', () => {
+        saveState('Ljudvolym sparad');
+        renderSound();
+      });
+      elements.soundToggle.addEventListener('click', toggleSound);
+
       elements.widthSlider.addEventListener('input', event => {
         applyWidth(event.target.value);
         saveState();
@@ -5039,6 +5721,7 @@
       window.addEventListener('pointercancel', endNodeDrag);
       window.addEventListener('resize', scheduleResize);
       window.visualViewport?.addEventListener('resize', scheduleResize);
+      window.addEventListener('pagehide', () => Soundscape.stop(true));
       window.addEventListener('beforeinstallprompt', event => {
         event.preventDefault();
         deferredInstallPrompt = event;
@@ -5266,6 +5949,7 @@
       updateNodePositions();
       renderStats();
       renderTimer();
+      renderSound();
       drawGraph();
       setupEvents();
       startTimerTicker();

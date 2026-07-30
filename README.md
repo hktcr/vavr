@@ -26,6 +26,20 @@ Timern kan pausas, fortsättas och döljas till en neutral statusrad. När ett
 pass är slut kan användaren själv välja en femminuterspaus, ett nytt pass
 eller att avsluta. Ingenting startar automatiskt.
 
+## Ljudrum
+
+Fyra frivilliga ljudteman kan skapas direkt i webbläsaren:
+
+- **Gläntan** ger mjuk luft, varma grundtoner och sällsynta ljusglimtar.
+- **Regnväv** ger ett jämnt regnfält som kan maskera ljud i omgivningen.
+- **Djupström** är ett mörkt, neutralt brus utan melodi eller tydlig rytm.
+- **Nattljus** ger långsamma övertoner och ett mer stämningsfullt rum.
+
+Ljudet startar endast efter ett uttryckligt val. Tema, volym och den valfria
+textresponsen sparas, men uppspelning återupptas aldrig automatiskt efter en
+omladdning. Alla ljud syntetiseras med Web Audio API utan ljudfiler eller
+nätverksanrop och fungerar därför även offline.
+
 ## Analys
 
 Kohesionen beräknas med svensk tokenisering, stoppord, lätt suffixtrunkering,
@@ -70,4 +84,5 @@ Testsviterna körs med:
 ```bash
 node vavr-test.mjs
 node vavr-shell-test.mjs
+node vavr-audio-test.mjs
 ```
