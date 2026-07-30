@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#090b11">
+  <meta name="apple-mobile-web-app-title" content="VävR">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/vavr-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="./icons/vavr-180.png" sizes="180x180">
   <title>VävR</title>
   <style>
     :root {
@@ -480,6 +486,60 @@
       font-variant-numeric: tabular-nums;
     }
 
+    .writing-support-summary {
+      display: flex;
+      min-height: 45px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 18px 8px;
+    }
+
+    .writing-support-summary[hidden],
+    .support-compact[hidden] {
+      display: none;
+    }
+
+    .support-compact {
+      display: flex;
+      min-width: 0;
+      min-height: 44px;
+      align-items: center;
+      gap: 8px;
+      padding: 0 11px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 10px;
+      background: rgba(179, 229, 255, .025);
+      color: var(--paper-dim);
+      cursor: pointer;
+      font: 10px/1.25 var(--mono);
+      letter-spacing: .04em;
+      text-align: left;
+      transition: color .16s, border-color .16s, background .16s;
+    }
+
+    .support-compact:hover,
+    .support-compact:focus-visible {
+      border-color: rgba(89, 194, 255, .3);
+      background: rgba(89, 194, 255, .06);
+      color: var(--cyan-bright);
+    }
+
+    .support-compact svg {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+    }
+
+    #goal-compact {
+      flex: 1 1 auto;
+    }
+
+    #timer-compact {
+      flex: 0 1 auto;
+      font-variant-numeric: tabular-nums;
+    }
+
     #draft-input {
       display: block;
       width: 100%;
@@ -663,7 +723,7 @@
     }
 
     .structure-shell {
-      width: min(850px, 100%);
+      width: min(1180px, 100%);
       margin: 0 auto;
     }
 
@@ -697,6 +757,7 @@
 
     .outline-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
     }
 
@@ -726,16 +787,88 @@
       color: var(--cyan-bright);
     }
 
-    #outline {
+    .structure-breadcrumb {
+      display: flex;
+      overflow-x: auto;
+      align-items: center;
+      gap: 5px;
+      margin: -5px 0 22px;
+      padding: 4px 2px 8px;
+      scrollbar-width: thin;
+    }
+
+    .structure-breadcrumb button {
+      min-height: 40px;
+      flex: 0 0 auto;
+      padding: 0 10px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--paper-faint);
+      cursor: pointer;
+      font: 10px/1 var(--mono);
+      letter-spacing: .04em;
+    }
+
+    .structure-breadcrumb button:hover,
+    .structure-breadcrumb button[aria-current="location"] {
+      background: rgba(179, 229, 255, .055);
+      color: var(--cyan-bright);
+    }
+
+    .breadcrumb-separator {
+      color: rgba(154, 170, 181, .3);
+      font: 12px/1 var(--mono);
+    }
+
+    #structure-board {
       display: grid;
-      gap: 10px;
-      margin: 0;
+      gap: 30px;
       padding-bottom: 80px;
+    }
+
+    .board-zone {
+      display: grid;
+      gap: 12px;
+    }
+
+    .board-zone[hidden] {
+      display: none;
+    }
+
+    .board-zone-head {
+      display: flex;
+      min-height: 32px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .board-zone-head h2 {
+      margin: 0;
+      color: var(--paper-dim);
+      font: 600 11px/1 var(--mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .board-zone-head span {
+      color: var(--paper-faint);
+      font: 10px/1 var(--mono);
+    }
+
+    .structure-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 255px), 1fr));
+      gap: 14px;
+      margin: 0;
       padding-left: 0;
       list-style: none;
+      align-items: stretch;
     }
 
     .outline-empty {
+      grid-column: 1 / -1;
       padding: 50px 24px;
       border: 1px dashed var(--line);
       border-radius: var(--radius);
@@ -757,18 +890,45 @@
       transition: border-color .16s, background .16s, opacity .16s, transform .16s;
     }
 
+    .structure-grid .block-card {
+      display: flex;
+      min-height: 216px;
+      flex-direction: column;
+      gap: 12px;
+      padding: 15px;
+    }
+
     .block-card:hover,
+    .block-card:focus-within,
     .block-card[data-selected="true"] {
       border-color: rgba(179, 229, 255, .27);
       background: rgba(23, 29, 40, .86);
     }
 
-    .block-card[data-kind="heading"] {
-      margin-top: 16px;
+    .structure-grid .block-card[data-kind="heading"] {
       border-color: rgba(197, 160, 89, .21);
       background:
-        linear-gradient(90deg, rgba(197, 160, 89, .08), transparent 54%),
+        linear-gradient(145deg, rgba(197, 160, 89, .09), transparent 58%),
         rgba(15, 19, 28, .76);
+    }
+
+    .structure-grid .block-card[data-level="2"] {
+      border-color: rgba(197, 160, 89, .15);
+      background:
+        linear-gradient(145deg, rgba(197, 160, 89, .055), rgba(89, 194, 255, .025) 58%, transparent),
+        rgba(15, 19, 28, .76);
+    }
+
+    .structure-grid .block-card[data-level="3"] {
+      border-color: rgba(89, 194, 255, .16);
+      background:
+        linear-gradient(145deg, rgba(89, 194, 255, .045), transparent 56%),
+        rgba(15, 19, 28, .76);
+    }
+
+    .structure-grid .block-card[data-editing="true"] {
+      grid-column: 1 / -1;
+      min-height: auto;
     }
 
     .block-card[data-dragging="true"] {
@@ -795,7 +955,10 @@
     .drag-handle:active { cursor: grabbing; }
 
     .block-main {
+      display: flex;
       min-width: 0;
+      flex: 1 1 auto;
+      flex-direction: column;
     }
 
     .block-meta {
@@ -831,6 +994,7 @@
     .block-text {
       display: block;
       width: 100%;
+      overflow: hidden;
       padding: 0;
       border: 0;
       background: transparent;
@@ -841,7 +1005,15 @@
       white-space: pre-wrap;
     }
 
-    .block-card[data-kind="heading"] .block-text {
+    .structure-grid .block-card:not([data-editing="true"]) .block-text {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 6;
+      line-clamp: 6;
+    }
+
+    .block-card[data-kind="heading"] .block-text,
+    .section-open {
       color: #ead7ad;
       font-family: var(--sans);
       font-size: 20px;
@@ -851,6 +1023,10 @@
 
     .block-tools {
       display: flex;
+      width: 100%;
+      margin-top: auto;
+      padding-top: 4px;
+      border-top: 1px solid rgba(179, 229, 255, .07);
       gap: 2px;
     }
 
@@ -859,9 +1035,88 @@
       height: 44px;
     }
 
+    .section-open {
+      display: block;
+      width: 100%;
+      min-height: 58px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .section-preview {
+      display: -webkit-box;
+      overflow: hidden;
+      margin: 2px 0 0;
+      color: var(--paper-dim);
+      font: 14px/1.55 var(--serif);
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+    }
+
+    .section-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    .section-thread {
+      display: flex;
+      height: 20px;
+      align-items: center;
+      gap: 5px;
+      color: var(--amber);
+    }
+
+    .section-thread::before {
+      width: 12px;
+      height: 12px;
+      content: "";
+      border: 1.5px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .section-thread i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 6px rgba(89, 194, 255, .35);
+    }
+
+    .section-thread i.ring {
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--amber);
+      background: transparent;
+    }
+
     .edit-area {
       display: grid;
       gap: 9px;
+    }
+
+    .structure-heading-editor {
+      margin: -7px 0 20px;
+      padding: 15px;
+      border: 1px solid rgba(197, 160, 89, .24);
+      border-radius: 14px;
+      background: rgba(197, 160, 89, .05);
+    }
+
+    .structure-heading-editor[hidden] {
+      display: none;
+    }
+
+    .structure-heading-editor label {
+      color: var(--paper-dim);
+      font: 10px/1 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
 
     .edit-area textarea {
@@ -1134,7 +1389,7 @@
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
     }
 
@@ -1165,6 +1420,228 @@
       color: var(--paper-faint);
       font-size: 12px;
       line-height: 1.65;
+    }
+
+    .support-card {
+      display: grid;
+      gap: 12px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(179, 229, 255, .025);
+    }
+
+    .support-card-head {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .support-card-title {
+      display: grid;
+      gap: 3px;
+    }
+
+    .support-card-title strong {
+      color: var(--paper);
+      font-size: 13px;
+    }
+
+    .support-card-title span,
+    #timer-state {
+      color: var(--paper-faint);
+      font: 9px/1.35 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .check-control {
+      display: flex;
+      min-height: 44px;
+      align-items: center;
+      gap: 8px;
+      color: var(--paper-dim);
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .check-control input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--cyan);
+    }
+
+    .support-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .support-progress {
+      display: grid;
+      gap: 7px;
+    }
+
+    .support-progress[hidden],
+    #custom-minutes-field[hidden],
+    #timer-finished-actions[hidden] {
+      display: none;
+    }
+
+    .support-progress progress {
+      width: 100%;
+      height: 7px;
+      overflow: hidden;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(179, 229, 255, .08);
+      color: var(--cyan);
+      accent-color: var(--cyan);
+    }
+
+    .support-progress progress::-webkit-progress-bar {
+      border-radius: 999px;
+      background: rgba(179, 229, 255, .08);
+    }
+
+    .support-progress progress::-webkit-progress-value {
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan-deep), var(--cyan));
+    }
+
+    .support-progress progress::-moz-progress-bar {
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--cyan-deep), var(--cyan));
+    }
+
+    .support-progress p {
+      margin: 0;
+      color: var(--paper-dim);
+      font: 11px/1.45 var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #timer-display {
+      padding: 15px 12px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 10px;
+      background: rgba(3, 6, 10, .42);
+      color: var(--cyan-bright);
+      font: 600 25px/1 var(--mono);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .04em;
+      text-align: center;
+    }
+
+    #timer-display[data-words="true"] {
+      font-size: 14px;
+    }
+
+    #timer-finished-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .device-card-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-icon-preview {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .32);
+    }
+
+    .install-instructions {
+      margin: 0;
+      padding-left: 22px;
+      color: var(--paper-dim);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .install-instructions[hidden],
+    .data-transfer-note[hidden],
+    #install-card[hidden],
+    #update-card[hidden],
+    #device-settings[hidden] {
+      display: none;
+    }
+
+    .data-transfer-note {
+      display: grid;
+      gap: 9px;
+      padding: 11px;
+      border: 1px solid rgba(197, 160, 89, .22);
+      border-radius: 9px;
+      background: rgba(197, 160, 89, .055);
+    }
+
+    .data-transfer-note p {
+      margin: 0;
+      color: var(--paper-dim);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    #install-nudge {
+      position: fixed;
+      z-index: 90;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      display: grid;
+      width: min(360px, calc(100vw - 32px));
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 12px;
+      padding: 13px;
+      border: 1px solid rgba(179, 229, 255, .2);
+      border-radius: 17px;
+      background: rgba(10, 13, 20, .97);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .62);
+      color: var(--paper);
+    }
+
+    #install-nudge[hidden] {
+      display: none;
+    }
+
+    #install-nudge img {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+    }
+
+    .install-nudge-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .install-nudge-copy strong {
+      font-size: 13px;
+    }
+
+    .install-nudge-copy span {
+      color: var(--paper-dim);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .install-nudge-actions {
+      display: flex;
+      grid-column: 1 / -1;
+      gap: 8px;
+    }
+
+    .install-nudge-actions .plain-button {
+      min-height: 44px;
+      flex: 1 1 0;
     }
 
     .danger {
@@ -1335,6 +1812,25 @@
         padding-left: 12px;
       }
 
+      .writing-support-summary {
+        align-items: stretch;
+        gap: 6px;
+        padding-right: 12px;
+        padding-left: 12px;
+      }
+
+      .support-compact {
+        min-width: 0;
+        flex: 1 1 0;
+        padding: 0 9px;
+      }
+
+      .support-compact span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
       #commit-hint .optional {
         display: none;
       }
@@ -1357,6 +1853,14 @@
       }
 
       .button-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .support-fields {
+        grid-template-columns: 1fr;
+      }
+
+      .structure-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -1436,6 +1940,16 @@
           <span id="draft-count">0 ord</span>
         </div>
         <textarea id="draft-input" rows="4" spellcheck="true" autocomplete="off" placeholder="Skriv ett stycke. Enter väver in det." aria-label="Skriv nästa stycke"></textarea>
+        <div id="writing-support-summary" class="writing-support-summary" hidden>
+          <button id="goal-compact" class="support-compact" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M22 12h-3"/></svg>
+            <span id="goal-compact-label">0 av 800 ord</span>
+          </button>
+          <button id="timer-compact" class="support-compact" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>
+            <span id="timer-compact-label">25:00</span>
+          </button>
+        </div>
         <div class="composer-bottom">
           <span id="commit-hint">Enter väver in <span class="optional">· Shift + Enter ger radbrytning</span></span>
           <label class="width-control" title="Skrivbredd">
@@ -1465,10 +1979,36 @@
             <p id="structure-summary">Ordna, granska och redigera block. Endast denna vy ändrar dokumentets ordning.</p>
           </div>
           <div class="outline-actions">
+            <button id="structure-up" class="plain-button" type="button" hidden>Upp en nivå</button>
+            <button id="structure-edit-heading" class="plain-button" type="button" hidden>Redigera rubrik</button>
             <button id="structure-add" class="plain-button primary" type="button">+ Skriv nytt</button>
           </div>
         </header>
-        <ul id="outline"></ul>
+        <div id="structure-heading-editor" class="edit-area structure-heading-editor" hidden>
+          <label for="structure-heading-input">Rubriktext</label>
+          <textarea id="structure-heading-input" rows="2"></textarea>
+          <div class="edit-buttons">
+            <button id="structure-heading-cancel" class="small-button" type="button">Avbryt</button>
+            <button id="structure-heading-save" class="small-button primary" type="button">Spara rubrik</button>
+          </div>
+        </div>
+        <nav id="structure-breadcrumb" class="structure-breadcrumb" aria-label="Plats i dokumentstrukturen"></nav>
+        <div id="structure-board">
+          <section id="paragraph-zone" class="board-zone" aria-labelledby="paragraph-zone-title">
+            <header class="board-zone-head">
+              <h2 id="paragraph-zone-title">Text på denna nivå</h2>
+              <span id="paragraph-zone-count"></span>
+            </header>
+            <ul id="outline" class="structure-grid"></ul>
+          </section>
+          <section id="section-zone" class="board-zone" aria-labelledby="section-zone-title">
+            <header class="board-zone-head">
+              <h2 id="section-zone-title">Undersektioner</h2>
+              <span id="section-zone-count"></span>
+            </header>
+            <ul id="section-grid" class="structure-grid section-grid"></ul>
+          </section>
+        </div>
       </div>
     </section>
   </main>
@@ -1512,8 +2052,83 @@
         <h3>Nyckeltal</h3>
         <div class="stats-grid">
           <div class="stat"><strong id="stat-words">0</strong><span>Ord</span></div>
+          <div class="stat"><strong id="stat-characters">0</strong><span>Texttecken</span></div>
           <div class="stat"><strong id="stat-blocks">0</strong><span>Block</span></div>
           <div class="stat"><strong id="stat-links">0</strong><span>Trådar</span></div>
+        </div>
+      </section>
+
+      <section id="writing-support-settings" class="setting-group">
+        <h3>Skrivstöd</h3>
+
+        <div class="support-card">
+          <div class="support-card-head">
+            <div class="support-card-title">
+              <strong>Dokumentmål</strong>
+              <span id="goal-state">Av</span>
+            </div>
+            <label class="check-control">
+              <input id="goal-enabled" type="checkbox">
+              <span>Använd mål</span>
+            </label>
+          </div>
+          <div class="support-fields">
+            <div class="field">
+              <label for="goal-metric">Räkna</label>
+              <select id="goal-metric">
+                <option value="words">Ord</option>
+                <option value="characters">Texttecken inklusive blanksteg</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="goal-target">Mål</label>
+              <input id="goal-target" type="number" min="1" max="1000000" step="1" inputmode="numeric" value="800">
+            </div>
+          </div>
+          <div id="goal-progress-wrap" class="support-progress" hidden>
+            <progress id="goal-progress" max="800" value="0" aria-label="Dokumentmålets framsteg"></progress>
+            <p id="goal-progress-text">0 av 800 ord</p>
+          </div>
+          <p class="method-note">Målet räknar committad text. Texttecken inkluderar blanksteg men inte Markdownmarkörer.</p>
+        </div>
+
+        <div class="support-card">
+          <div class="support-card-head">
+            <div class="support-card-title">
+              <strong>Skrivpass</strong>
+              <span id="timer-state">Inte startat</span>
+            </div>
+            <label class="check-control">
+              <input id="show-countdown" type="checkbox" checked>
+              <span>Visa nedräkning</span>
+            </label>
+          </div>
+          <div class="support-fields">
+            <div class="field">
+              <label for="focus-duration">Längd för nästa pass</label>
+              <select id="focus-duration">
+                <option value="15">15 minuter</option>
+                <option value="25" selected>25 minuter</option>
+                <option value="45">45 minuter</option>
+                <option value="custom">Egen längd</option>
+              </select>
+            </div>
+            <div id="custom-minutes-field" class="field" hidden>
+              <label for="custom-minutes">Minuter, 1 till 180</label>
+              <input id="custom-minutes" type="number" min="1" max="180" step="1" inputmode="numeric" value="25">
+            </div>
+          </div>
+          <div id="timer-display" role="timer" aria-live="off">25:00</div>
+          <div id="timer-standard-actions" class="button-grid">
+            <button id="timer-primary" class="plain-button primary" type="button">Starta</button>
+            <button id="timer-stop" class="plain-button" type="button" disabled>Avsluta</button>
+          </div>
+          <div id="timer-finished-actions" hidden>
+            <button id="timer-break" class="plain-button primary" type="button">Ta 5 min paus</button>
+            <button id="timer-restart" class="plain-button" type="button">Starta nytt pass</button>
+            <button id="timer-done" class="plain-button" type="button">Klart</button>
+          </div>
+          <p class="method-note">Timern är frivillig och blockerar aldrig skrivfältet. Ingenting startar automatiskt.</p>
         </div>
       </section>
 
@@ -1536,9 +2151,43 @@
           <button id="copy-markdown" class="plain-button" type="button">Kopiera Markdown</button>
           <button id="download-markdown" class="plain-button" type="button">Ladda ner .md</button>
           <button id="import-markdown" class="plain-button" type="button">Importera .md</button>
+          <button id="download-backup" class="plain-button" type="button">Säkerhetskopia</button>
+          <button id="restore-backup" class="plain-button" type="button">Återställ kopia</button>
           <button id="clear-document" class="plain-button danger" type="button">Töm dokumentet</button>
         </div>
         <input id="import-file" class="sr-only" type="file" accept=".md,.markdown,text/markdown,text/plain">
+        <input id="backup-file" class="sr-only" type="file" accept=".json,.vavr,application/json">
+      </section>
+
+      <section id="device-settings" class="setting-group" hidden>
+        <h3>På enheten</h3>
+        <div id="install-card" class="support-card" hidden>
+          <div class="device-card-head">
+            <img class="app-icon-preview" src="./icons/vavr-192.png" alt="">
+            <div class="support-card-title">
+              <strong id="install-title">Installera VävR</strong>
+              <span id="install-subtitle">Öppna som en egen app</span>
+            </div>
+          </div>
+          <p id="install-description" class="method-note">Lägg VävR på hemskärmen och använd verktyget i ett eget appfönster.</p>
+          <ol id="ios-install-steps" class="install-instructions" hidden>
+            <li>Tryck på Dela i webbläsaren.</li>
+            <li>Välj Lägg till på hemskärmen.</li>
+            <li>Om Öppna som webbapp visas, låt valet vara på och tryck Lägg till.</li>
+          </ol>
+          <div id="install-data-note" class="data-transfer-note" hidden>
+            <p>På iPhone och iPad överförs inte lokala dokument automatiskt till den installerade appen. Hämta en säkerhetskopia först och återställ den efter installationen.</p>
+            <button id="install-backup" class="plain-button" type="button">Hämta säkerhetskopia</button>
+          </div>
+          <button id="install-action" class="plain-button primary" type="button">Installera VävR</button>
+        </div>
+        <div id="update-card" class="support-card" hidden>
+          <div class="support-card-title">
+            <strong>Ny version finns</strong>
+            <span>Din text sparas före omladdningen</span>
+          </div>
+          <button id="apply-update" class="plain-button primary" type="button">Uppdatera VävR</button>
+        </div>
       </section>
 
       <section class="setting-group">
@@ -1550,6 +2199,17 @@
 
   <div id="node-tooltip" role="tooltip" data-open="false" aria-hidden="true"></div>
   <div id="toast" role="status"></div>
+  <aside id="install-nudge" aria-label="Installera VävR" hidden>
+    <img src="./icons/vavr-192.png" alt="">
+    <div class="install-nudge-copy">
+      <strong>Vill du installera VävR?</strong>
+      <span>Öppna skrivverktyget från hemskärmen med VävR-ikonen.</span>
+    </div>
+    <div class="install-nudge-actions">
+      <button id="install-nudge-yes" class="plain-button primary" type="button">Visa hur</button>
+      <button id="install-nudge-no" class="plain-button" type="button">Inte nu</button>
+    </div>
+  </aside>
 
   <script>
   (() => {
@@ -1581,6 +2241,21 @@
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const uid = (prefix = 'b') => prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     const wordCount = text => (String(text || '').match(/[^\s]+/g) || []).length;
+    const graphemeSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
+      ? new Intl.Segmenter('sv', { granularity: 'grapheme' })
+      : null;
+    const characterCount = text => {
+      const value = String(text || '');
+      return graphemeSegmenter
+        ? [...graphemeSegmenter.segment(value)].length
+        : Array.from(value).length;
+    };
+    const formatNumber = value => Number(value || 0).toLocaleString('sv-SE');
+    const formatClock = seconds => {
+      const safe = Math.max(0, Math.ceil(Number(seconds) || 0));
+      const minutes = Math.floor(safe / 60);
+      return String(minutes).padStart(2, '0') + ':' + String(safe % 60).padStart(2, '0');
+    };
     const escapeHtml = text => String(text == null ? '' : text)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -1597,9 +2272,25 @@
       draft: $('#draft-input'),
       draftCount: $('#draft-count'),
       blockKind: $('#block-kind'),
+      writingSupportSummary: $('#writing-support-summary'),
+      goalCompact: $('#goal-compact'),
+      goalCompactLabel: $('#goal-compact-label'),
+      timerCompact: $('#timer-compact'),
+      timerCompactLabel: $('#timer-compact-label'),
       widthSlider: $('#width-slider'),
       emptyGraph: $('#empty-graph'),
       outline: $('#outline'),
+      sectionGrid: $('#section-grid'),
+      structureBoard: $('#structure-board'),
+      structureBreadcrumb: $('#structure-breadcrumb'),
+      paragraphZone: $('#paragraph-zone'),
+      sectionZone: $('#section-zone'),
+      paragraphZoneCount: $('#paragraph-zone-count'),
+      sectionZoneCount: $('#section-zone-count'),
+      structureUp: $('#structure-up'),
+      structureEditHeading: $('#structure-edit-heading'),
+      structureHeadingEditor: $('#structure-heading-editor'),
+      structureHeadingInput: $('#structure-heading-input'),
       structureTitle: $('#structure-title'),
       structureSummary: $('#structure-summary'),
       inspector: $('#inspector'),
@@ -1612,7 +2303,38 @@
       live: $('#live-region'),
       saveStatus: $('#save-status'),
       documentSelect: $('#document-select'),
-      documentTitle: $('#document-title')
+      documentTitle: $('#document-title'),
+      goalEnabled: $('#goal-enabled'),
+      goalMetric: $('#goal-metric'),
+      goalTarget: $('#goal-target'),
+      goalState: $('#goal-state'),
+      goalProgressWrap: $('#goal-progress-wrap'),
+      goalProgress: $('#goal-progress'),
+      goalProgressText: $('#goal-progress-text'),
+      focusDuration: $('#focus-duration'),
+      customMinutesField: $('#custom-minutes-field'),
+      customMinutes: $('#custom-minutes'),
+      showCountdown: $('#show-countdown'),
+      timerState: $('#timer-state'),
+      timerDisplay: $('#timer-display'),
+      timerPrimary: $('#timer-primary'),
+      timerStop: $('#timer-stop'),
+      timerStandardActions: $('#timer-standard-actions'),
+      timerFinishedActions: $('#timer-finished-actions'),
+      timerBreak: $('#timer-break'),
+      timerRestart: $('#timer-restart'),
+      timerDone: $('#timer-done'),
+      deviceSettings: $('#device-settings'),
+      installCard: $('#install-card'),
+      installTitle: $('#install-title'),
+      installSubtitle: $('#install-subtitle'),
+      installDescription: $('#install-description'),
+      installAction: $('#install-action'),
+      iosInstallSteps: $('#ios-install-steps'),
+      installDataNote: $('#install-data-note'),
+      installNudge: $('#install-nudge'),
+      updateCard: $('#update-card'),
+      applyUpdate: $('#apply-update')
     };
 
     const context = elements.canvas.getContext('2d');
@@ -1633,13 +2355,77 @@
     let editingId = null;
     let editingSnapshot = null;
     let draggedBlockIndex = null;
+    let structureSectionId = null;
+    let pendingInsertContext = null;
+    let commitsThisSession = 0;
     let recalledBlock = null;
     let undoStack = [];
     let redoStack = [];
     let toastTimer = null;
     let titleSaveTimer = null;
     let draftSaveTimer = null;
+    let timerInterval = null;
+    let announceTimer = null;
+    let announceQueue = [];
     let utilityReturnFocus = null;
+    let deferredInstallPrompt = null;
+    let installKind = null;
+    let installNudgeTimer = null;
+    let serviceWorkerRegistration = null;
+    let reloadForUpdate = false;
+    let lastWorkerUpdateCheck = 0;
+
+    function createGoal() {
+      return {
+        enabled: false,
+        metric: 'words',
+        target: 800,
+        reachedAt: null
+      };
+    }
+
+    function normalizeGoal(goal) {
+      const source = goal || {};
+      return {
+        enabled: Boolean(source.enabled),
+        metric: source.metric === 'characters' ? 'characters' : 'words',
+        target: clamp(Math.round(Number(source.target) || 800), 1, 1000000),
+        reachedAt: source.reachedAt || null
+      };
+    }
+
+    function createTimer(minutes = 25) {
+      const durationSec = clamp(Math.round(Number(minutes) || 25), 1, 180) * 60;
+      return {
+        mode: 'focus',
+        state: 'idle',
+        durationSec,
+        remainingSec: durationSec,
+        endAt: null,
+        announced: false
+      };
+    }
+
+    function normalizeTimer(timer, minutes = 25) {
+      const fallback = createTimer(minutes);
+      if (!timer) return fallback;
+      const allowedStates = new Set(['idle', 'running', 'paused', 'finished']);
+      const durationSec = clamp(Math.round(Number(timer.durationSec) || fallback.durationSec), 60, 10800);
+      const state = allowedStates.has(timer.state) ? timer.state : 'idle';
+      const remainingSec = clamp(
+        Math.ceil(Number(timer.remainingSec) || (state === 'finished' ? 0 : durationSec)),
+        0,
+        durationSec
+      );
+      return {
+        mode: timer.mode === 'break' ? 'break' : 'focus',
+        state: state === 'running' && !Number.isFinite(Number(timer.endAt)) ? 'paused' : state,
+        durationSec,
+        remainingSec,
+        endAt: Number.isFinite(Number(timer.endAt)) ? Number(timer.endAt) : null,
+        announced: Boolean(timer.announced)
+      };
+    }
 
     function createDocument(title = 'Namnlöst dokument') {
       const now = new Date().toISOString();
@@ -1649,6 +2435,7 @@
         blocks: [],
         draft: '',
         recalledBlock: null,
+        goal: createGoal(),
         created: now,
         updated: now,
         hiddenWords: []
@@ -1661,7 +2448,15 @@
         version: 5,
         activeId: document.id,
         documents: [document],
-        settings: { widthIndex: 2, threshold: .12, maxEdges: 3 }
+        settings: {
+          widthIndex: 2,
+          threshold: .12,
+          maxEdges: 3,
+          focusMinutes: 25,
+          breakMinutes: 5,
+          showCountdown: true
+        },
+        timer: createTimer(25)
       };
     }
 
@@ -1687,9 +2482,21 @@
             title: document.title || document.titel || 'Namnlöst dokument',
             blocks: (document.blocks || document.block || []).map(normalizeBlock),
             draft: String(document.draft || ''),
-            recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null
+            recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null,
+            goal: normalizeGoal(document.goal)
           }));
-          stored.settings = Object.assign({ widthIndex: 2, threshold: .12, maxEdges: 3 }, stored.settings || {});
+          stored.settings = Object.assign({
+            widthIndex: 2,
+            threshold: .12,
+            maxEdges: 3,
+            focusMinutes: 25,
+            breakMinutes: 5,
+            showCountdown: true
+          }, stored.settings || {});
+          stored.settings.focusMinutes = clamp(Math.round(Number(stored.settings.focusMinutes) || 25), 1, 180);
+          stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
+          stored.settings.showCountdown = stored.settings.showCountdown !== false;
+          stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
         }
@@ -1712,7 +2519,15 @@
             version: 5,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
-            settings: { widthIndex: 2, threshold: .12, maxEdges: 3 }
+            settings: {
+              widthIndex: 2,
+              threshold: .12,
+              maxEdges: 3,
+              focusMinutes: 25,
+              breakMinutes: 5,
+              showCountdown: true
+            },
+            timer: createTimer(25)
           };
         }
       } catch (error) {
@@ -2097,11 +2912,234 @@
       };
     }
 
+    function documentMetrics(document = activeDocument()) {
+      return document.blocks.reduce((totals, block) => {
+        totals.words += wordCount(block.text);
+        totals.characters += characterCount(block.text);
+        return totals;
+      }, { words: 0, characters: 0 });
+    }
+
+    function goalUnit(metric, value) {
+      if (metric === 'characters') return value === 1 ? 'texttecken' : 'texttecken';
+      return value === 1 ? 'ord' : 'ord';
+    }
+
+    function updateWritingSupportVisibility() {
+      const showGoal = Boolean(activeDocument().goal?.enabled);
+      const showTimer = app.timer?.state !== 'idle';
+      elements.goalCompact.hidden = !showGoal;
+      elements.timerCompact.hidden = !showTimer;
+      elements.writingSupportSummary.hidden = !showGoal && !showTimer;
+    }
+
+    function renderGoal() {
+      const document = activeDocument();
+      document.goal = normalizeGoal(document.goal);
+      const goal = document.goal;
+      const metrics = documentMetrics(document);
+      const count = metrics[goal.metric];
+      const unit = goalUnit(goal.metric, goal.target);
+      const text = `${formatNumber(count)} av ${formatNumber(goal.target)} ${unit}`;
+
+      elements.goalEnabled.checked = goal.enabled;
+      elements.goalMetric.value = goal.metric;
+      elements.goalTarget.value = goal.target;
+      elements.goalMetric.disabled = !goal.enabled;
+      elements.goalTarget.disabled = !goal.enabled;
+      elements.goalState.textContent = goal.enabled
+        ? (count >= goal.target ? 'Målet är nått' : 'Aktivt')
+        : 'Av';
+      elements.goalProgressWrap.hidden = !goal.enabled;
+      elements.goalProgress.max = goal.target;
+      elements.goalProgress.value = Math.min(count, goal.target);
+      elements.goalProgress.setAttribute('aria-valuetext', text);
+      elements.goalProgressText.textContent = text;
+      elements.goalCompactLabel.textContent = count >= goal.target ? 'Mål nått · ' + text : text;
+      elements.goalCompact.setAttribute(
+        'aria-label',
+        'Dokumentmål: ' + (count >= goal.target ? 'målet är nått, ' : '') + text + '. Öppna inställningar.'
+      );
+
+      if (goal.enabled && count >= goal.target && !goal.reachedAt) {
+        goal.reachedAt = new Date().toISOString();
+        saveState('Dokumentmål nått');
+        toast('Dokumentmålet är nått');
+        announce('Dokumentmålet är nått');
+      }
+
+      updateWritingSupportVisibility();
+    }
+
+    function timerRemainingSeconds(timer = app.timer) {
+      if (timer.state === 'running' && timer.endAt) {
+        return Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+      }
+      return Math.max(0, Math.ceil(Number(timer.remainingSec) || 0));
+    }
+
+    function timerLabel(mode, state) {
+      const noun = mode === 'break' ? 'Paus' : 'Skrivpass';
+      if (state === 'running') return noun + ' pågår';
+      if (state === 'paused') return noun + ' pausat';
+      if (state === 'finished') return noun + ' avslutat';
+      return 'Inte startat';
+    }
+
+    function stopTimerTicker() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function startTimerTicker() {
+      stopTimerTicker();
+      if (app.timer.state === 'running') {
+        timerInterval = setInterval(renderTimer, 250);
+      }
+    }
+
+    function finishTimer(notify = true) {
+      const timer = app.timer;
+      if (timer.state !== 'running' || timerRemainingSeconds(timer) > 0) return false;
+      timer.state = 'finished';
+      timer.remainingSec = 0;
+      timer.endAt = null;
+      stopTimerTicker();
+      if (!timer.announced) {
+        timer.announced = true;
+        saveState(timer.mode === 'break' ? 'Pausen är slut' : 'Skrivpasset är slut');
+        if (notify) {
+          const message = timer.mode === 'break' ? 'Pausen är slut' : 'Skrivpasset är slut';
+          toast(message);
+          announce(message);
+        }
+      }
+      return true;
+    }
+
+    function renderTimer() {
+      finishTimer(true);
+      const timer = app.timer;
+      const remaining = timerRemainingSeconds(timer);
+      const noun = timer.mode === 'break' ? 'Paus' : 'Skrivpass';
+      const showCountdown = app.settings.showCountdown !== false;
+      let display = formatClock(timer.state === 'idle' ? timer.durationSec : remaining);
+      let words = false;
+
+      if (!showCountdown && timer.state === 'running') {
+        display = noun + ' pågår';
+        words = true;
+      } else if (!showCountdown && timer.state === 'paused') {
+        display = noun + ' pausat';
+        words = true;
+      } else if (timer.state === 'finished') {
+        display = timer.mode === 'break' ? 'Pausen är slut' : 'Passet är slut';
+        words = true;
+      }
+
+      elements.timerState.textContent = timerLabel(timer.mode, timer.state);
+      elements.timerDisplay.textContent = display;
+      elements.timerDisplay.dataset.words = words ? 'true' : 'false';
+      elements.timerCompactLabel.textContent = display;
+      elements.timerCompact.setAttribute(
+        'aria-label',
+        timerLabel(timer.mode, timer.state) + (words ? '' : ', ' + display) + '. Öppna inställningar.'
+      );
+      elements.showCountdown.checked = showCountdown;
+
+      const configuredMinutes = clamp(Math.round(Number(app.settings.focusMinutes) || 25), 1, 180);
+      const preset = [15, 25, 45].includes(configuredMinutes);
+      elements.focusDuration.value = preset ? String(configuredMinutes) : 'custom';
+      elements.customMinutesField.hidden = preset;
+      elements.customMinutes.value = configuredMinutes;
+
+      elements.timerStandardActions.hidden = timer.state === 'finished';
+      elements.timerFinishedActions.hidden = timer.state !== 'finished';
+      elements.timerBreak.hidden = timer.mode === 'break';
+      elements.timerStop.disabled = timer.state === 'idle' || timer.state === 'finished';
+      elements.timerPrimary.textContent = timer.state === 'running'
+        ? 'Pausa'
+        : (timer.state === 'paused' ? 'Fortsätt' : 'Starta');
+
+      if (timer.state !== 'running') stopTimerTicker();
+      updateWritingSupportVisibility();
+    }
+
+    function beginFreshTimer(mode, durationSec) {
+      hideInstallNudge(false);
+      app.timer = {
+        mode,
+        state: 'running',
+        durationSec,
+        remainingSec: durationSec,
+        endAt: Date.now() + durationSec * 1000,
+        announced: false
+      };
+      saveState(mode === 'break' ? 'Paus startad' : 'Skrivpass startat');
+      startTimerTicker();
+      renderTimer();
+      const message = mode === 'break' ? 'Paus startad' : 'Skrivpass startat';
+      toast(message);
+      announce(message);
+    }
+
+    function toggleTimer() {
+      const timer = app.timer;
+      if (timer.state === 'running') {
+        timer.remainingSec = timerRemainingSeconds(timer);
+        timer.endAt = null;
+        timer.state = 'paused';
+        saveState(timer.mode === 'break' ? 'Paus pausad' : 'Skrivpass pausat');
+        stopTimerTicker();
+        renderTimer();
+        const message = timer.mode === 'break' ? 'Paus pausad' : 'Skrivpass pausat';
+        toast(message);
+        announce(message);
+        return;
+      }
+      if (timer.state === 'paused') {
+        timer.endAt = Date.now() + Math.max(1, timer.remainingSec) * 1000;
+        timer.state = 'running';
+        saveState(timer.mode === 'break' ? 'Pausen fortsätter' : 'Skrivpasset fortsätter');
+        startTimerTicker();
+        renderTimer();
+        const message = timer.mode === 'break' ? 'Pausen fortsätter' : 'Skrivpasset fortsätter';
+        toast(message);
+        announce(message);
+        return;
+      }
+      beginFreshTimer('focus', clamp(Math.round(Number(app.settings.focusMinutes) || 25), 1, 180) * 60);
+    }
+
+    function endTimer() {
+      const wasActive = app.timer.state !== 'idle';
+      app.timer = createTimer(app.settings.focusMinutes);
+      stopTimerTicker();
+      saveState(wasActive ? 'Skrivpass avslutat' : 'Lokalt sparat');
+      renderTimer();
+      if (wasActive) {
+        toast('Skrivpasset avslutades');
+        announce('Skrivpasset avslutades');
+      }
+    }
+
+    function setFocusMinutes(value) {
+      const minutes = clamp(Math.round(Number(value) || 25), 1, 180);
+      app.settings.focusMinutes = minutes;
+      if (app.timer.state === 'idle') {
+        app.timer.durationSec = minutes * 60;
+        app.timer.remainingSec = minutes * 60;
+      }
+      saveState('Timerinställning sparad');
+      renderTimer();
+    }
+
     function updateDraftMeta() {
       const value = elements.draft.value;
       const parsed = parseDraft(value);
       const count = wordCount(parsed.text);
-      elements.draftCount.textContent = count + (count === 1 ? ' ord' : ' ord');
+      const characters = characterCount(parsed.text);
+      elements.draftCount.textContent = `${formatNumber(count)} ord · ${formatNumber(characters)} tecken`;
       if (parsed.kind === 'heading') {
         elements.blockKind.textContent = 'Rubrik H' + parsed.level;
         elements.draft.dataset.heading = parsed.level;
@@ -2149,7 +3187,13 @@
           comments: [],
           created: new Date().toISOString()
         };
-        activeDocument().blocks.push(block);
+        if (pendingInsertContext?.documentId === app.activeId) {
+          const insertion = clamp(pendingInsertContext.index, 0, activeDocument().blocks.length);
+          activeDocument().blocks.splice(insertion, 0, block);
+          pendingInsertContext.index = insertion + 1;
+        } else {
+          activeDocument().blocks.push(block);
+        }
       }
 
       const ghostText = elements.draft.value;
@@ -2157,6 +3201,7 @@
       elements.draft.value = '';
       updateDraftMeta();
       saveState();
+      commitsThisSession += 1;
       recalculate(block.id);
       animateCommit(block.id, ghostText);
       announce((block.kind === 'heading' ? 'Rubrik' : 'Stycke') + ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.');
@@ -2197,6 +3242,7 @@
       const rect = elements.composer.getBoundingClientRect();
       const ghost = document.createElement('div');
       ghost.className = 'commit-ghost';
+      ghost.setAttribute('aria-hidden', 'true');
       ghost.textContent = snippet(text, 52);
       ghost.style.left = rect.left + rect.width / 2 + 'px';
       ghost.style.top = rect.top + rect.height / 2 + 'px';
@@ -2807,9 +3853,11 @@
         requestAnimationFrame(() => startEditing(id));
       });
       $('#show-selected')?.addEventListener('click', () => {
+        structureSectionId = analysis.owners.get(id) || null;
         switchView('structure');
         requestAnimationFrame(() => {
-          const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+          renderOutline();
+          const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.structureBoard);
           card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
           card?.focus({ preventScroll: true });
         });
@@ -2922,11 +3970,27 @@
       return null;
     }
 
+    function paragraphSiblingIndex(index, direction) {
+      const blocks = activeDocument().blocks;
+      const block = blocks[index];
+      if (!block || block.kind !== 'paragraph') return null;
+      const owner = analysis.owners.get(block.id) || null;
+      const siblings = blocks
+        .map((item, itemIndex) => ({ item, itemIndex }))
+        .filter(entry =>
+          entry.item.kind === 'paragraph' &&
+          (analysis.owners.get(entry.item.id) || null) === owner
+        )
+        .map(entry => entry.itemIndex);
+      const position = siblings.indexOf(index);
+      return siblings[position + direction] ?? null;
+    }
+
     function canMoveUnit(index, direction) {
       const block = activeDocument().blocks[index];
       if (!block) return false;
       if (block.kind === 'heading') return siblingHeadingIndex(index, direction) !== null;
-      return direction < 0 ? index > 0 : index < activeDocument().blocks.length - 1;
+      return paragraphSiblingIndex(index, direction) !== null;
     }
 
     function moveBlockUnit(index, direction) {
@@ -2934,6 +3998,7 @@
       const range = sectionRange(index);
       if (!canMoveUnit(index, direction)) return;
       const headingSibling = blocks[index].kind === 'heading' ? siblingHeadingIndex(index, direction) : null;
+      const paragraphSibling = blocks[index].kind === 'paragraph' ? paragraphSiblingIndex(index, direction) : null;
       pushHistory(blocks[index].kind === 'heading' ? 'Flytta sektion' : 'Flytta block');
 
       const unit = blocks.splice(range.start, range.end - range.start);
@@ -2945,16 +4010,17 @@
           const siblingRange = sectionRange(adjustedSibling);
           blocks.splice(siblingRange.end, 0, ...unit);
         }
-      } else if (direction < 0) {
-        blocks.splice(range.start - 1, 0, ...unit);
       } else {
-        blocks.splice(range.start + 1, 0, ...unit);
+        const siblingId = activeDocument().blocks[paragraphSibling > index ? paragraphSibling - 1 : paragraphSibling]?.id;
+        const currentSiblingIndex = blocks.findIndex(block => block.id === siblingId);
+        const insertion = direction < 0 ? currentSiblingIndex : currentSiblingIndex + 1;
+        blocks.splice(insertion, 0, ...unit);
       }
       saveState();
       recalculate();
       requestAnimationFrame(() => {
-        const card = $(`[data-block-id="${CSS.escape(unit[0].id)}"]`, elements.outline);
-        card?.querySelector(`[data-action="${direction < 0 ? 'up' : 'down'}"]`)?.focus();
+        const card = $(`[data-block-id="${CSS.escape(unit[0].id)}"]`, elements.structureBoard);
+        card?.focus();
         card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'nearest' });
       });
       const newIndex = blocks.findIndex(block => block.id === unit[0].id);
@@ -2965,12 +4031,26 @@
     function reorderByDrop(fromIndex, targetIndex) {
       if (fromIndex == null || targetIndex == null || fromIndex === targetIndex) return;
       const blocks = activeDocument().blocks;
+      const source = blocks[fromIndex];
+      const target = blocks[targetIndex];
+      if (!source || !target || source.kind !== target.kind) return;
+      const sameOwner = (analysis.owners.get(source.id) || null) === (analysis.owners.get(target.id) || null);
+      if (!sameOwner || (source.kind === 'heading' && source.level !== target.level)) {
+        return toast('Flytta bara mellan kort på samma nivå');
+      }
       const range = sectionRange(fromIndex);
       if (targetIndex >= range.start && targetIndex < range.end) return;
       pushHistory(blocks[fromIndex].kind === 'heading' ? 'Dra sektion' : 'Dra block');
+      const movingForward = fromIndex < targetIndex;
+      const targetId = target.id;
       const unit = blocks.splice(range.start, range.end - range.start);
-      let insert = targetIndex;
-      if (insert > range.start) insert -= unit.length;
+      const currentTargetIndex = blocks.findIndex(block => block.id === targetId);
+      let insert = currentTargetIndex;
+      if (movingForward) {
+        insert = source.kind === 'heading'
+          ? sectionRange(currentTargetIndex).end
+          : currentTargetIndex + 1;
+      }
       blocks.splice(clamp(insert, 0, blocks.length), 0, ...unit);
       saveState();
       recalculate();
@@ -2993,34 +4073,69 @@
       toast(count > 1 ? 'Sektionen raderades' : 'Blocket raderades');
     }
 
-    function focusBlockControl(id, action = 'select') {
+    function focusBlockControl(id) {
       requestAnimationFrame(() => {
-        const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
-        (card?.querySelector(`[data-action="${action}"]`) || card)?.focus();
+        const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.structureBoard);
+        card?.focus();
       });
     }
 
     function startEditing(id) {
+      const block = activeDocument().blocks.find(item => item.id === id);
+      if (!block) return;
+      structureSectionId = (analysis.owners.get(id) || null);
       editingId = id;
       editingSnapshot = JSON.stringify(activeDocument().blocks);
       renderOutline();
-      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.structureBoard);
       const textarea = $('textarea', card);
       textarea?.focus();
       textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
       card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
     }
 
+    function startEditingCurrentHeading() {
+      if (!structureSectionId) return;
+      const block = activeDocument().blocks.find(item => item.id === structureSectionId);
+      if (!block || block.kind !== 'heading') return;
+      editingId = block.id;
+      editingSnapshot = JSON.stringify(activeDocument().blocks);
+      renderOutline();
+      requestAnimationFrame(() => {
+        elements.structureHeadingInput.focus();
+        elements.structureHeadingInput.select();
+      });
+    }
+
+    function saveCurrentHeading() {
+      const block = activeDocument().blocks.find(item => item.id === structureSectionId);
+      const text = elements.structureHeadingInput.value.trim().replace(/\s+/g, ' ');
+      if (!block || block.kind !== 'heading' || !text) return toast('Rubriken kan inte vara tom');
+      undoStack.push({ label: 'Redigera rubrik', blocks: editingSnapshot });
+      if (undoStack.length > 60) undoStack.shift();
+      redoStack = [];
+      block.text = text;
+      editingId = null;
+      editingSnapshot = null;
+      saveState();
+      recalculate();
+      elements.structureEditHeading.focus();
+      toast('Rubriken uppdaterades');
+      announce('Rubriken uppdaterades');
+    }
+
     function cancelEditing() {
       const id = editingId;
+      const currentHeading = id && id === structureSectionId;
       editingId = null;
       editingSnapshot = null;
       renderOutline();
-      if (id) focusBlockControl(id, 'edit');
+      if (currentHeading) requestAnimationFrame(() => elements.structureEditHeading.focus());
+      else if (id) focusBlockControl(id, 'edit');
     }
 
     function saveEditing(id) {
-      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.structureBoard);
       const textarea = $('textarea', card);
       const parsed = parseDraft(textarea?.value || '');
       if (!parsed.text) return toast('Ett block kan inte vara tomt');
@@ -3040,67 +4155,263 @@
       toast('Blocket uppdaterades');
     }
 
-    function renderOutline() {
-      if (view !== 'structure') return;
-      const document = activeDocument();
-      elements.structureTitle.textContent = document.title;
-      const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length;
-      const headings = document.blocks.length - paragraphs;
-      elements.structureSummary.textContent = `${document.blocks.length} block, ${paragraphs} stycken och ${headings} rubriker. Dra med mus eller använd pilarna. En rubrik tar med sin sektion.`;
+    function buildStructureTree(blocks = activeDocument().blocks) {
+      const root = {
+        id: null,
+        headingBlock: null,
+        level: 0,
+        start: 0,
+        end: blocks.length,
+        parentId: null,
+        directParagraphs: [],
+        childSections: []
+      };
+      const sections = new Map([[null, root]]);
+      const stack = [root];
 
-      if (!document.blocks.length) {
-        elements.outline.innerHTML = '<li class="outline-empty">Dokumentet är tomt. Välj Skriv för att börja.</li>';
+      blocks.forEach((block, index) => {
+        if (block.kind === 'heading') {
+          while (stack.length > 1 && stack[stack.length - 1].level >= block.level) {
+            stack.pop().end = index;
+          }
+          const parent = stack[stack.length - 1];
+          const section = {
+            id: block.id,
+            headingBlock: block,
+            level: block.level,
+            start: index,
+            end: blocks.length,
+            parentId: parent.id,
+            directParagraphs: [],
+            childSections: []
+          };
+          parent.childSections.push(section);
+          sections.set(section.id, section);
+          stack.push(section);
+        } else {
+          stack[stack.length - 1].directParagraphs.push({ block, index });
+        }
+      });
+      while (stack.length > 1) stack.pop().end = blocks.length;
+      return { root, sections };
+    }
+
+    function sectionStats(section) {
+      const blocks = activeDocument().blocks.slice(section.start, section.end);
+      const paragraphs = blocks.filter(block => block.kind === 'paragraph');
+      const words = paragraphs.reduce((sum, block) => sum + wordCount(block.text), 0);
+      const issues = paragraphs.reduce((sum, block) => {
+        const node = analysis.nodesById.get(block.id);
+        return sum + (node?.lonely || node?.flow ? 1 : 0);
+      }, 0);
+      return { paragraphs, words, issues };
+    }
+
+    function structurePath(section, sections) {
+      const path = [];
+      let cursor = section;
+      while (cursor?.id) {
+        path.unshift(cursor);
+        cursor = sections.get(cursor.parentId);
+      }
+      return path;
+    }
+
+    function openStructureSection(id, focusFirst = true) {
+      if (editingId) return toast('Spara eller avbryt redigeringen först');
+      if (elements.inspector.dataset.open === 'true') closeInspector();
+      structureSectionId = id || null;
+      selectedId = null;
+      renderOutline();
+      if (focusFirst) {
+        requestAnimationFrame(() => {
+          const first = $('.block-card', elements.structureBoard);
+          (first || elements.structureUp)?.focus();
+        });
+      }
+    }
+
+    function beginContextualWriting() {
+      const { root, sections } = buildStructureTree();
+      const current = sections.get(structureSectionId) || root;
+      const insertion = current.childSections[0]?.start ?? current.end;
+      pendingInsertContext = {
+        documentId: app.activeId,
+        sectionId: current.id,
+        index: insertion,
+        label: current.headingBlock?.text || 'dokumentets början'
+      };
+      switchView('write');
+      toast('Nästa block infogas i ' + pendingInsertContext.label);
+      announce('Skrivläget öppnades. Nästa block infogas i ' + pendingInsertContext.label);
+    }
+
+    function editMarkup(block) {
+      const displayText = block.kind === 'heading'
+        ? '#'.repeat(block.level) + ' ' + block.text
+        : block.text;
+      return `<div class="edit-area">
+        <textarea aria-label="Redigera block">${escapeHtml(displayText)}</textarea>
+        <div class="edit-buttons">
+          <button class="small-button" data-action="cancel">Avbryt</button>
+          <button class="small-button primary" data-action="save">Spara</button>
+        </div>
+      </div>`;
+    }
+
+    function paragraphCard(entry) {
+      const { block, index } = entry;
+      const node = analysis.nodesById.get(block.id);
+      const statusClass = node?.lonely ? 'lonely' : (node?.flow ? 'flow' : '');
+      const editing = editingId === block.id;
+      return `<li class="block-card" tabindex="-1"
+                draggable="${editingId ? 'false' : 'true'}"
+                data-block-id="${escapeHtml(block.id)}" data-index="${index}"
+                data-kind="paragraph" data-editing="${editing}" data-selected="${String(selectedId === block.id)}">
+        <div class="block-main">
+          <div class="block-meta">
+            <span>Stycke ${index + 1}</span>
+            <span>${formatNumber(wordCount(block.text))} ord</span>
+            <span class="status-chip ${statusClass}">${escapeHtml(statusLabel(node))}</span>
+          </div>
+          ${editing ? editMarkup(block) : `<button class="block-text" data-action="select">${escapeHtml(block.text)}</button>`}
+        </div>
+        <div class="block-tools">
+          <button class="icon-button" data-action="up" aria-label="Flytta tidigare" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
+          </button>
+          <button class="icon-button" data-action="down" aria-label="Flytta senare" ${canMoveUnit(index, 1) ? '' : 'disabled'}>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>
+          </button>
+          <button class="icon-button" data-action="edit" aria-label="Redigera stycke">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>
+          </button>
+          <button class="icon-button" data-action="delete" aria-label="Radera stycke">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3M8 10v8M12 10v8M16 10v8M7 7l1 14h8l1-14"/></svg>
+          </button>
+        </div>
+      </li>`;
+    }
+
+    function sectionCard(section) {
+      const block = section.headingBlock;
+      const index = section.start;
+      const stats = sectionStats(section);
+      const editing = editingId === block.id;
+      const preview = stats.paragraphs.slice(0, 2).map(item => item.text).join(' ');
+      const thread = [
+        ...Array.from({ length: Math.min(5, section.directParagraphs.length) }, () => '<i></i>'),
+        ...Array.from({ length: Math.min(3, section.childSections.length) }, () => '<i class="ring"></i>')
+      ].join('');
+      return `<li class="block-card" tabindex="-1"
+                draggable="${editingId ? 'false' : 'true'}"
+                data-block-id="${escapeHtml(block.id)}" data-index="${index}"
+                data-kind="heading" data-level="${block.level}" data-editing="${editing}">
+        <div class="block-main">
+          <div class="block-meta">
+            <span>Rubrik H${block.level}</span>
+            <span>${stats.paragraphs.length} stycken</span>
+            ${stats.issues ? `<span class="status-chip flow">${stats.issues} att granska</span>` : ''}
+          </div>
+          ${editing ? editMarkup(block) : `
+            <button class="section-open" data-action="open">${escapeHtml(block.text)}</button>
+            <div class="section-thread" aria-hidden="true">${thread}</div>
+            <p class="section-preview">${escapeHtml(preview || 'Öppna sektionen för att skriva och ordna innehållet.')}</p>
+            <div class="section-stats">
+              <span class="status-chip">${section.directParagraphs.length} direkta</span>
+              <span class="status-chip">${section.childSections.length} undersektioner</span>
+              <span class="status-chip">${formatNumber(stats.words)} ord</span>
+            </div>`}
+        </div>
+        <div class="block-tools">
+          <button class="icon-button" data-action="up" aria-label="Flytta sektionen tidigare" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
+          </button>
+          <button class="icon-button" data-action="down" aria-label="Flytta sektionen senare" ${canMoveUnit(index, 1) ? '' : 'disabled'}>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>
+          </button>
+          <button class="icon-button" data-action="edit" aria-label="Redigera rubrik">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>
+          </button>
+          <button class="icon-button" data-action="delete" aria-label="Radera sektion">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3M8 10v8M12 10v8M16 10v8M7 7l1 14h8l1-14"/></svg>
+          </button>
+        </div>
+      </li>`;
+    }
+
+    function focusGridNeighbor(card, key) {
+      const grid = card.parentElement;
+      const cards = $$('.block-card', grid);
+      if (!cards.length) return;
+      if (key === 'Home' || key === 'End') {
+        (key === 'Home' ? cards[0] : cards[cards.length - 1]).focus();
         return;
       }
+      const current = card.getBoundingClientRect();
+      const cx = current.left + current.width / 2;
+      const cy = current.top + current.height / 2;
+      const candidates = cards.filter(candidate => {
+        if (candidate === card) return false;
+        const rect = candidate.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        if (key === 'ArrowLeft') return x < cx - 2;
+        if (key === 'ArrowRight') return x > cx + 2;
+        if (key === 'ArrowUp') return y < cy - 2;
+        return y > cy + 2;
+      });
+      const horizontal = key === 'ArrowLeft' || key === 'ArrowRight';
+      candidates.sort((a, b) => {
+        const score = element => {
+          const rect = element.getBoundingClientRect();
+          const dx = Math.abs(rect.left + rect.width / 2 - cx);
+          const dy = Math.abs(rect.top + rect.height / 2 - cy);
+          return horizontal ? dx + dy * 2.2 : dy + dx * 1.4;
+        };
+        return score(a) - score(b);
+      });
+      if (candidates[0]) {
+        candidates[0].focus();
+      } else if (key === 'ArrowDown' && grid === elements.outline) {
+        $('.block-card', elements.sectionGrid)?.focus();
+      } else if (key === 'ArrowUp' && grid === elements.sectionGrid) {
+        const paragraphCards = $$('.block-card', elements.outline);
+        paragraphCards[paragraphCards.length - 1]?.focus();
+      }
+    }
 
-      elements.outline.innerHTML = document.blocks.map((block, index) => {
-        const node = analysis.nodesById.get(block.id);
-        const statusClass = node?.lonely ? 'lonely' : (node?.flow ? 'flow' : '');
-        const status = statusLabel(node);
-        const displayText = block.kind === 'heading' ? '#'.repeat(block.level) + ' ' + block.text : block.text;
-        const editContent = editingId === block.id
-          ? `<div class="edit-area">
-              <textarea aria-label="Redigera block">${escapeHtml(displayText)}</textarea>
-              <div class="edit-buttons">
-                <button class="small-button" data-action="cancel">Avbryt</button>
-                <button class="small-button primary" data-action="save">Spara</button>
-              </div>
-            </div>`
-          : `<button class="block-text" data-action="select">${escapeHtml(displayText)}</button>`;
-        return `<li class="block-card" tabindex="-1" draggable="${editingId ? 'false' : 'true'}"
-                  data-block-id="${escapeHtml(block.id)}" data-index="${index}" data-kind="${block.kind}"
-                  data-selected="${String(selectedId === block.id)}">
-          <button class="drag-handle" aria-label="Dra ${block.kind === 'heading' ? 'sektionen' : 'blocket'}" tabindex="-1">
-            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="7" r="1.2"/><circle cx="15" cy="7" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="17" r="1.2"/><circle cx="15" cy="17" r="1.2"/></svg>
-          </button>
-          <div class="block-main">
-            <div class="block-meta">
-              <span>${block.kind === 'heading' ? 'Rubrik H' + block.level : 'Stycke ' + (index + 1)}</span>
-              <span>${wordCount(block.text)} ord</span>
-              <span class="status-chip ${statusClass}">${escapeHtml(status)}</span>
-            </div>
-            ${editContent}
-          </div>
-          <div class="block-tools">
-            <button class="icon-button" data-action="up" aria-label="Flytta upp" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
-            </button>
-            <button class="icon-button" data-action="down" aria-label="Flytta ned" ${canMoveUnit(index, 1) ? '' : 'disabled'}>
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>
-            </button>
-            <button class="icon-button" data-action="edit" aria-label="Redigera block">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>
-            </button>
-            <button class="icon-button" data-action="delete" aria-label="Radera block">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3M8 10v8M12 10v8M16 10v8M7 7l1 14h8l1-14"/></svg>
-            </button>
-          </div>
-        </li>`;
-      }).join('');
-
-      $$('.block-card', elements.outline).forEach(card => {
+    function wireStructureGrid(grid) {
+      const cards = $$('.block-card', grid);
+      cards.forEach((card, cardPosition) => {
+        if (cardPosition === 0) card.tabIndex = 0;
+        if (card.dataset.editing !== 'true') {
+          $$('button', card).forEach(button => button.tabIndex = -1);
+        }
         const id = card.dataset.blockId;
         const index = Number(card.dataset.index);
+        card.addEventListener('focus', () => {
+          cards.forEach(item => item.tabIndex = item === card ? 0 : -1);
+        });
+        card.addEventListener('keydown', event => {
+          if (event.target !== card) return;
+          if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+            event.preventDefault();
+            moveBlockUnit(index, event.key === 'ArrowUp' ? -1 : 1);
+          } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
+            event.preventDefault();
+            focusGridNeighbor(card, event.key);
+          } else if (event.key === 'Enter') {
+            event.preventDefault();
+            card.dataset.kind === 'heading' ? openStructureSection(id) : card.querySelector('[data-action="select"]')?.click();
+          } else if (event.key.toLowerCase() === 'e') {
+            event.preventDefault();
+            startEditing(id);
+          } else if (event.key === 'Delete') {
+            event.preventDefault();
+            deleteBlock(id);
+          }
+        });
         card.addEventListener('dragstart', event => {
           if (editingId) return event.preventDefault();
           draggedBlockIndex = index;
@@ -3109,6 +4420,7 @@
           event.dataTransfer.setData('text/plain', String(index));
         });
         card.addEventListener('dragover', event => {
+          if (draggedBlockIndex == null) return;
           event.preventDefault();
           card.dataset.drop = 'true';
         });
@@ -3121,15 +4433,16 @@
         card.addEventListener('dragend', () => {
           draggedBlockIndex = null;
           delete card.dataset.dragging;
-          $$('.block-card', elements.outline).forEach(item => delete item.dataset.drop);
+          $$('.block-card', elements.structureBoard).forEach(item => delete item.dataset.drop);
         });
         card.addEventListener('dblclick', event => {
-          if (!event.target.closest('.block-tools')) startEditing(id);
+          if (!event.target.closest('.block-tools') && card.dataset.kind !== 'heading') startEditing(id);
         });
         $$('[data-action]', card).forEach(button => {
           button.addEventListener('click', () => {
             const action = button.dataset.action;
-            if (action === 'select') {
+            if (action === 'open') openStructureSection(id);
+            else if (action === 'select') {
               selectedId = id;
               renderOutline();
               renderInspector(id);
@@ -3146,13 +4459,62 @@
           if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
             saveEditing(id);
-          }
-          if (event.key === 'Escape') {
+          } else if (event.key === 'Escape') {
             event.preventDefault();
             cancelEditing();
           }
         });
       });
+    }
+
+    function renderOutline() {
+      if (view !== 'structure') return;
+      const document = activeDocument();
+      const { root, sections } = buildStructureTree(document.blocks);
+      if (!sections.has(structureSectionId)) structureSectionId = null;
+      const current = sections.get(structureSectionId) || root;
+      const path = structurePath(current, sections);
+      const currentStats = current.id
+        ? sectionStats(current)
+        : {
+            paragraphs: document.blocks.filter(block => block.kind === 'paragraph'),
+            words: document.blocks.reduce((sum, block) => sum + (block.kind === 'paragraph' ? wordCount(block.text) : 0), 0)
+          };
+
+      elements.structureTitle.textContent = current.headingBlock?.text || document.title;
+      elements.structureSummary.textContent = `${current.directParagraphs.length} direkta stycken, ${current.childSections.length} undersektioner och ${formatNumber(currentStats.words)} ord i ${current.id ? 'denna sektion' : 'dokumentet'}. Pilar flyttar fokus, Alt + pil flyttar kort och E redigerar.`;
+      elements.structureUp.hidden = current.id === null;
+      elements.structureEditHeading.hidden = current.id === null;
+      const editingCurrentHeading = Boolean(current.id && editingId === current.id);
+      elements.structureEditHeading.disabled = editingCurrentHeading;
+      elements.structureHeadingEditor.hidden = !editingCurrentHeading;
+      if (editingCurrentHeading) elements.structureHeadingInput.value = current.headingBlock.text;
+      $('#structure-view').dataset.depth = String(current.level || 0);
+
+      const crumbs = [{ id: null, label: document.title }, ...path.map(section => ({
+        id: section.id,
+        label: section.headingBlock.text
+      }))];
+      elements.structureBreadcrumb.innerHTML = crumbs.map((crumb, index) =>
+        `${index ? '<span class="breadcrumb-separator" aria-hidden="true">›</span>' : ''}
+         <button type="button" data-section-id="${escapeHtml(crumb.id || '')}"
+           ${index === crumbs.length - 1 ? 'aria-current="location"' : ''}>${escapeHtml(snippet(crumb.label, 34))}</button>`
+      ).join('');
+      $$('button', elements.structureBreadcrumb).forEach(button => {
+        button.addEventListener('click', () => openStructureSection(button.dataset.sectionId || null));
+      });
+
+      elements.paragraphZoneCount.textContent = current.directParagraphs.length + ' kort';
+      elements.sectionZoneCount.textContent = current.childSections.length + ' kort';
+      elements.paragraphZone.hidden = !current.directParagraphs.length && Boolean(current.childSections.length);
+      elements.sectionZone.hidden = !current.childSections.length;
+      elements.outline.innerHTML = current.directParagraphs.length
+        ? current.directParagraphs.map(paragraphCard).join('')
+        : '<li class="outline-empty">Den här nivån saknar direkta stycken. Välj Skriv nytt för att fortsätta.</li>';
+      elements.sectionGrid.innerHTML = current.childSections.map(sectionCard).join('');
+
+      wireStructureGrid(elements.outline);
+      wireStructureGrid(elements.sectionGrid);
     }
 
     function renderDocumentControls() {
@@ -3165,13 +4527,16 @@
 
     function renderStats() {
       const document = activeDocument();
-      const words = document.blocks.reduce((sum, block) => sum + wordCount(block.text), 0);
-      $('#stat-words').textContent = words;
+      const metrics = documentMetrics(document);
+      $('#stat-words').textContent = formatNumber(metrics.words);
+      $('#stat-characters').textContent = formatNumber(metrics.characters);
       $('#stat-blocks').textContent = document.blocks.length;
       $('#stat-links').textContent = analysis.cohesionEdges.length;
       $('#threshold-output').textContent = Number(app.settings.threshold).toFixed(2).replace('.', ',');
       $('#edge-count-output').textContent = app.settings.maxEdges;
       elements.emptyGraph.hidden = document.blocks.length > 0;
+      renderGoal();
+      configureInstallUI();
     }
 
     function recalculate(bornId = null) {
@@ -3214,7 +4579,7 @@
       } else {
         stopSimulation();
         renderOutline();
-        requestAnimationFrame(() => elements.outline.querySelector('.block-card')?.focus());
+        requestAnimationFrame(() => $('.block-card', elements.structureBoard)?.focus());
       }
       announce('Växlade till ' + (nextView === 'write' ? 'Skriv' : (nextView === 'graph' ? 'Väven' : 'Struktur')));
     }
@@ -3226,8 +4591,11 @@
       document.documentElement.style.setProperty('--composer-width', WIDTHS[safeIndex] + 'px');
     }
 
-    function openUtility() {
+    function openUtility(focusTarget = elements.documentSelect) {
       renderDocumentControls();
+      renderGoal();
+      renderTimer();
+      configureInstallUI();
       utilityReturnFocus = document.activeElement;
       $('main').setAttribute('inert', '');
       $('#topbar').setAttribute('inert', '');
@@ -3237,7 +4605,7 @@
       elements.utility.removeAttribute('inert');
       elements.scrim.dataset.open = 'true';
       elements.utilityButton.setAttribute('aria-expanded', 'true');
-      requestAnimationFrame(() => elements.documentSelect.focus());
+      requestAnimationFrame(() => focusTarget?.focus?.());
     }
 
     function closeUtility() {
@@ -3261,8 +4629,20 @@
     }
 
     function announce(message) {
-      elements.live.textContent = '';
-      requestAnimationFrame(() => elements.live.textContent = message);
+      if (!message) return;
+      if (announceQueue[announceQueue.length - 1] !== message) announceQueue.push(message);
+      if (announceTimer) return;
+      const next = () => {
+        const item = announceQueue.shift();
+        if (!item) {
+          announceTimer = null;
+          return;
+        }
+        elements.live.textContent = '';
+        requestAnimationFrame(() => elements.live.textContent = item);
+        announceTimer = setTimeout(next, 650);
+      };
+      next();
     }
 
     function copyMarkdown() {
@@ -3296,11 +4676,220 @@
       toast('Markdown hämtad');
     }
 
+    function downloadBackup(prefix = 'vavr-sakerhetskopia', statusMessage = 'Säkerhetskopian hämtades') {
+      activeDocument().draft = elements.draft.value;
+      saveState();
+      const payload = {
+        format: 'vavr-backup',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        app
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = prefix + '-' + new Date().toISOString().slice(0, 10) + '.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 0);
+      toast(statusMessage);
+      announce(statusMessage);
+    }
+
+    function restoreBackupData(payload) {
+      const source = payload?.format === 'vavr-backup' ? payload.app : payload;
+      if (!source || !Array.isArray(source.documents) || !source.documents.length) {
+        throw new Error('Filen innehåller inga VävR-dokument.');
+      }
+
+      const defaults = createDefaultState();
+      const documents = source.documents.map(document => ({
+        ...createDocument(document.title || document.titel || 'Namnlöst dokument'),
+        ...document,
+        id: document.id || uid('d'),
+        title: document.title || document.titel || 'Namnlöst dokument',
+        blocks: (document.blocks || document.block || []).map(normalizeBlock),
+        draft: String(document.draft || ''),
+        recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null,
+        goal: normalizeGoal(document.goal)
+      }));
+      const settings = Object.assign({}, defaults.settings, source.settings || {});
+      settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
+      settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
+      settings.showCountdown = settings.showCountdown !== false;
+
+      stopTimerTicker();
+      app = {
+        ...defaults,
+        ...source,
+        version: 5,
+        documents,
+        settings,
+        timer: normalizeTimer(source.timer, settings.focusMinutes)
+      };
+      if (!documents.some(document => document.id === app.activeId)) app.activeId = documents[0].id;
+      changeActiveDocument(app.activeId, false);
+      renderTimer();
+      startTimerTicker();
+      toast('Säkerhetskopian återställdes');
+      announce('Säkerhetskopian återställdes');
+    }
+
+    function isStandaloneApp() {
+      return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    }
+
+    function detectInstallEnvironment() {
+      if (isStandaloneApp()) return null;
+      const agent = navigator.userAgent || '';
+      const ipadLike = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      const ios = /iPhone|iPad|iPod/i.test(agent) || ipadLike;
+      if (!ios) return deferredInstallPrompt ? 'native' : null;
+      const safari = /Safari/i.test(agent) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(agent);
+      return safari ? 'ios-safari' : 'ios-other';
+    }
+
+    function hasLocalWriting() {
+      return app.documents.some(document =>
+        document.blocks?.length || String(document.draft || '').trim()
+      ) || Boolean(elements.draft.value.trim());
+    }
+
+    function installNudgeSnoozed() {
+      try {
+        const until = Number(localStorage.getItem('vavr-install-snooze') || 0);
+        return until > Date.now();
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function hideInstallNudge(snooze = false) {
+      clearTimeout(installNudgeTimer);
+      elements.installNudge.hidden = true;
+      if (snooze) {
+        try {
+          localStorage.setItem('vavr-install-snooze', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+        } catch (error) {
+          console.warn('Kunde inte spara installationsvalet.', error);
+        }
+      }
+    }
+
+    function maybeShowInstallNudge() {
+      clearTimeout(installNudgeTimer);
+      if (!installKind || isStandaloneApp() || installNudgeSnoozed()) return;
+      if (commitsThisSession < 1 || app.timer.state !== 'idle' || elements.draft.value.trim()) return;
+      installNudgeTimer = setTimeout(() => {
+        if (app.timer.state === 'idle' && !elements.draft.value.trim() && elements.utility.dataset.open !== 'true') {
+          $('#install-nudge-yes').textContent = installKind === 'native' ? 'Installera' : 'Visa hur';
+          elements.installNudge.hidden = false;
+        }
+      }, 900);
+    }
+
+    function configureInstallUI() {
+      installKind = detectInstallEnvironment();
+      if (!installKind || isStandaloneApp()) {
+        elements.installCard.hidden = true;
+        elements.deviceSettings.hidden = elements.updateCard.hidden;
+        hideInstallNudge(false);
+        return;
+      }
+
+      elements.installCard.hidden = false;
+      elements.deviceSettings.hidden = false;
+      elements.iosInstallSteps.hidden = true;
+      const localWriting = hasLocalWriting();
+      elements.installDataNote.hidden = !installKind.startsWith('ios') || !localWriting;
+      if (localWriting) hideInstallNudge(false);
+
+      if (installKind === 'native') {
+        elements.installTitle.textContent = 'Installera VävR';
+        elements.installSubtitle.textContent = 'Öppna som en egen app';
+        elements.installDescription.textContent = 'Lägg VävR på hemskärmen och använd verktyget i ett eget appfönster.';
+        elements.installAction.textContent = 'Installera VävR';
+      } else if (installKind === 'ios-safari') {
+        elements.installTitle.textContent = 'Lägg till på hemskärmen';
+        elements.installSubtitle.textContent = 'Installation via Safari';
+        elements.installDescription.textContent = 'Safari installerar VävR genom menyn Dela. Tryck nedan för en kort vägledning.';
+        elements.installAction.textContent = 'Visa installationssteg';
+      } else {
+        elements.installTitle.textContent = 'Lägg till på hemskärmen';
+        elements.installSubtitle.textContent = 'Installation via webbläsarens Dela-meny';
+        elements.installDescription.textContent = 'Välj Lägg till på hemskärmen i Dela-menyn. Om valet saknas kan du öppna sidan i Safari.';
+        elements.installAction.textContent = 'Visa installationssteg';
+      }
+      maybeShowInstallNudge();
+    }
+
+    async function handleInstallAction() {
+      hideInstallNudge(false);
+      if (installKind === 'native' && deferredInstallPrompt) {
+        const promptEvent = deferredInstallPrompt;
+        deferredInstallPrompt = null;
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice.outcome !== 'accepted') {
+          hideInstallNudge(true);
+          installKind = null;
+          elements.installCard.hidden = true;
+          elements.deviceSettings.hidden = elements.updateCard.hidden;
+        }
+        return;
+      }
+      if (installKind === 'ios-safari') {
+        elements.iosInstallSteps.hidden = false;
+        elements.installAction.textContent = 'Installationsstegen visas ovan';
+        elements.iosInstallSteps.scrollIntoView({ block: 'nearest', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+        return;
+      }
+      if (installKind === 'ios-other') {
+        elements.iosInstallSteps.hidden = false;
+        elements.installAction.textContent = 'Installationsstegen visas ovan';
+        elements.iosInstallSteps.scrollIntoView({ block: 'nearest', behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+      }
+    }
+
+    function showUpdateReady(registration) {
+      serviceWorkerRegistration = registration;
+      elements.updateCard.hidden = false;
+      elements.deviceSettings.hidden = false;
+    }
+
+    function watchServiceWorker(registration) {
+      serviceWorkerRegistration = registration;
+      if (registration.waiting) showUpdateReady(registration);
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateReady(registration);
+          }
+        });
+      });
+    }
+
+    async function registerServiceWorker() {
+      if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+      try {
+        const registration = await navigator.serviceWorker.register('./sw.js', {
+          scope: './',
+          updateViaCache: 'none'
+        });
+        lastWorkerUpdateCheck = Date.now();
+        watchServiceWorker(registration);
+      } catch (error) {
+        console.warn('VävR kunde inte aktivera offlineläget.', error);
+      }
+    }
+
     function changeActiveDocument(id, persistCurrent = true) {
       if (!app.documents.some(document => document.id === id)) return;
       if (persistCurrent) activeDocument().draft = elements.draft.value;
       app.activeId = id;
       selectedId = null;
+      structureSectionId = null;
+      pendingInsertContext = null;
       recalledBlock = activeDocument().recalledBlock || null;
       editingId = null;
       undoStack = [];
@@ -3333,16 +4922,86 @@
         }
       });
 
-      $$('.mode-button').forEach(button => button.addEventListener('click', () => switchView(button.dataset.viewTarget)));
-      $('#structure-add').addEventListener('click', () => switchView('write'));
+      $$('.mode-button').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.viewTarget === 'write') pendingInsertContext = null;
+        switchView(button.dataset.viewTarget);
+      }));
+      $('#structure-add').addEventListener('click', beginContextualWriting);
+      elements.structureUp.addEventListener('click', () => {
+        const { sections } = buildStructureTree();
+        const current = sections.get(structureSectionId);
+        openStructureSection(current?.parentId || null);
+      });
+      elements.structureEditHeading.addEventListener('click', startEditingCurrentHeading);
+      $('#structure-heading-cancel').addEventListener('click', cancelEditing);
+      $('#structure-heading-save').addEventListener('click', saveCurrentHeading);
+      elements.structureHeadingInput.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          saveCurrentHeading();
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          cancelEditing();
+        }
+      });
       $('#inspector-close').addEventListener('click', closeInspector);
       elements.utilityButton.addEventListener('click', () => elements.utility.dataset.open === 'true' ? closeUtility() : openUtility());
       $('#utility-close').addEventListener('click', closeUtility);
       elements.scrim.addEventListener('click', closeUtility);
+      elements.goalCompact.addEventListener('click', () => openUtility(elements.goalEnabled));
+      elements.timerCompact.addEventListener('click', () => {
+        openUtility(app.timer.state === 'finished' ? elements.timerRestart : elements.timerPrimary);
+      });
       $('#help-button').addEventListener('click', () => {
         openUtility();
         requestAnimationFrame(() => elements.utility.scrollTo({ top: elements.utility.scrollHeight, behavior: REDUCED_MOTION ? 'auto' : 'smooth' }));
       });
+
+      elements.goalEnabled.addEventListener('change', event => {
+        const goal = activeDocument().goal = normalizeGoal(activeDocument().goal);
+        goal.enabled = event.target.checked;
+        saveState(goal.enabled ? 'Dokumentmål aktiverat' : 'Dokumentmål avstängt');
+        renderGoal();
+      });
+      elements.goalMetric.addEventListener('change', event => {
+        const goal = activeDocument().goal = normalizeGoal(activeDocument().goal);
+        goal.metric = event.target.value === 'characters' ? 'characters' : 'words';
+        goal.reachedAt = null;
+        saveState('Dokumentmål uppdaterat');
+        renderGoal();
+      });
+      elements.goalTarget.addEventListener('change', event => {
+        const goal = activeDocument().goal = normalizeGoal(activeDocument().goal);
+        goal.target = clamp(Math.round(Number(event.target.value) || 1), 1, 1000000);
+        goal.reachedAt = null;
+        saveState('Dokumentmål uppdaterat');
+        renderGoal();
+      });
+
+      elements.focusDuration.addEventListener('change', event => {
+        if (event.target.value === 'custom') {
+          elements.customMinutesField.hidden = false;
+          elements.customMinutes.value = app.settings.focusMinutes;
+          requestAnimationFrame(() => elements.customMinutes.focus());
+        } else {
+          setFocusMinutes(event.target.value);
+        }
+      });
+      elements.customMinutes.addEventListener('change', event => setFocusMinutes(event.target.value));
+      elements.showCountdown.addEventListener('change', event => {
+        app.settings.showCountdown = event.target.checked;
+        saveState('Timerinställning sparad');
+        renderTimer();
+      });
+      elements.timerPrimary.addEventListener('click', toggleTimer);
+      elements.timerStop.addEventListener('click', endTimer);
+      elements.timerBreak.addEventListener('click', () => {
+        beginFreshTimer('break', clamp(Math.round(Number(app.settings.breakMinutes) || 5), 1, 60) * 60);
+      });
+      elements.timerRestart.addEventListener('click', () => {
+        beginFreshTimer('focus', clamp(Math.round(Number(app.settings.focusMinutes) || 25), 1, 180) * 60);
+      });
+      elements.timerDone.addEventListener('click', endTimer);
 
       elements.widthSlider.addEventListener('input', event => {
         applyWidth(event.target.value);
@@ -3380,9 +5039,35 @@
       window.addEventListener('pointercancel', endNodeDrag);
       window.addEventListener('resize', scheduleResize);
       window.visualViewport?.addEventListener('resize', scheduleResize);
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        configureInstallUI();
+      });
+      window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        installKind = null;
+        hideInstallNudge(false);
+        elements.installCard.hidden = true;
+        elements.deviceSettings.hidden = elements.updateCard.hidden;
+        toast('VävR installerades');
+        announce('VävR installerades');
+      });
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) stopSimulation();
-        else drawGraph();
+        else {
+          drawGraph();
+          renderTimer();
+          if (serviceWorkerRegistration && Date.now() - lastWorkerUpdateCheck > 6 * 60 * 60 * 1000) {
+            lastWorkerUpdateCheck = Date.now();
+            serviceWorkerRegistration.update().catch(() => {});
+          }
+        }
+      });
+      navigator.serviceWorker?.addEventListener('controllerchange', () => {
+        if (!reloadForUpdate) return;
+        reloadForUpdate = false;
+        location.reload();
       });
 
       window.addEventListener('keydown', event => {
@@ -3426,6 +5111,14 @@
           if (elements.utility.dataset.open === 'true') closeUtility();
           else if (editingId) cancelEditing();
           else if (elements.inspector.dataset.open === 'true') closeInspector();
+          else if (view === 'structure' && structureSectionId) {
+            const { sections } = buildStructureTree();
+            openStructureSection(sections.get(structureSectionId)?.parentId || null);
+          }
+        } else if (event.key === 'Backspace' && view === 'structure' && structureSectionId && !editingText) {
+          event.preventDefault();
+          const { sections } = buildStructureTree();
+          openStructureSection(sections.get(structureSectionId)?.parentId || null);
         }
       });
 
@@ -3477,6 +5170,9 @@
 
       $('#copy-markdown').addEventListener('click', copyMarkdown);
       $('#download-markdown').addEventListener('click', downloadMarkdown);
+      $('#download-backup').addEventListener('click', () => downloadBackup());
+      $('#restore-backup').addEventListener('click', () => $('#backup-file').click());
+      $('#install-backup').addEventListener('click', () => downloadBackup());
       $('#import-markdown').addEventListener('click', () => $('#import-file').click());
       $('#import-file').addEventListener('change', async event => {
         const file = event.target.files?.[0];
@@ -3490,6 +5186,47 @@
         closeUtility();
         switchView('structure');
         toast('Markdown importerad som nytt dokument');
+      });
+      $('#backup-file').addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const payload = JSON.parse(await file.text());
+          const source = payload?.format === 'vavr-backup' ? payload.app : payload;
+          const count = Array.isArray(source?.documents) ? source.documents.length : 0;
+          const exported = payload?.exportedAt
+            ? new Date(payload.exportedAt).toLocaleString('sv-SE')
+            : 'okänd tidpunkt';
+          if (!count) throw new Error('Filen innehåller inga VävR-dokument.');
+          if (!confirm(`Återställ ${count} dokument från ${exported}? Nuvarande dokument ersätts. En säkerhetskopia hämtas först.`)) return;
+          downloadBackup('vavr-fore-aterstallning', 'Nuvarande dokument säkerhetskopierades');
+          restoreBackupData(payload);
+          closeUtility();
+        } catch (error) {
+          toast(error.message || 'Kunde inte återställa säkerhetskopian');
+        } finally {
+          event.target.value = '';
+        }
+      });
+
+      elements.installAction.addEventListener('click', handleInstallAction);
+      $('#install-nudge-yes').addEventListener('click', async () => {
+        if (installKind === 'native') {
+          await handleInstallAction();
+        } else {
+          hideInstallNudge(false);
+          if (installKind === 'ios-safari') elements.iosInstallSteps.hidden = false;
+          openUtility(elements.installAction);
+        }
+      });
+      $('#install-nudge-no').addEventListener('click', () => hideInstallNudge(true));
+      elements.applyUpdate.addEventListener('click', () => {
+        activeDocument().draft = elements.draft.value;
+        saveState('Utkast sparat');
+        const waiting = serviceWorkerRegistration?.waiting;
+        if (!waiting) return toast('Uppdateringen förbereds fortfarande');
+        reloadForUpdate = true;
+        waiting.postMessage({ type: 'SKIP_WAITING' });
       });
 
       $('#clear-document').addEventListener('click', () => {
@@ -3528,8 +5265,14 @@
       simulationAlpha = 0;
       updateNodePositions();
       renderStats();
+      renderTimer();
       drawGraph();
       setupEvents();
+      startTimerTicker();
+      configureInstallUI();
+      const scheduleRegistration = () => registerServiceWorker();
+      if ('requestIdleCallback' in window) requestIdleCallback(scheduleRegistration, { timeout: 1800 });
+      else setTimeout(scheduleRegistration, 600);
       requestAnimationFrame(() => elements.draft.focus());
     }
 

@@ -1,111 +1,157 @@
-# KODDOKUMENTATION: VävR
+# Koddokumentation för VävR
 
-**Typ:** Webbapplikation (HTML + ES-moduler + Vanilla CSS)  
-**Skapad:** 2026-07-29  
-**Status:** 🟢 Produktion / GitHub Pages  
-**Deploy:** [hktcr.github.io/vavr](https://hktcr.github.io/vavr/)
+**Typ:** Statisk webbapplikation i HTML, CSS och JavaScript
 
----
+**Drift:** GitHub Pages
+
+**Publik adress:** [hktcr.github.io/vavr](https://hktcr.github.io/vavr/)
 
 ## Syfte
 
-VävR är ett skrivverktyg som gör textens sammanhang och lexikala kohesion synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna representerar sekvensordning samt lexikal kohesion (beräknad med tf-idf och cosinuslikhet). VävR ersätter inte SkrivR, utan erbjuder ett specialiserat skrivstöd för struktur, kohesion och röda tråden.
+VävR är ett fokuserat skrivverktyg som gör dokumentets struktur och lexikala
+återkoppling synlig. Varje committat block blir en nod. Rubriker skapar
+hierarki, stycken analyseras med TF/IDF och cosinuslikhet, och dokumentordningen
+visas som en separat narrativ tråd.
 
-## Vetenskaplig grund & metodik
+Analysen mäter återanvändning av centrala ord. Den mäter inte full semantisk
+betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 
-- **Lexikal kohesion:** Baseras på Halliday och Hasans modell (*Cohesion in English*, 1976) samt ordöverlapp mellan textblock (Hearst, *TextTiling*, 1997).
-- **Beräkning:** Standard tf-idf med cosinuslikhet och utjämnad idf: `idf = log(1 + N / df)`.
-- **Trunkering:** `normalisera()` tillämpar en lätt svensk suffixtrunkering som heuristik för ordstammar.
-- **Formulering:** Metoden mäter lexikal kohesion. Visualiseringen är en designidé byggd på beprövad mätning (påstår ej oberoende klinisk/pedagogisk utvärdering).
+## Filer
 
----
+| Fil | Roll |
+|---|---|
+| `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, analys, fysik, canvasritning, timer, mål och PWA-flöden |
+| `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
+| `sw.js` | Versionsstyrd appskal-cache, offlinefallback och användarstyrd uppdatering |
+| `icons/` | Vanlig, maskable och Apple-anpassad VävR-ikon |
+| `vavr-dokument.js` | Fristående äldre dokumentmodul som fortfarande täcks av testsviten |
+| `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
+| `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
+| `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
 
-## Arkitektur & Moduler
+Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
-| Fil | Roll | Beskrivning |
-|---|---|---|
-| `index.html` | Huvudskal & UI | HTML5-skal, nätverksrendering på canvas/buttons, 4 lägen, sidopanel, kortkommandon, tvåtaktshantering |
-| `vavr-tokens.css` | Designsystem | CSS Custom Properties, färgpalett, komponentstilar och vyväxling (`data-lage`) |
-| `vavr-dokument.js` | Datamodell | Parse från/till Markdown, blockmodell (`id`, `typ`, `niva`, `text`, `kommentarer`), sektioner, ägarskap, blockflytt |
-| `vavr-kohesion.js` | Kohesionsanalys | Tokenisering, stoppordslista (`STOPPORD`), suffixtrunkering, idf-bygge, cosinus-likhet, grafer (`berakna()`), ordlista |
-| `vavr-textcontext.js` | TextContext | Tvåtaktsskanning för text- och vokalananalys. Levererar kontraktet `getStats()` till ljudmotorerna |
-| `vavr-test.mjs` | Testsvit | 87 automatiska tester för dokumentmodellen, tokeniseringen, kohesionen och TextContext |
-| `valsang-engine.js` | Ljudmotor | Continuous ambient audio (Valsång) från SkrivBord |
-| `skogsklang-engine.js` | Ljudmotor | Harmonisk skogsklang-ackordmotor från SkrivBord |
-| `hardfork-engine.js` | Ljudmotor | Rytmisk meningsdriven ljudmotor (korrigerad `stats.words`) |
-| `space-engine.js` | Ljudmotor | Analogsynt/Lydisk ljudmotor (korrigerad `stats.words`) |
-| `manifest.webmanifest` | PWA | Web App Manifest för installering |
-| `KODDOKUMENTATION.md` | Dokumentation | Denna fil |
+## Kanonisk dokumentmodell
 
----
-
-## Datamodell (Single Source of Truth)
-
-Single Source of Truth är **Markdown-strängen**. Nätverkskanter, ordlista och nodpositioner lagras aldrig – de beräknas dynamiskt vid laddning.
+Blocklistan är den enda sanningskällan i det aktiva gränssnittet.
+Sektionsträdet, noder, kanter, varningar och gridkort härleds från listan.
 
 ```js
 Block = {
-  id: 'b-<base36>-<n>',
-  typ: 'rubrik' | 'stycke',
-  niva: 1..6 | null,
-  text: '...',
-  kommentarer: [ { id, text, skapad } ]
+  id,
+  kind: 'heading' | 'paragraph',
+  level: 1 | 2 | 3 | null,
+  text,
+  comments: [],
+  created
 }
 
-Dokument = {
-  id, titel,
-  block: [ Block ],
-  skapad, andrad,
-  ljudtema: 'inget' | 'valsang' | 'skogsklang' | 'hardfork' | 'space',
-  doldaOrd: [ 'ord', ... ],
-  skrivmal: { typ: 'ord'|'tecken', varde: 800 } | null,
-  timer: { minuter: 25, startad: null } | null
+Document = {
+  id,
+  title,
+  blocks: [Block],
+  draft,
+  recalledBlock,
+  goal: {
+    enabled,
+    metric: 'words' | 'characters',
+    target,
+    reachedAt
+  },
+  created,
+  updated,
+  hiddenWords: []
 }
 ```
 
-### localStorage
+Timerstatus är appövergripande:
 
+```js
+Timer = {
+  mode: 'focus' | 'break',
+  state: 'idle' | 'running' | 'paused' | 'finished',
+  durationSec,
+  remainingSec,
+  endAt,
+  announced
+}
 ```
-vavr-dokument   JSON-array av Dokument
-vavr-aktivt     id för aktivt dokument
-vavr-inst       { accentfarg, typsnitt, textstorlek, pausMs, troskel, maxPerNod, tangentljud }
+
+Körande tid räknas från absoluta `endAt`. Timern behöver därför inte skriva
+till lagringen varje sekund och återhämtar rätt återstående tid efter
+bakgrundsläge eller omladdning.
+
+## Lokal lagring och säkerhetskopiering
+
+Applikationstillståndet sparas i `localStorage` under nyckeln
+`vavr-weaver-v5`. Äldre VävR-data kan migreras vid inläsning.
+
+Markdown exporterar det aktiva dokumentets text. En VävR-säkerhetskopia
+exporterar alla dokument, mål, inställningar och timerstatus som JSON.
+Återställning kräver bekräftelse och laddar först ner en säkerhetskopia av
+nuvarande tillstånd.
+
+## Arbetslägen
+
+### Skriv
+
+Endast det aktuella skrivfältet visar text. Enter committar blocket,
+Shift + Enter skapar radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
+tillbaka det senaste blocket.
+
+Dokumentmål och timer sammanfattas i en diskret statusrad när de är aktiva.
+Målet räknar endast committad text.
+
+### Väven
+
+Kanterna ritas på canvas. Noderna är absolut positionerade knappar i DOM.
+Fysiken kombinerar repulsion, kohesionsfjädrar, sekvenslänkar och
+rubrikgravitation. Den fullständiga kohesionsmatrisen används för analys,
+medan ett begränsat urval används för ritning.
+
+### Struktur
+
+Sektionstavlan härleder ett träd med en rubrikstack. Varje grid visar endast
+direkta stycken och direkta undersektioner på aktuell nivå. Breadcrumb och
+Upp en nivå navigerar hierarkin.
+
+Stycken kan bara flyttas mellan stycken med samma ägarrubrik. En rubrik kan
+bara flyttas mellan syskon med samma nivå och ägare. När en rubrik flyttas
+följer hela dess underträd.
+
+## PWA och offline
+
+Alla sökvägar är relativa till GitHub Pages-scope. Service workern ligger i
+reporoten och påverkar därför bara projektets egen katalog. Navigation använder
+nätverksförst med cachefallback. En väntande ny version aktiveras först när
+användaren väljer Uppdatera VävR, efter att utkastet har sparats.
+
+Chromium använder `beforeinstallprompt` efter ett uttryckligt användartryck.
+iPhone och iPad får manuella steg via Dela och Lägg till på hemskärmen.
+Eftersom installerade Apple-webbappar kan få separat lokal lagring visar VävR
+en säkerhetskopieringsvarning när lokalt innehåll finns.
+
+## Tillgänglighet
+
+- Canvasen är dold för hjälpmedel och varje grafnod har textalternativ.
+- Interaktiva mål är minst 44 gånger 44 pixlar.
+- Status förmedlas med text och inte enbart med färg.
+- Timerdisplayen använder `role="timer"` och läser inte upp varje sekund.
+- Viktiga händelser köas i en polite live-region.
+- Sektionstavlans kort nås med Tab. Pilar flyttar fokus, Alt + pil flyttar ett
+  kort, E redigerar, Enter öppnar eller väljer och Delete raderar efter
+  bekräftelse.
+- Reduced motion minskar animering och synkrona fysiksteg.
+
+## Verifiering
+
+```bash
+node vavr-test.mjs
+node vavr-shell-test.mjs
+node --check sw.js
+python3 -m http.server 8000
 ```
 
----
-
-## De fyra lägena (`data-lage`)
-
-1. **Raden (`data-lage="raden"`):** Skrivläge med vertikalt centrerat `<textarea>` med autohöjd. De två föregående blocken visas i en opacitetstrappa ovanför.
-2. **Väven (`data-lage="vaven"`):** Nätverksvy. Sekvenskanter ritas i full opacitet på `<canvas id="vaven">`, kohesionskanter skalas efter vikt. Noder är klickbara `<button>`-element med `transform`. Rubrikgravitation drar block mot sin ägarrubrik.
-3. **Trappan (`data-lage="trappan"`):** Dispositionsvy och läsläge. Tre utfällningssteg (`0` rubriker, `1` ingresser, `2` hela texten). HTML5 Drag-and-drop för omordning av stycken och hela sektioner med live-kohesionsindikator under dragning.
-4. **Studion (`data-lage="studion"`):** Helskärmsredigering av ett enskilt block med svaga grannblock och blockbundna kommentarer.
-
----
-
-## Tangentbordsgenvägar
-
-| Tangent | Funktion |
-|---|---|
-| `Enter` | Commit av skrivfältet i Raden, analysera & väck simulering |
-| `Shift+Enter` | Radbrytning i samma block |
-| `Pil upp` (pos 0) | Lyft föregående block tillbaka till skrivfältet |
-| `Pil ner` | Släpp lyft block och gå till nästa |
-| `Escape` | Släpp lyft block / stäng Studion / stäng sidopanel |
-| `Cmd/Ctrl+1..4` | Byt läge (Raden, Väven, Trappan, Studion) |
-| `Cmd/Ctrl+B` | Öppna / stäng sidopanel |
-| `Cmd/Ctrl+S` | Ladda ner aktivt dokument som `.md` |
-| `Cmd/Ctrl+Shift+C` | Kopiera markdown till urklipp |
-
----
-
-## Tillgänglighet (a11y)
-
-- Canvasen har `aria-hidden="true"`. Noderna är interaktiva `<button>`-element med utförliga `aria-label`.
-- Alla klickytor uppfyller minst 44x44px.
-- `:focus-visible` har tydliga fokusringar i `--ljus`.
-- Färg är aldrig ensam infobärare (ensamma noder har t.ex. både avvikande färg och saknad kant; flödesbrott visas med dubbel ring).
-- `prefers-reduced-motion: reduce` inaktiverar automatisk kraftsimuleringsdrift och vyövergångar.
-
----
-
-*gAIa 🌲 2026-07-30*
+Kontrollera dessutom manifest, ikonstorlekar, offlinekallstart,
+installationsflöden, säkerhetskopiering, mobil layout och
+tangentbordsnavigering före publicering.

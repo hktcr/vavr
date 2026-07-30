@@ -1,16 +1,33 @@
 {
+  "id": "./",
   "name": "VävR",
   "short_name": "VävR",
-  "description": "VävR — skrivverktyget som gör textens sammanhang och lexikala kohesion synlig medan du skriver.",
-  "start_url": "./index.html",
+  "description": "Ett fokuserat skrivverktyg som synliggör textens struktur och kohesion.",
+  "lang": "sv",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#121417",
-  "theme_color": "#121417",
+  "background_color": "#090b11",
+  "theme_color": "#090b11",
+  "categories": ["productivity", "writing"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23121417'/><circle cx='256' cy='256' r='180' fill='none' stroke='%23e2b714' stroke-width='24'/><path d='M160 256 L256 160 L352 256 L256 352 Z' fill='none' stroke='%23e2b714' stroke-width='20'/></svg>",
+      "src": "./icons/vavr-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/vavr-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/vavr-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
