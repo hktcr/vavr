@@ -10,11 +10,14 @@ VävR är ett lokalt skrivverktyg som gör textens struktur och lexikala
    tillbaka senaste noden.
 2. **Väven** visar stycken, rubrikhierarki, dokumentordning och viktade
    lexikala kopplingar. En vald nod öppnar ett sambandskort med full text,
-   närmiljö, delade ord och försiktiga omvävningsförslag.
+   närmiljö, delade ord och försiktiga omvävningsförslag. Vävlinsen kan
+   isolera alla lager, lexikala samband, dokumentstruktur eller glapp.
 3. **Struktur** är en hierarkisk sektionstavla. Roten visar dokumentets
    huvudsektioner som kort. Varje rubrikkort öppnar nästa nivå, där direkta
    stycken och undersektioner visas i separata grid. När en rubrik flyttas
-   följer hela dess sektion.
+   följer hela dess sektion. Dokumentpulsen ovanför korten gör sektionernas
+   relativa omfång och lexikala signaler synliga och fungerar som klickbar
+   navigering. Tomma och ännu inte bedömbara sektioner märks uttryckligen.
 
 ## Skrivstöd
 
@@ -26,9 +29,12 @@ Timern kan pausas, fortsättas och döljas till en neutral statusrad. När ett
 pass är slut kan användaren själv välja en femminuterspaus, ett nytt pass
 eller att avsluta. Ingenting startar automatiskt.
 
+Skrivfältets bredd kan ställas i åtta steg från 540 till 1 440 pixlar. På
+smalare skärmar anpassas fältet automatiskt till den tillgängliga ytan.
+
 ## Ljudrum
 
-Sju frivilliga ljudlandskap kan skapas direkt i webbläsaren. Fyra är stilla:
+Nio frivilliga ljudlandskap kan skapas direkt i webbläsaren. Fyra är stilla:
 
 - **Gläntan** ger mjuk luft, varma grundtoner och sällsynta ljusglimtar.
 - **Regnväv** ger ett jämnt regnfält som kan maskera ljud i omgivningen.
@@ -41,16 +47,34 @@ Tre textlevande landskap förändras långsamt med texten:
 - **Sambandsväv** följer styckenas uppmätta lexikala återkoppling.
 - **Strukturklang** följer rubriknivåer, styckeantal och dokumentets tillväxt.
 
+Två dynamiska kompositioner svarar både på varje tecken och på textens
+sammanlagda form:
+
+- **Valsång** formar melodisk riktning av bokstavsföljder, låter vokaler
+  andas längre och bygger fraser av skrivtempo, ordform och meningar.
+- **Hard Fork** ger ett omedelbart elektroniskt teckensvar och låter
+  skrivtempo, skiljetecken, rubrikdjup och textens samband bygga ett groove
+  som växer och klingar av med aktiviteten.
+
 Ett separat skrivmaskinslager kan kombineras med vilket ljudlandskap som
 helst. Det har fyra karaktärer: Mekanisk, Reseskrivare, Elektrisk och Dämpad.
-Bokstäver, mellanslag, backsteg och Enter får skilda syntetiserade svar.
+Bokstäver, mellanslag, backsteg och Enter får skilda syntetiserade svar. När
+ett tema väljs aktiveras det direkt och ett provslag bekräftar valet.
+Anslagen förbereds som korta lokala ljudbufferter när temat startar, så ett
+tangenttryck bara behöver starta ett redan färdigt ljud. Det minskar
+fördröjningen tydligt, särskilt på iPhone och iPad. En sen iOS-inmatningssignal
+dedupliceras mot det direkta tangentanslaget, så den inte hörs som ett
+fördröjt dubbelslag.
 
-Ljud startar endast efter ett uttryckligt val. Tema, volym och valfri
-skrivrespons sparas, men uppspelning återupptas aldrig automatiskt efter
-omladdning. Alla ljud syntetiseras med Web Audio API utan ljudfiler eller
-nätverksanrop och fungerar därför även offline. Start, stopp och snabba
-temabyten är avbrytbara, så ett äldre startförsök kan inte slå på ljudet igen
-efter ett stopp.
+Ljud startar endast efter ett uttryckligt temaval eller tryck på startknappen.
+Volymreglagen har ett utökat intervall upp till en betydligt högre grundnivå.
+Tema, volym och valfri skrivrespons sparas, men uppspelning återupptas aldrig
+automatiskt efter omladdning. Alla ljud syntetiseras med Web Audio API utan
+ljudfiler eller nätverksanrop och fungerar därför även offline. Start, stopp
+och snabba temabyten är avbrytbara, så att ett äldre startförsök inte kan slå på
+ljudet igen efter ett stopp. Bluetooth, AirPlay och vissa externa
+ljudgränssnitt kan fortfarande lägga till egen överföringsfördröjning som
+webbappen inte kan ta bort.
 
 ## Analys
 
@@ -64,7 +88,9 @@ Det hindrar ett visuellt kanttak från att skapa falska varningar.
 
 I Väven visas dokumentordning med en sammanhängande gråblå linje, lexikal
 återkoppling med en tydligt streckad cyan linje och rubrikhierarki med en
-prickad mässingslinje. Teckenförklaringen visar alla tre.
+prickad mässingslinje. Teckenförklaringen visar alla tre och Vävlinsen kan
+visa ett lager i taget utan att ändra dokumentet. Om en lins saknar mätbart
+underlag förklarar VävR varför i stället för att visa en tvetydigt tom vy.
 
 VävR mäter lexikal återkoppling, alltså delade centrala ord. Det är inte ett
 mått på full semantisk betydelse, argumentativ kvalitet eller om en text är
