@@ -1,43 +1,48 @@
-# VävR 🧵
+# VävR
 
-**VävR** är ett skrivverktyg som gör textens sammanhang och lexikala kohesion synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna speglar sekvensordning samt lexikal kohesion.
+VävR är ett lokalt skrivverktyg som gör textens struktur och lexikala
+återkoppling synlig. Varje committat stycke blir en nod i en levande väv.
 
----
+## Tre arbetsrum
 
-## 🌟 Grundidé & Metodik
+1. **Skriv** visar endast det block som formuleras nu. Enter väver in blocket,
+   Shift + Enter ger radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
+   tillbaka senaste noden.
+2. **Väven** visar stycken, rubrikhierarki, dokumentordning och viktade
+   lexikala kopplingar. En vald nod öppnar ett sambandskort med full text,
+   närmiljö, delade ord och försiktiga omvävningsförslag.
+3. **Struktur** är dokumentets ordningseditor. Block kan redigeras och flyttas
+   med dragning eller knappar. När en rubrik flyttas följer hela dess sektion.
 
-VävR bygger på principen om den röda tråden – att kunskap och text inte ska fragmenteras. 
+## Analys
 
-- **Lexikal kohesion:** Metoden vilar på etablerad textlingvistik (Halliday & Hasan, *Cohesion in English*, 1976) och ordöverlapp mellan textblock (Hearst, *TextTiling*, 1997).
-- **Mätning:** Beräkningen tillämpar tf-idf och cosinuslikhet med en utjämnad idf-formel `idf = log(1 + N / df)` för stabil funktion även i korta dokument.
-- **Suffixtrunkering:** Ordnormaliseringen i `vavr-kohesion.js` är en lätt svensk suffixtrunkering (en heuristik för ordstammar, inte en fullständig Snowball-stemmer).
-- **Formulering:** Verktyget mäter lexikal kohesion. Visualiseringen är en designidé byggd på beprövad mätning (påstår inte oberoende klinisk eller pedagogisk utvärdering).
+Kohesionen beräknas med svensk tokenisering, stoppord, lätt suffixtrunkering,
+TF/IDF och cosinuslikhet. Rubriker påverkar inte styckenas IDF. Små dokument
+stabiliseras genom att IDF-vikterna krymps mot neutral vikt.
 
----
+Analysen och ritningen är åtskilda. Varningsstatus bygger på den fullständiga
+kohesionsmatrisen, medan Väven bara ritar ett begränsat antal trådar per nod.
+Det hindrar ett visuellt kanttak från att skapa falska varningar.
 
-## 🚀 Lägen
+VävR mäter lexikal återkoppling, alltså delade centrala ord. Det är inte ett
+mått på full semantisk betydelse, argumentativ kvalitet eller om en text är
+korrekt. Orange markering visas därför först när det finns minst fyra
+brödtextblock och tillräckligt analysunderlag.
 
-1. **Raden (`Cmd+1`):** Fokusera på ett stycke i taget. Tidigare stycken visas i en svag opacitetstrappa ovanför.
-2. **Väven (`Cmd+2`):** Interaktiv grafvisualisering. Sekvenskanter och kohesionskanter ritas i realtid med rubrikgravitation.
-3. **Trappan (`Cmd+3`):** Disposition och läsläge med 3 utfällningsnivåer (Rubriker, Ingresser, Hela texten) samt Drag-and-drop med live-kohesionsmarkör.
-4. **Studion (`Cmd+4`):** Helskärmsredigering av ett enskilt block med synliga grannblock och blockbundna kommentarer.
+## Teknik
 
----
+Applikationen är helt självbärande i `index.html` och har inga
+körtidsberoenden eller byggsteg. Dokument och utkast sparas lokalt i
+webbläsaren. Markdown kan importeras, kopieras och laddas ner.
 
-## 🎧 Generativa Ljudteman
+Öppna `index.html` direkt eller kör en enkel lokal webbserver:
 
-Fyra generativa ljudmotorer (Valsång, Skogsklang, HardFork och Space Odyssey) ger dynamisk audio-respons i två takter.
+```bash
+python3 -m http.server 8000
+```
 
----
-
-## 🛠️ Bygg & Tester
-
-Statisk webbapplikation utan byggsteg. Kör testerna i Node:
+Den fristående modultestsviten körs med:
 
 ```bash
 node vavr-test.mjs
 ```
-
----
-
-*Utvecklad med gAIa 🌲 | GitHub Pages: [hktcr.github.io/vavr](https://hktcr.github.io/vavr/)*

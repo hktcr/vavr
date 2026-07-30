@@ -1,1584 +1,3540 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090b11">
   <title>VävR</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="vavr-tokens.css?v=4.0">
-  <script type="module">
-    import { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik } from './vavr-dokument.js';
-    import { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD } from './vavr-kohesion.js';
-    import { TextContext } from './vavr-textcontext.js';
-    import { ValsangEngine } from './valsang-engine.js';
-    import { SkogsklangEngine } from './skogsklang-engine.js';
-    import { HardForkEngine } from './hardfork-engine.js';
-    import { SpaceOdysseyEngine } from './space-engine.js';
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #090b11;
+      --ink-2: #0f131c;
+      --ink-3: #171d28;
+      --paper: #f1f6f8;
+      --paper-dim: #9aaab5;
+      --paper-faint: #60717e;
+      --cyan: #59c2ff;
+      --cyan-bright: #b3e5ff;
+      --cyan-deep: #174e6c;
+      --amber: #c5a059;
+      --orange: #e85d4a;
+      --line: rgba(179, 229, 255, .13);
+      --glass: rgba(15, 19, 28, .78);
+      --glass-strong: rgba(15, 19, 28, .94);
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      --composer-width: 720px;
+      --topbar-height: 64px;
+      --visual-height: 100dvh;
+      --visual-top: 0px;
+      --radius: 18px;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
 
-    window.VavrDokument = { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik };
-    window.VavrKohesion = { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD };
-    window.TextContext = TextContext;
-    window.ValsangEngine = ValsangEngine;
-    window.SkogsklangEngine = SkogsklangEngine;
-    window.HardForkEngine = HardForkEngine;
-    window.SpaceOdysseyEngine = SpaceOdysseyEngine;
-  </script>
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 43%, rgba(31, 78, 107, .14), transparent 34rem),
+        radial-gradient(circle at 12% 88%, rgba(197, 160, 89, .045), transparent 28rem),
+        var(--ink);
+      color: var(--paper);
+      font: 15px/1.5 var(--sans);
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button,
+    [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--cyan-bright);
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0 0 0 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    .icon {
+      width: 19px;
+      height: 19px;
+      flex: 0 0 auto;
+    }
+
+    .icon-button,
+    .plain-button,
+    .mode-button,
+    .small-button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--paper-dim);
+      transition: color .16s, background .16s, border-color .16s;
+    }
+
+    .icon-button:hover,
+    .icon-button[aria-expanded="true"] {
+      border-color: var(--line);
+      background: rgba(179, 229, 255, .07);
+      color: var(--cyan-bright);
+    }
+
+    #topbar {
+      position: fixed;
+      z-index: 50;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      right: max(12px, env(safe-area-inset-right));
+      display: grid;
+      grid-template-columns: minmax(12rem, 1fr) auto minmax(12rem, 1fr);
+      align-items: center;
+      min-height: var(--topbar-height);
+      padding: 8px 10px;
+      border: 1px solid rgba(179, 229, 255, .09);
+      border-radius: 999px;
+      background: rgba(9, 11, 17, .62);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .22);
+      backdrop-filter: blur(18px) saturate(125%);
+      -webkit-backdrop-filter: blur(18px) saturate(125%);
+    }
+
+    .brand {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 10px;
+      padding-left: 8px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 25px;
+      height: 25px;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      position: absolute;
+      content: "";
+      border-radius: 50%;
+    }
+
+    .brand-mark::before {
+      inset: 2px;
+      border: 1.5px solid var(--cyan);
+      box-shadow: 0 0 15px rgba(89, 194, 255, .38);
+    }
+
+    .brand-mark::after {
+      top: 9px;
+      left: 9px;
+      width: 7px;
+      height: 7px;
+      background: var(--amber);
+      box-shadow: 0 0 12px rgba(197, 160, 89, .45);
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-name {
+      display: block;
+      font: 650 14px/1 var(--sans);
+      letter-spacing: .04em;
+    }
+
+    #save-status {
+      display: block;
+      overflow: hidden;
+      margin-top: 5px;
+      color: var(--paper-faint);
+      font: 10px/1 var(--mono);
+      letter-spacing: .08em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #mode-nav {
+      display: flex;
+      gap: 3px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(3, 6, 10, .5);
+    }
+
+    .mode-button {
+      display: flex;
+      min-height: 38px;
+      align-items: center;
+      gap: 7px;
+      padding: 0 15px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--paper-dim);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .02em;
+      transition: color .18s, background .18s, box-shadow .18s;
+    }
+
+    .mode-button:hover {
+      color: var(--paper);
+    }
+
+    .mode-button[aria-current="page"] {
+      background: var(--paper);
+      box-shadow: 0 0 22px rgba(179, 229, 255, .12);
+      color: var(--ink);
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 2px;
+    }
+
+    #edge-canvas,
+    #node-layer {
+      position: fixed;
+      z-index: 0;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #edge-canvas {
+      pointer-events: none;
+      transition: opacity .35s var(--ease);
+    }
+
+    #node-layer {
+      z-index: 1;
+      overflow: hidden;
+      transition: opacity .35s var(--ease);
+    }
+
+    body[data-view="write"] #edge-canvas,
+    body[data-view="write"] #node-layer {
+      opacity: .29;
+    }
+
+    body[data-view="write"] #node-layer {
+      pointer-events: none;
+    }
+
+    body[data-view="structure"] #edge-canvas,
+    body[data-view="structure"] #node-layer {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #graph-view {
+      pointer-events: none;
+    }
+
+    body:not([data-view="graph"]) #graph-view {
+      display: none;
+    }
+
+    .graph-node {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      width: max(44px, var(--diameter));
+      height: max(44px, var(--diameter));
+      padding: 0;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      cursor: grab;
+      touch-action: none;
+      transform: translate3d(var(--x), var(--y), 0) translate(-50%, -50%);
+      transition: opacity .22s, filter .22s;
+    }
+
+    .graph-node:active {
+      cursor: grabbing;
+    }
+
+    .node-shape {
+      position: relative;
+      display: block;
+      width: var(--diameter);
+      height: var(--diameter);
+      border: 1px solid rgba(179, 229, 255, .38);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, rgba(255, 255, 255, .8), rgba(179, 229, 255, .58) 18%, var(--cyan) 57%, #2586b9 100%);
+      box-shadow:
+        0 0 0 1px rgba(89, 194, 255, .08),
+        0 0 13px rgba(89, 194, 255, .38);
+      transition: transform .2s var(--ease), box-shadow .2s, border-color .2s;
+    }
+
+    .graph-node[data-kind="heading"] .node-shape {
+      border: 2px solid var(--amber);
+      background: rgba(9, 11, 17, .8);
+      box-shadow:
+        inset 0 0 12px rgba(197, 160, 89, .08),
+        0 0 14px rgba(197, 160, 89, .26);
+    }
+
+    .graph-node[data-lonely="true"] .node-shape {
+      border: 2px solid var(--orange);
+      background: rgba(232, 93, 74, .14);
+      box-shadow: 0 0 14px rgba(232, 93, 74, .32);
+    }
+
+    .graph-node[data-lonely="true"] .node-shape::after {
+      position: absolute;
+      right: -4px;
+      bottom: -3px;
+      width: 6px;
+      height: 6px;
+      content: "";
+      border: 1px solid var(--ink);
+      border-radius: 1px;
+      background: var(--orange);
+    }
+
+    .graph-node[data-flow="true"] .node-shape {
+      outline: 1px dashed rgba(179, 229, 255, .72);
+      outline-offset: 4px;
+    }
+
+    .graph-node:hover .node-shape,
+    .graph-node:focus-visible .node-shape,
+    .graph-node[data-selected="true"] .node-shape {
+      border-color: #fff;
+      box-shadow:
+        0 0 0 5px rgba(179, 229, 255, .11),
+        0 0 25px rgba(179, 229, 255, .65);
+      transform: scale(1.13);
+    }
+
+    .graph-node[data-kind="heading"]:hover .node-shape,
+    .graph-node[data-kind="heading"]:focus-visible .node-shape,
+    .graph-node[data-selected="true"][data-kind="heading"] .node-shape {
+      box-shadow:
+        0 0 0 5px rgba(197, 160, 89, .1),
+        0 0 25px rgba(197, 160, 89, .55);
+    }
+
+    .graph-node[data-dimmed="true"] {
+      opacity: .12;
+      filter: saturate(.25);
+    }
+
+    .node-label {
+      position: absolute;
+      top: calc(50% + var(--diameter) / 2 + 5px);
+      left: 50%;
+      max-width: 150px;
+      overflow: hidden;
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: rgba(9, 11, 17, .78);
+      color: var(--paper-dim);
+      font: 9px/1.2 var(--mono);
+      letter-spacing: .04em;
+      opacity: .8;
+      pointer-events: none;
+      text-overflow: ellipsis;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    body[data-view="write"] .node-label {
+      opacity: 0;
+    }
+
+    .graph-node.is-born .node-shape {
+      animation: node-birth .58s var(--ease) both;
+    }
+
+    @keyframes node-birth {
+      0% { opacity: 0; transform: scale(.18); }
+      54% { opacity: 1; transform: scale(1.35); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .view {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+    }
+
+    #write-view {
+      display: grid;
+      top: var(--visual-top);
+      bottom: auto;
+      height: var(--visual-height);
+      overflow: auto;
+      padding:
+        calc(var(--topbar-height) + max(30px, env(safe-area-inset-top)))
+        max(16px, env(safe-area-inset-right))
+        max(26px, env(safe-area-inset-bottom))
+        max(16px, env(safe-area-inset-left));
+      place-items: center;
+      pointer-events: none;
+    }
+
+    body:not([data-view="write"]) #write-view {
+      display: none;
+    }
+
+    #composer {
+      position: relative;
+      width: min(var(--composer-width), calc(100vw - 32px));
+      border: 1px solid rgba(179, 229, 255, .27);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(179, 229, 255, .055), transparent 42%),
+        var(--glass);
+      box-shadow:
+        0 28px 80px rgba(0, 0, 0, .5),
+        0 0 0 1px rgba(89, 194, 255, .03),
+        0 0 80px rgba(89, 194, 255, .06);
+      backdrop-filter: blur(22px) saturate(125%);
+      -webkit-backdrop-filter: blur(22px) saturate(125%);
+      pointer-events: auto;
+      transition: width .24s var(--ease), border-color .2s, box-shadow .2s;
+    }
+
+    #composer:focus-within {
+      border-color: rgba(179, 229, 255, .62);
+      box-shadow:
+        0 30px 90px rgba(0, 0, 0, .55),
+        0 0 0 1px rgba(89, 194, 255, .08),
+        0 0 90px rgba(89, 194, 255, .11);
+    }
+
+    .composer-top,
+    .composer-bottom {
+      display: flex;
+      align-items: center;
+      color: var(--paper-faint);
+      font: 10px/1.2 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .composer-top {
+      justify-content: space-between;
+      padding: 14px 18px 2px;
+    }
+
+    #block-kind {
+      color: var(--cyan);
+    }
+
+    #draft-count {
+      font-variant-numeric: tabular-nums;
+    }
+
+    #draft-input {
+      display: block;
+      width: 100%;
+      min-height: 132px;
+      max-height: 48dvh;
+      overflow-y: auto;
+      padding: 19px 24px 21px;
+      border: 0;
+      outline: 0;
+      resize: none;
+      background: transparent;
+      color: var(--paper);
+      caret-color: var(--cyan);
+      font: 400 clamp(20px, 2.1vw, 27px)/1.58 var(--serif);
+      text-wrap: pretty;
+    }
+
+    #draft-input::placeholder {
+      color: rgba(154, 170, 181, .4);
+    }
+
+    #draft-input[data-heading="1"] {
+      font: 620 clamp(27px, 3.4vw, 42px)/1.2 var(--sans);
+    }
+
+    #draft-input[data-heading="2"] {
+      font: 600 clamp(24px, 2.8vw, 34px)/1.25 var(--sans);
+    }
+
+    #draft-input[data-heading="3"] {
+      font: 600 clamp(21px, 2.35vw, 29px)/1.3 var(--sans);
+    }
+
+    .composer-bottom {
+      min-height: 44px;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 8px 18px 12px;
+      border-top: 1px solid rgba(179, 229, 255, .07);
+    }
+
+    #commit-hint {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .width-control {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .width-control svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    #width-slider {
+      width: 94px;
+      height: 20px;
+      margin: 0;
+      accent-color: var(--cyan);
+      cursor: ew-resize;
+    }
+
+    .composer-grip {
+      position: absolute;
+      top: 50%;
+      width: 24px;
+      height: 80px;
+      border: 0;
+      background: transparent;
+      cursor: ew-resize;
+      opacity: .38;
+      transform: translateY(-50%);
+      touch-action: none;
+      transition: opacity .16s;
+    }
+
+    .composer-grip:hover,
+    .composer-grip:focus-visible {
+      opacity: 1;
+    }
+
+    .composer-grip::before {
+      position: absolute;
+      top: 18px;
+      bottom: 18px;
+      left: 11px;
+      width: 2px;
+      content: "";
+      border-radius: 2px;
+      background: linear-gradient(transparent, var(--cyan), transparent);
+    }
+
+    .composer-grip.left { right: 100%; }
+    .composer-grip.right { left: 100%; }
+
+    #empty-graph {
+      position: fixed;
+      z-index: 3;
+      top: 50%;
+      left: 50%;
+      max-width: min(34rem, calc(100vw - 36px));
+      color: var(--paper-faint);
+      font: 12px/1.7 var(--mono);
+      letter-spacing: .04em;
+      text-align: center;
+      transform: translate(-50%, -50%);
+    }
+
+    body:not([data-view="graph"]) #empty-graph,
+    #empty-graph[hidden] {
+      display: none;
+    }
+
+    #graph-legend {
+      position: fixed;
+      z-index: 8;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: max(18px, env(safe-area-inset-left));
+      display: flex;
+      gap: 14px;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(9, 11, 17, .72);
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .06em;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    body:not([data-view="graph"]) #graph-legend {
+      display: none;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-mark {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 8px rgba(89, 194, 255, .3);
+    }
+
+    .legend-mark.heading {
+      border: 1.5px solid var(--amber);
+      background: transparent;
+    }
+
+    .legend-mark.lonely {
+      border: 1.5px solid var(--orange);
+      background: rgba(232, 93, 74, .12);
+      border-radius: 2px;
+    }
+
+    #structure-view {
+      z-index: 7;
+      overflow: auto;
+      padding:
+        calc(var(--topbar-height) + max(32px, env(safe-area-inset-top)))
+        max(20px, env(safe-area-inset-right))
+        max(80px, env(safe-area-inset-bottom))
+        max(20px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 50% 0%, rgba(89, 194, 255, .07), transparent 30rem),
+        var(--ink);
+    }
+
+    body:not([data-view="structure"]) #structure-view {
+      display: none;
+    }
+
+    .structure-shell {
+      width: min(850px, 100%);
+      margin: 0 auto;
+    }
+
+    .structure-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 22px 0 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--cyan);
+      font: 10px/1 var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .structure-head h1 {
+      margin: 0;
+      font: 500 clamp(28px, 4vw, 45px)/1.05 var(--serif);
+    }
+
+    #structure-summary {
+      max-width: 26rem;
+      margin: 9px 0 0;
+      color: var(--paper-dim);
+      font-size: 13px;
+    }
+
+    .outline-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .plain-button,
+    .small-button {
+      min-height: 40px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(179, 229, 255, .045);
+      color: var(--paper-dim);
+      font-size: 12px;
+      font-weight: 620;
+      transition: color .16s, border-color .16s, background .16s;
+    }
+
+    .plain-button:hover,
+    .small-button:hover {
+      border-color: rgba(179, 229, 255, .34);
+      background: rgba(179, 229, 255, .08);
+      color: var(--paper);
+    }
+
+    .plain-button.primary {
+      border-color: rgba(89, 194, 255, .3);
+      background: rgba(89, 194, 255, .13);
+      color: var(--cyan-bright);
+    }
+
+    #outline {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding-bottom: 80px;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .outline-empty {
+      padding: 50px 24px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      color: var(--paper-faint);
+      text-align: center;
+    }
+
+    .block-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: start;
+      padding: 14px 14px 14px 10px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 14px;
+      background: rgba(15, 19, 28, .68);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, .16);
+      transition: border-color .16s, background .16s, opacity .16s, transform .16s;
+    }
+
+    .block-card:hover,
+    .block-card[data-selected="true"] {
+      border-color: rgba(179, 229, 255, .27);
+      background: rgba(23, 29, 40, .86);
+    }
+
+    .block-card[data-kind="heading"] {
+      margin-top: 16px;
+      border-color: rgba(197, 160, 89, .21);
+      background:
+        linear-gradient(90deg, rgba(197, 160, 89, .08), transparent 54%),
+        rgba(15, 19, 28, .76);
+    }
+
+    .block-card[data-dragging="true"] {
+      opacity: .35;
+    }
+
+    .block-card[data-drop="true"] {
+      transform: translateY(3px);
+      border-top-color: var(--cyan);
+    }
+
+    .drag-handle {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      place-items: center;
+      border: 0;
+      background: transparent;
+      color: var(--paper-faint);
+      cursor: grab;
+    }
+
+    .drag-handle:active { cursor: grabbing; }
+
+    .block-main {
+      min-width: 0;
+    }
+
+    .block-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      min-height: 18px;
+      margin-bottom: 7px;
+      color: var(--paper-faint);
+      font: 9px/1.2 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .status-chip {
+      padding: 3px 6px;
+      border: 1px solid rgba(89, 194, 255, .17);
+      border-radius: 999px;
+      color: var(--paper-dim);
+    }
+
+    .status-chip.lonely {
+      border-color: rgba(232, 93, 74, .35);
+      color: #f29b8f;
+    }
+
+    .status-chip.flow {
+      border-style: dashed;
+      color: var(--cyan-bright);
+    }
+
+    .block-text {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--paper);
+      cursor: text;
+      font: 400 17px/1.62 var(--serif);
+      text-align: left;
+      white-space: pre-wrap;
+    }
+
+    .block-card[data-kind="heading"] .block-text {
+      color: #ead7ad;
+      font-family: var(--sans);
+      font-size: 20px;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+
+    .block-tools {
+      display: flex;
+      gap: 2px;
+    }
+
+    .block-tools .icon-button {
+      width: 44px;
+      height: 44px;
+    }
+
+    .edit-area {
+      display: grid;
+      gap: 9px;
+    }
+
+    .edit-area textarea {
+      width: 100%;
+      min-height: 130px;
+      padding: 13px;
+      border: 1px solid rgba(89, 194, 255, .35);
+      border-radius: 10px;
+      outline: 0;
+      resize: vertical;
+      background: rgba(3, 6, 10, .55);
+      color: var(--paper);
+      font: 17px/1.6 var(--serif);
+    }
+
+    .edit-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 7px;
+    }
+
+    #inspector {
+      position: fixed;
+      z-index: 35;
+      top: calc(var(--topbar-height) + max(24px, env(safe-area-inset-top)));
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      display: flex;
+      width: min(370px, calc(100vw - 32px));
+      flex-direction: column;
+      border: 1px solid rgba(179, 229, 255, .16);
+      border-radius: var(--radius);
+      background: var(--glass-strong);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .55);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(calc(100% + 28px));
+      transition: opacity .25s, transform .35s var(--ease);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+    }
+
+    #inspector[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    body[data-view="write"] #inspector {
+      display: none;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 62px;
+      padding: 8px 10px 8px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-kicker {
+      color: var(--cyan);
+      font: 10px/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    #inspector-content {
+      overflow: auto;
+      padding: 20px 20px 26px;
+    }
+
+    #inspector-title {
+      margin: 0 0 12px;
+      color: var(--paper);
+      font: 500 25px/1.22 var(--serif);
+      white-space: pre-wrap;
+    }
+
+    .inspector-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .inspector-section {
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .inspector-section h3 {
+      margin: 0 0 11px;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .context-snippet {
+      margin: 7px 0;
+      padding-left: 11px;
+      border-left: 1px solid rgba(179, 229, 255, .15);
+      color: var(--paper-dim);
+      font: 14px/1.5 var(--serif);
+    }
+
+    .connection-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .connection {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .035);
+      color: var(--paper-dim);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .connection:hover {
+      border-color: rgba(89, 194, 255, .32);
+      color: var(--paper);
+    }
+
+    .connection strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--cyan-bright);
+      font: 10px/1 var(--mono);
+      letter-spacing: .04em;
+    }
+
+    .connection small {
+      color: var(--paper-faint);
+    }
+
+    .shared-words {
+      color: var(--paper-dim);
+      font: 11px/1.5 var(--mono);
+    }
+
+    .inspector-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    #utility-panel {
+      position: fixed;
+      z-index: 70;
+      top: max(10px, env(safe-area-inset-top));
+      right: max(10px, env(safe-area-inset-right));
+      bottom: max(10px, env(safe-area-inset-bottom));
+      width: min(390px, calc(100vw - 20px));
+      overflow: auto;
+      border: 1px solid rgba(179, 229, 255, .18);
+      border-radius: 22px;
+      background: rgba(10, 13, 20, .97);
+      box-shadow: 0 34px 100px rgba(0, 0, 0, .7);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(calc(100% + 24px));
+      transition: opacity .24s, transform .34s var(--ease);
+    }
+
+    #utility-panel[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    #scrim {
+      position: fixed;
+      z-index: 65;
+      inset: 0;
+      border: 0;
+      background: rgba(0, 0, 0, .44);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+
+    #scrim[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .utility-body {
+      display: grid;
+      gap: 22px;
+      padding: 18px 20px 30px;
+    }
+
+    .setting-group {
+      display: grid;
+      gap: 10px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+
+    .setting-group:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .setting-group h3 {
+      margin: 0;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: var(--paper-dim);
+      font-size: 12px;
+    }
+
+    .range-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--paper-dim);
+      font-size: 12px;
+    }
+
+    .range-label output {
+      color: var(--cyan-bright);
+      font-family: var(--mono);
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 42px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      outline: 0;
+      background: rgba(179, 229, 255, .04);
+      color: var(--paper);
+    }
+
+    .field input[type="range"] {
+      padding: 0;
+      accent-color: var(--cyan);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .button-grid .plain-button {
+      min-height: 44px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .025);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--paper);
+      font: 600 19px/1 var(--mono);
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .method-note {
+      margin: 0;
+      color: var(--paper-faint);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .danger {
+      border-color: rgba(232, 93, 74, .22) !important;
+      color: #f29b8f !important;
+    }
+
+    #toast {
+      position: fixed;
+      z-index: 100;
+      bottom: max(22px, env(safe-area-inset-bottom));
+      left: 50%;
+      max-width: calc(100vw - 32px);
+      padding: 10px 15px;
+      border: 1px solid rgba(179, 229, 255, .2);
+      border-radius: 999px;
+      background: var(--glass-strong);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .45);
+      color: var(--cyan-bright);
+      font: 11px/1.3 var(--mono);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+      transition: opacity .18s, transform .25s var(--ease);
+    }
+
+    #toast[data-show="true"] {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    .commit-ghost {
+      position: fixed;
+      z-index: 60;
+      max-width: 25rem;
+      overflow: hidden;
+      color: var(--cyan-bright);
+      font: 18px/1.4 var(--serif);
+      opacity: .75;
+      pointer-events: none;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #node-tooltip {
+      position: fixed;
+      z-index: 30;
+      width: max-content;
+      max-width: min(330px, calc(100vw - 32px));
+      padding: 10px 12px;
+      border: 1px solid rgba(179, 229, 255, .18);
+      border-radius: 9px;
+      background: rgba(9, 11, 17, .94);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .42);
+      color: var(--paper);
+      font: 14px/1.45 var(--serif);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px);
+      transition: opacity .14s, transform .14s;
+    }
+
+    #node-tooltip[data-open="true"] {
+      opacity: 1;
+      transform: none;
+    }
+
+    @media (max-width: 820px) {
+      #topbar {
+        grid-template-columns: 44px 1fr 44px;
+        padding: 6px;
+      }
+
+      .brand {
+        padding: 0;
+        justify-content: center;
+      }
+
+      .brand-copy,
+      #help-button {
+        display: none;
+      }
+
+      #mode-nav {
+        justify-self: center;
+      }
+
+      .mode-button {
+        min-width: 44px;
+        justify-content: center;
+        padding: 0 10px;
+      }
+
+      .mode-button span {
+        display: none;
+      }
+
+      .composer-grip {
+        display: none;
+      }
+
+      .structure-head {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .block-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+      }
+
+      .block-tools {
+        grid-column: 2;
+        justify-content: flex-end;
+      }
+
+      #inspector {
+        top: auto;
+        right: max(8px, env(safe-area-inset-right));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        left: max(8px, env(safe-area-inset-left));
+        width: auto;
+        max-height: min(68dvh, 620px);
+        transform: translateY(calc(100% + 18px));
+      }
+
+      #inspector[data-open="true"] {
+        transform: none;
+      }
+
+      #graph-legend {
+        bottom: max(12px, env(safe-area-inset-bottom));
+        gap: 9px;
+      }
+
+      #graph-legend .legend-item span:last-child {
+        display: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      :root { --topbar-height: 56px; }
+
+      #topbar {
+        top: max(6px, env(safe-area-inset-top));
+        right: max(6px, env(safe-area-inset-right));
+        left: max(6px, env(safe-area-inset-left));
+      }
+
+      #write-view {
+        padding-right: 10px;
+        padding-left: 10px;
+      }
+
+      #composer {
+        width: 100%;
+        border-radius: 14px;
+      }
+
+      #draft-input {
+        min-height: 118px;
+        padding: 16px 17px 18px;
+        font-size: 20px;
+      }
+
+      .composer-bottom {
+        gap: 8px;
+        padding-right: 12px;
+        padding-left: 12px;
+      }
+
+      #commit-hint .optional {
+        display: none;
+      }
+
+      .width-control {
+        display: none;
+      }
+
+      #structure-view {
+        padding-right: 10px;
+        padding-left: 10px;
+      }
+
+      .structure-head {
+        margin-top: 12px;
+      }
+
+      .block-card {
+        padding-right: 9px;
+      }
+
+      .button-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (hover: none), (pointer: coarse) {
+      #topbar {
+        background: rgba(9, 11, 17, .84);
+      }
+
+      .icon-button,
+      .mode-button,
+      .plain-button,
+      .small-button {
+        min-height: 44px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
+  </style>
 </head>
-<body data-lage="raden">
+<body data-view="write">
+  <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Skärmläsaranmälare (a11y status announcer) -->
-  <div id="a11y-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
-
-  <!-- Svävande Glassmorphism-Header (MärkR-estetik) -->
-  <header class="huvudbar">
-    <button id="paneltoggle" class="knapp-ikon" title="Öppna sidopanel (Cmd+B)" aria-label="Sidopanel">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-    </button>
-
-    <div class="dok-titel-container">
-      <input type="text" id="dok-titel-input" class="dok-titel-falt" value="Namnlöst" aria-label="Dokumenttitel">
+  <header id="topbar">
+    <div class="brand" role="img" aria-label="VävR">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-copy">
+        <span class="brand-name">VävR</span>
+        <span id="save-status">Lokalt sparat</span>
+      </span>
     </div>
 
-    <nav class="vynav" aria-label="Vyer">
-      <button class="vyknapp aktiv" data-vy="raden" title="Raden (Cmd+1)">Raden</button>
-      <button class="vyknapp" data-vy="vaven" title="Väven (Cmd+2)">Väven</button>
-      <button class="vyknapp" data-vy="trappan" title="Trappan (Cmd+3)">Trappan</button>
-      <button class="vyknapp" data-vy="studion" title="Studion (Cmd+4)">Studion</button>
+    <nav id="mode-nav" aria-label="Arbetsläge">
+      <button class="mode-button" type="button" data-view-target="write" aria-current="page" title="Skriv, Ctrl eller Cmd + 1">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></svg>
+        <span>Skriv</span>
+      </button>
+      <button class="mode-button" type="button" data-view-target="graph" title="Väven, Ctrl eller Cmd + 2">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="17" cy="5" r="2.5"/><circle cx="19" cy="17" r="2.5"/><path d="m7.2 10.8 7.6-4.6M7.4 13l9.2 3M17.5 7.5l1 7"/></svg>
+        <span>Väven</span>
+      </button>
+      <button class="mode-button" type="button" data-view-target="structure" title="Struktur, Ctrl eller Cmd + 3">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 6h12M8 12h9M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+        <span>Struktur</span>
+      </button>
     </nav>
+
+    <div class="top-actions">
+      <button id="help-button" class="icon-button" type="button" title="Kortkommandon och metod" aria-label="Visa hjälp">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.9 1.9c-1 .7-1.7 1.2-1.7 2.6M12 17h.01"/></svg>
+      </button>
+      <button id="utility-button" class="icon-button" type="button" title="Dokument och inställningar" aria-label="Öppna dokument och inställningar" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg>
+      </button>
+    </div>
   </header>
 
-  <!-- Nätverksvy canvas & nodlager (Subtilt i bakgrunden i Raden-läge) -->
-  <canvas id="vaven" aria-hidden="true"></canvas>
-  <div id="nodlager"></div>
+  <canvas id="edge-canvas" aria-hidden="true"></canvas>
+  <section id="node-layer" aria-label="Textens nätverk"></section>
 
-  <!-- Huvudinnehållsytor -->
-  <main id="huvudomrade">
-    <!-- LÄGE 1: RADEN (skrivläge i centrum) -->
-    <section id="vy-raden" class="skrivyta">
-      <div class="trappa" id="skrivtrappa"></div>
-      <div class="raden aktiv" id="radcontainer">
-        <div class="marke"></div>
-        <textarea id="skrivfalt" rows="1" spellcheck="false" aria-label="Skrivfält"></textarea>
-      </div>
-    </section>
-
-    <!-- LÄGE 3: TRAPPAN (disposition & läsning) -->
-    <section id="vy-trappan" class="trappvy" data-utfallning="2" style="display:none;">
-      <div class="utfallningsreglage">
-        <span class="etikett">Visning:</span>
-        <button class="reglage-knapp" data-ut="0">Rubriker</button>
-        <button class="reglage-knapp" data-ut="1">Ingresser</button>
-        <button class="reglage-knapp aktiv" data-ut="2">Hela texten</button>
-      </div>
-      <div id="trappan-innehall"></div>
-    </section>
-
-    <!-- LÄGE 4: STUDION (enskilt block) -->
-    <section id="vy-studion" class="studio" style="display:none;">
-      <div class="studio-nav">
-        <button id="studio-tillbaka" class="knapp-sekundar">← Tillbaka (Esc)</button>
-        <span id="studio-block-typ" class="studio-info"></span>
-      </div>
-      <div id="studio-foralder" class="grannskap"></div>
-      <textarea id="studio-falt" rows="6" aria-label="Redigera stycke"></textarea>
-      <div id="studio-efterfoljande" class="grannskap"></div>
-      <div class="studio-kommentarer">
-        <h3>Kommentarer</h3>
-        <div id="studio-kommentarer-lista"></div>
-        <div class="ny-kommentar-form">
-          <input type="text" id="ny-kommentar-input" aria-label="Ny kommentar">
-          <button id="ny-kommentar-knapp" class="knapp-primar">Lägg till</button>
+  <main>
+    <section id="write-view" class="view" aria-label="Skrivläge">
+      <div id="composer">
+        <button class="composer-grip left" type="button" aria-label="Ändra skrivfältets bredd"></button>
+        <button class="composer-grip right" type="button" aria-label="Ändra skrivfältets bredd"></button>
+        <div class="composer-top">
+          <span id="block-kind">Nytt stycke</span>
+          <span id="draft-count">0 ord</span>
         </div>
+        <textarea id="draft-input" rows="4" spellcheck="true" autocomplete="off" placeholder="Skriv ett stycke. Enter väver in det." aria-label="Skriv nästa stycke"></textarea>
+        <div class="composer-bottom">
+          <span id="commit-hint">Enter väver in <span class="optional">· Shift + Enter ger radbrytning</span></span>
+          <label class="width-control" title="Skrivbredd">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>
+            <span class="sr-only">Skrivfältets bredd</span>
+            <input id="width-slider" type="range" min="0" max="4" step="1" value="2">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section id="graph-view" class="view" aria-label="Nätverksvy">
+      <p id="empty-graph">Väven är tom. Gå till Skriv och väv in ditt första stycke.</p>
+      <div id="graph-legend" role="note" aria-label="Teckenförklaring">
+        <span class="legend-item"><i class="legend-mark"></i><span>Stycke</span></span>
+        <span class="legend-item"><i class="legend-mark heading"></i><span>Rubrik</span></span>
+        <span class="legend-item"><i class="legend-mark lonely"></i><span>Saknar lexikal återkoppling</span></span>
+      </div>
+    </section>
+
+    <section id="structure-view" class="view" aria-label="Strukturerad redigering">
+      <div class="structure-shell">
+        <header class="structure-head">
+          <div>
+            <p class="eyebrow">Redaktionsbord</p>
+            <h1 id="structure-title">Namnlöst dokument</h1>
+            <p id="structure-summary">Ordna, granska och redigera block. Endast denna vy ändrar dokumentets ordning.</p>
+          </div>
+          <div class="outline-actions">
+            <button id="structure-add" class="plain-button primary" type="button">+ Skriv nytt</button>
+          </div>
+        </header>
+        <ul id="outline"></ul>
       </div>
     </section>
   </main>
 
-  <!-- Sidopanel -->
-  <aside id="sidopanel" class="sidopanel">
-    <div class="paneltopp">
-      <h2>VävR</h2>
-      <button id="panel-stang" class="knapp-ikon" aria-label="Stäng panel">✕</button>
-    </div>
+  <aside id="inspector" aria-label="Blockinspektör" data-open="false" inert>
+    <header class="panel-head">
+      <span class="panel-kicker">Sambandskort</span>
+      <button id="inspector-close" class="icon-button" type="button" aria-label="Stäng inspektören">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div id="inspector-content"></div>
+  </aside>
 
-    <!-- 1. Dokument -->
-    <div class="avdelning">DOKUMENT</div>
-    <div class="panel-sektion">
-      <div id="dok-lista" class="dok-lista"></div>
-      <div class="knapprad">
-        <button id="nytt-dok-knapp" class="knapp-sekundar">+ Nytt</button>
-        <button id="ladda-ner-alla-knapp" class="knapp-sekundar">Spara alla</button>
-      </div>
-    </div>
+  <button id="scrim" type="button" aria-label="Stäng panel" data-open="false"></button>
+  <aside id="utility-panel" aria-label="Dokument och inställningar" data-open="false" inert>
+    <header class="panel-head">
+      <span class="panel-kicker">Dokument och inställningar</span>
+      <button id="utility-close" class="icon-button" type="button" aria-label="Stäng dokument och inställningar">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="utility-body">
+      <section class="setting-group">
+        <h3>Dokument</h3>
+        <div class="field">
+          <label for="document-select">Aktivt dokument</label>
+          <select id="document-select"></select>
+        </div>
+        <div class="field">
+          <label for="document-title">Titel</label>
+          <input id="document-title" type="text" value="Namnlöst dokument">
+        </div>
+        <div class="button-grid">
+          <button id="new-document" class="plain-button" type="button">Nytt dokument</button>
+          <button id="delete-document" class="plain-button danger" type="button">Radera dokument</button>
+        </div>
+      </section>
 
-    <!-- 2. Textuell Graf (a11y) -->
-    <div class="avdelning">TEXTUELL GRAF (A11Y)</div>
-    <div class="panel-sektion">
-      <div id="textuell-graf-container" class="textuell-graf-lista"></div>
-    </div>
+      <section class="setting-group">
+        <h3>Nyckeltal</h3>
+        <div class="stats-grid">
+          <div class="stat"><strong id="stat-words">0</strong><span>Ord</span></div>
+          <div class="stat"><strong id="stat-blocks">0</strong><span>Block</span></div>
+          <div class="stat"><strong id="stat-links">0</strong><span>Trådar</span></div>
+        </div>
+      </section>
 
-    <!-- 3. Ordlistan & Lexikal Återkoppling -->
-    <div class="avdelning">LEXIKAL ÅTERKOPPLING</div>
-    <div class="panel-sektion">
-      <div id="dolda-ord-notis" class="dolda-notis" style="display:none;">
-        <span id="dolda-antal">0 dolda ord</span>
-        <button id="rensa-dolda" class="knapp-liten">Återställ alla</button>
-      </div>
-      <div id="ordlista-container" class="ordlista-container"></div>
-    </div>
+      <section class="setting-group">
+        <h3>Vävens känslighet</h3>
+        <div class="field">
+          <div class="range-label"><label for="threshold-input">Grundtröskel</label><output id="threshold-output" for="threshold-input">0,12</output></div>
+          <input id="threshold-input" type="range" min="0.08" max="0.24" step="0.01" value="0.12">
+        </div>
+        <div class="field">
+          <div class="range-label"><label for="edge-count-input">Synliga trådar per nod</label><output id="edge-count-output" for="edge-count-input">3</output></div>
+          <input id="edge-count-input" type="range" min="1" max="6" step="1" value="3">
+        </div>
+        <p class="method-note">VävR mäter lexikal återkoppling genom TF/IDF och cosinuslikhet. Det visar delade centrala ord, inte full semantisk betydelse, argumentativ kvalitet eller om en formulering är riktig.</p>
+      </section>
 
-    <!-- 4. Nyckeltal -->
-    <div class="avdelning">NYCKELTAL</div>
-    <div class="panel-sektion">
-      <div class="tal"><span>Ord</span><b id="stat-ord">0</b></div>
-      <div class="tal"><span>Tecken</span><b id="stat-tecken">0</b></div>
-      <div class="tal"><span>Stycken</span><b id="stat-stycken">0</b></div>
-      <div class="tal"><span>Rubriker</span><b id="stat-rubriker">0</b></div>
-      <div class="tal"><span>Lästid</span><b id="stat-lastid">1 min</b></div>
-      <div class="tal"><span>LIX</span><b id="stat-lix">0</b></div>
-    </div>
+      <section class="setting-group">
+        <h3>Import och export</h3>
+        <div class="button-grid">
+          <button id="copy-markdown" class="plain-button" type="button">Kopiera Markdown</button>
+          <button id="download-markdown" class="plain-button" type="button">Ladda ner .md</button>
+          <button id="import-markdown" class="plain-button" type="button">Importera .md</button>
+          <button id="clear-document" class="plain-button danger" type="button">Töm dokumentet</button>
+        </div>
+        <input id="import-file" class="sr-only" type="file" accept=".md,.markdown,text/markdown,text/plain">
+      </section>
 
-    <!-- 5. Skrivmål -->
-    <div class="avdelning">SKRIVMÅL</div>
-    <div class="panel-sektion">
-      <div class="malform">
-        <select id="mal-typ" aria-label="Måltyp">
-          <option value="ord">Ord</option>
-          <option value="tecken">Tecken</option>
-        </select>
-        <input type="number" id="mal-varde" value="800" min="50" step="50" aria-label="Målvärde">
-      </div>
-      <div class="malstapel"><i id="mal-framgang" style="width: 0%;"></i></div>
-      <div class="tal"><span id="mal-text">0 / 800 ord</span><b id="mal-procent">0%</b></div>
-    </div>
-
-    <!-- 6. Timer -->
-    <div class="avdelning">TIMER</div>
-    <div class="panel-sektion">
-      <div class="timer-display" id="timer-display">25:00</div>
-      <div class="knapprad">
-        <button id="timer-start" class="knapp-sekundar">Starta</button>
-        <button id="timer-nollstall" class="knapp-sekundar">Nollställ</button>
-      </div>
-    </div>
-
-    <!-- 7. Ljud -->
-    <div class="avdelning">LJUDTEMA</div>
-    <div class="panel-sektion">
-      <select id="ljud-select" class="panel-select" aria-label="Ljudtema">
-        <option value="inget">Inget (tyst)</option>
-        <option value="valsang">Valsång</option>
-        <option value="skogsklang">Skogsklang</option>
-        <option value="hardfork">HardFork</option>
-        <option value="space">Space Odyssey</option>
-      </select>
-      <div class="reglage-rad">
-        <label for="ljud-volym">Volym</label>
-        <input type="range" id="ljud-volym" min="0" max="1" step="0.05" value="0.5">
-      </div>
-      <div class="reglage-rad">
-        <label for="ljud-djup">Djup</label>
-        <input type="range" id="ljud-djup" min="0" max="1" step="0.05" value="0.5">
-      </div>
-    </div>
-
-    <!-- 8. Inställningar & Läge -->
-    <div class="avdelning">INSTÄLLNINGAR</div>
-    <div class="panel-sektion">
-      <div class="reglage-rad">
-        <label for="inst-paus">Paus (ms)</label>
-        <input type="number" id="inst-paus" value="800" min="400" max="3000" step="100">
-      </div>
-      <div class="reglage-rad">
-        <label for="inst-troskel">Kohesionströskel</label>
-        <input type="number" id="inst-troskel" value="0.12" min="0.05" max="0.5" step="0.01">
-      </div>
-      <div class="reglage-rad">
-        <label for="inst-maxkanter">Max kanter/nod</label>
-        <input type="number" id="inst-maxkanter" value="3" min="1" max="10">
-      </div>
-    </div>
-
-    <!-- 9. Export & File System API -->
-    <div class="avdelning">EXPORT & DISK</div>
-    <div class="panel-sektion">
-      <label class="kryss-rad">
-        <input type="checkbox" id="export-kommentarer" checked>
-        <span>Ta med kommentarer</span>
-      </label>
-      <div class="knapp-vertikalsida">
-        <button id="export-fs-api" class="knapp-primar">Spara till disk (Fil-API)</button>
-        <button id="export-kopiera" class="knapp-sekundar">Kopiera Markdown</button>
-        <button id="export-ladda-ner" class="knapp-sekundar">Ladda ner .md</button>
-      </div>
+      <section class="setting-group">
+        <h3>Kortkommandon</h3>
+        <p class="method-note">Ctrl eller Cmd + 1: Skriv. + 2: Väven. + 3: Struktur. + B: panel. Ctrl eller Cmd + Z i ett tomt skrivfält tar tillbaka senaste blocket.</p>
+      </section>
     </div>
   </aside>
 
-  <!-- Brödrost (notis) -->
-  <div id="brodrost" class="brodrost"></div>
+  <div id="node-tooltip" role="tooltip" data-open="false" aria-hidden="true"></div>
+  <div id="toast" role="status"></div>
 
-  <!-- Applikationslogik -->
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const { nyttId, nyttBlock, nyttDokument, lasRad, franMarkdown, tillMarkdown, flyttaBlock, sektioner, agare, statistik } = window.VavrDokument;
-      const { STOPPORD, normalisera, tokenisera, byggIdf, cosinus, berakna, byggOrdlista, STANDARD } = window.VavrKohesion;
-      const TextContext = window.TextContext;
+  (() => {
+    'use strict';
 
-      /* ── 1. TILLSTÅND ─────────────────────────────────────────── */
+    /* VävR 5
+       Analysen mäter lexikal återkoppling. Blocklistan är kanonisk.
+       Markdown används för import och export. Allt kör lokalt i webbläsaren. */
 
-      let dokumenter = JSON.parse(localStorage.getItem('vavr-dokument') || '[]');
-      let aktivtId = localStorage.getItem('vavr-aktivt') || null;
-      let inst = Object.assign({
-        accentfarg: '#74d0ff',
-        typsnitt: 'serif',
-        textstorlek: 19,
-        pausMs: 800,
-        troskel: 0.12,
-        maxPerNod: 3,
-        volym: 0.5,
-        djup: 0.5
-      }, JSON.parse(localStorage.getItem('vavr-inst') || '{}'));
+    const STORAGE_KEY = 'vavr-weaver-v5';
+    const WIDTHS = [540, 640, 720, 820, 940];
+    const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const STOP_WORDS = new Set((
+      'och att det som en ett på är av för med till den har de inte om men var jag sig så vi man kan när han hon hans hennes ' +
+      'från vid eller ska skulle kunde blir blev vara varit vad vem vilken vilket vilka där här hur alla allt andra annan annat ' +
+      'bara bli både denna detta dessa dig din ditt dina du efter ej emot ena endast få får fick fram före ge genom gick gör göra ' +
+      'hade heller honom icke ingen inget inom ju just kunna kunnat lika lilla lite längre mellan mera mest mig min mitt mina mot ' +
+      'mycket ner nog nu någon något några oss över redan sedan sin sitt sina själv skall ta tar tog under upp ut utan varje vars ' +
+      'vart vidare viss vår vårt våra än ändå ännu åt också samma sådan sådant sådana trots därför eftersom medan then the and of to in is it that this for with as be'
+    ).split(/\s+/));
+    const SUFFIXES = [
+      'andet', 'ernas', 'arnas', 'ornas', 'andes', 'ande', 'erna', 'arna', 'orna',
+      'ades', 'aren', 'eten', 'ers', 'ens', 'ets', 'arn', 'ade', 'are', 'ast',
+      'het', 'en', 'et', 'ar', 'er', 'or', 'na', 'ns', 'as', 'es', 's', 't', 'a'
+    ];
 
-      if (!dokumenter.length) {
-        const startDok = nyttDokument('Välkommen till VävR');
-        startDok.block = franMarkdown(
-`# VävR: Ett skrivverktyg för den röda tråden
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const uid = (prefix = 'b') => prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const wordCount = text => (String(text || '').match(/[^\s]+/g) || []).length;
+    const escapeHtml = text => String(text == null ? '' : text)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    const snippet = (text, length = 95) => {
+      const clean = String(text || '').replace(/\s+/g, ' ').trim();
+      return clean.length > length ? clean.slice(0, length - 1) + '…' : clean;
+    };
 
-VävR är utformat för att göra textens sammanhang och lexikala återkoppling synlig medan du skriver. Varje stycke bildar en nod i en graf, och kanterna speglar sekvens och ämnesöverlapp.
+    const elements = {
+      body: document.body,
+      canvas: $('#edge-canvas'),
+      nodeLayer: $('#node-layer'),
+      composer: $('#composer'),
+      draft: $('#draft-input'),
+      draftCount: $('#draft-count'),
+      blockKind: $('#block-kind'),
+      widthSlider: $('#width-slider'),
+      emptyGraph: $('#empty-graph'),
+      outline: $('#outline'),
+      structureTitle: $('#structure-title'),
+      structureSummary: $('#structure-summary'),
+      inspector: $('#inspector'),
+      inspectorContent: $('#inspector-content'),
+      utility: $('#utility-panel'),
+      utilityButton: $('#utility-button'),
+      scrim: $('#scrim'),
+      toast: $('#toast'),
+      tooltip: $('#node-tooltip'),
+      live: $('#live-region'),
+      saveStatus: $('#save-status'),
+      documentSelect: $('#document-select'),
+      documentTitle: $('#document-title')
+    };
 
-# Hur lexikal återkoppling beräknas
+    const context = elements.canvas.getContext('2d');
+    let viewport = { width: innerWidth, height: innerHeight, dpr: 1 };
+    let app = loadState();
+    let view = 'write';
+    let analysis = null;
+    let selectedId = null;
+    let hoveredId = null;
+    let nodeStates = new Map();
+    let animationFrame = null;
+    let simulationAlpha = 0;
+    let writeStopAt = 0;
+    let lastFrame = performance.now();
+    let dragState = null;
+    let suppressClickId = null;
+    let resizeFrame = null;
+    let editingId = null;
+    let editingSnapshot = null;
+    let draggedBlockIndex = null;
+    let recalledBlock = null;
+    let undoStack = [];
+    let redoStack = [];
+    let toastTimer = null;
+    let titleSaveTimer = null;
+    let draftSaveTimer = null;
+    let utilityReturnFocus = null;
 
-Metoden bygger på lexikal återkoppling och ordöverlapp mellan textblock. Genom tf-idf och cosinuslikhet mäts hur väl varje stycke knyter an till resten av dokumentet.
+    function createDocument(title = 'Namnlöst dokument') {
+      const now = new Date().toISOString();
+      return {
+        id: uid('d'),
+        title,
+        blocks: [],
+        draft: '',
+        recalledBlock: null,
+        created: now,
+        updated: now,
+        hiddenWords: []
+      };
+    }
 
-Ett stycke som inte binder till någonting flaggas som ensamt. Ett stycke som binder starkt till stycken långt bort antyder ett flyttförslag.
+    function createDefaultState() {
+      const document = createDocument();
+      return {
+        version: 5,
+        activeId: document.id,
+        documents: [document],
+        settings: { widthIndex: 2, threshold: .12, maxEdges: 3 }
+      };
+    }
 
-# De fyra lägena
+    function normalizeBlock(block) {
+      const kind = block.kind || block.typ || 'paragraph';
+      return {
+        id: block.id || uid('b'),
+        kind: kind === 'rubrik' || kind === 'heading' ? 'heading' : 'paragraph',
+        level: kind === 'rubrik' || kind === 'heading' ? clamp(Number(block.level || block.niva || 1), 1, 3) : null,
+        text: String(block.text || '').trim(),
+        comments: Array.isArray(block.comments) ? block.comments : (Array.isArray(block.kommentarer) ? block.kommentarer : []),
+        created: block.created || block.skapad || new Date().toISOString()
+      };
+    }
 
-Du växlar enkelt mellan lägena med Cmd+1 till Cmd+4.
-
-Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hela textgrafen. Trappan ger disposition och läskontroll. Studion låter dig fördjupa dig i ett enskilt block med kommentarer.`
-        );
-        dokumenter.push(startDok);
-        aktivtId = startDok.id;
-        sparaDokumenter();
+    function loadState() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (stored && Array.isArray(stored.documents) && stored.documents.length) {
+          stored.documents = stored.documents.map(document => ({
+            ...createDocument(document.title),
+            ...document,
+            title: document.title || document.titel || 'Namnlöst dokument',
+            blocks: (document.blocks || document.block || []).map(normalizeBlock),
+            draft: String(document.draft || ''),
+            recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null
+          }));
+          stored.settings = Object.assign({ widthIndex: 2, threshold: .12, maxEdges: 3 }, stored.settings || {});
+          if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
+          return stored;
+        }
+      } catch (error) {
+        console.warn('Kunde inte läsa VävR-data.', error);
       }
 
-      let dok = dokumenter.find(d => d.id === aktivtId) || dokumenter[0];
-      aktivtId = dok.id;
-
-      let nuvarandeLage = 'raden';
-      let lyftIndex = null;
-      let studioBlockId = null;
-      let audioCtx = null;
-      let aktivMotor = null;
-      let timerInterval = null;
-      let timerSekunder = 25 * 60;
-      let timerKor = false;
-      let beraknatResultat = null;
-
-      // Ångra-stack (Undo / Redo)
-      let undoStack = [];
-      let redoStack = [];
-
-      function sparaTillstand(handling = 'Ändring') {
-        if (!dok) return;
-        undoStack.push(JSON.stringify(dok.block));
-        if (undoStack.length > 50) undoStack.shift();
-        redoStack = [];
+      try {
+        const legacy = JSON.parse(localStorage.getItem('vavr-dokument') || '[]');
+        if (Array.isArray(legacy) && legacy.length) {
+          const activeLegacy = localStorage.getItem('vavr-aktivt');
+          const documents = legacy.map(document => ({
+            ...createDocument(document.titel || 'Namnlöst dokument'),
+            id: document.id || uid('d'),
+            title: document.titel || 'Namnlöst dokument',
+            blocks: (document.block || []).map(normalizeBlock),
+            hiddenWords: document.doldaOrd || []
+          }));
+          return {
+            version: 5,
+            activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
+            documents,
+            settings: { widthIndex: 2, threshold: .12, maxEdges: 3 }
+          };
+        }
+      } catch (error) {
+        console.warn('Kunde inte migrera äldre VävR-data.', error);
       }
 
-      function utforUndo() {
-        if (undoStack.length === 0) {
-          visaBrodrost('Ingenting att ångra');
+      return createDefaultState();
+    }
+
+    function activeDocument() {
+      let document = app.documents.find(item => item.id === app.activeId);
+      if (!document) {
+        document = app.documents[0] || createDocument();
+        if (!app.documents.length) app.documents.push(document);
+        app.activeId = document.id;
+      }
+      return document;
+    }
+
+    function saveState(message = 'Lokalt sparat') {
+      try {
+        activeDocument().updated = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(app));
+        elements.saveStatus.textContent = message;
+      } catch (error) {
+        elements.saveStatus.textContent = 'Kunde inte spara';
+        console.warn('VävR kunde inte spara lokalt.', error);
+      }
+    }
+
+    function pushHistory(label) {
+      undoStack.push({ label, blocks: JSON.stringify(activeDocument().blocks) });
+      if (undoStack.length > 60) undoStack.shift();
+      redoStack = [];
+    }
+
+    function restoreSnapshot(snapshot) {
+      if (!snapshot) return;
+      activeDocument().blocks = JSON.parse(snapshot.blocks).map(normalizeBlock);
+      recalledBlock = null;
+      activeDocument().recalledBlock = null;
+      saveState();
+      recalculate();
+    }
+
+    function undoDocument() {
+      const snapshot = undoStack.pop();
+      if (!snapshot) return toast('Ingenting att ångra');
+      redoStack.push({ label: snapshot.label, blocks: JSON.stringify(activeDocument().blocks) });
+      restoreSnapshot(snapshot);
+      toast('Ångrade: ' + snapshot.label);
+      announce('Ångrade senaste dokumentändringen');
+    }
+
+    function redoDocument() {
+      const snapshot = redoStack.pop();
+      if (!snapshot) return toast('Ingenting att göra om');
+      undoStack.push({ label: snapshot.label, blocks: JSON.stringify(activeDocument().blocks) });
+      restoreSnapshot(snapshot);
+      toast('Gjorde om: ' + snapshot.label);
+      announce('Gjorde om dokumentändringen');
+    }
+
+    function parseDraft(value) {
+      const raw = String(value || '').trim();
+      const heading = /^(#{1,3})\s+([\s\S]+)$/.exec(raw);
+      if (heading) return { kind: 'heading', level: heading[1].length, text: heading[2].trim() };
+      return { kind: 'paragraph', level: null, text: raw.replace(/\s*\n\s*/g, ' ').trim() };
+    }
+
+    function parseMarkdown(markdown) {
+      const blocks = [];
+      const lines = String(markdown || '').split(/\r?\n/);
+      let buffer = [];
+
+      const flush = () => {
+        const text = buffer.join(' ').replace(/\s+/g, ' ').trim();
+        if (text) blocks.push({ id: uid('b'), kind: 'paragraph', level: null, text, comments: [], created: new Date().toISOString() });
+        buffer = [];
+      };
+
+      for (const line of lines) {
+        if (!line.trim()) {
+          flush();
+          continue;
+        }
+        const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+        if (heading) {
+          flush();
+          blocks.push({
+            id: uid('b'),
+            kind: 'heading',
+            level: heading[1].length,
+            text: heading[2].trim(),
+            comments: [],
+            created: new Date().toISOString()
+          });
+        } else {
+          buffer.push(line.trim());
+        }
+      }
+      flush();
+      return blocks;
+    }
+
+    function toMarkdown(document = activeDocument()) {
+      if (!document.blocks.length) return '';
+      return document.blocks.map(block =>
+        block.kind === 'heading' ? '#'.repeat(block.level) + ' ' + block.text : block.text
+      ).join('\n\n') + '\n';
+    }
+
+    function normalizeWord(word) {
+      let value = word.toLowerCase();
+      for (const suffix of SUFFIXES) {
+        if (value.length - suffix.length >= 4 && value.endsWith(suffix)) return value.slice(0, -suffix.length);
+      }
+      return value;
+    }
+
+    function tokenize(text, hiddenWords = []) {
+      const hidden = hiddenWords instanceof Set ? hiddenWords : new Set(hiddenWords || []);
+      const map = new Map();
+      const matches = String(text || '').toLowerCase().match(/[a-zåäöéüæø][a-zåäöéüæø-]*/g) || [];
+      for (const surface of matches) {
+        if (surface.length < 3 || STOP_WORDS.has(surface) || hidden.has(surface)) continue;
+        const key = normalizeWord(surface);
+        if (key.length < 3 || hidden.has(key)) continue;
+        let item = map.get(key);
+        if (!item) {
+          item = { tf: 0, forms: new Map() };
+          map.set(key, item);
+        }
+        item.tf += 1;
+        item.forms.set(surface, (item.forms.get(surface) || 0) + 1);
+      }
+      return map;
+    }
+
+    function buildIdf(paragraphMaps) {
+      const count = paragraphMaps.length;
+      const documentFrequency = new Map();
+      for (const map of paragraphMaps) {
+        for (const key of map.keys()) documentFrequency.set(key, (documentFrequency.get(key) || 0) + 1);
+      }
+      const lambda = clamp((count - 2) / 8, 0, 1);
+      const idf = new Map();
+      for (const [key, frequency] of documentFrequency) {
+        const raw = Math.log(1 + count / frequency);
+        idf.set(key, lambda * raw + (1 - lambda));
+      }
+      return idf;
+    }
+
+    function buildVector(map, idf) {
+      const values = new Map();
+      let squared = 0;
+      for (const [key, item] of map) {
+        const weight = (1 + Math.log(item.tf)) * (idf.get(key) || 1);
+        values.set(key, weight);
+        squared += weight * weight;
+      }
+      return { values, norm: Math.sqrt(squared) };
+    }
+
+    function cosine(a, b) {
+      if (!a || !b || !a.norm || !b.norm) return 0;
+      const [small, large] = a.values.size <= b.values.size ? [a, b] : [b, a];
+      let dot = 0;
+      for (const [key, weight] of small.values) {
+        const other = large.values.get(key);
+        if (other) dot += weight * other;
+      }
+      return dot / (a.norm * b.norm);
+    }
+
+    function commonWords(a, b, idf, limit = 5) {
+      const words = [];
+      for (const [key, item] of a) {
+        const other = b.get(key);
+        if (!other) continue;
+        const forms = new Map();
+        for (const [form, count] of item.forms) forms.set(form, (forms.get(form) || 0) + count);
+        for (const [form, count] of other.forms) forms.set(form, (forms.get(form) || 0) + count);
+        const surface = [...forms].sort((x, y) => y[1] - x[1])[0]?.[0] || key;
+        words.push({ surface, weight: (idf.get(key) || 1) * Math.min(item.tf, other.tf) });
+      }
+      return words.sort((x, y) => y.weight - x.weight).slice(0, limit).map(item => item.surface);
+    }
+
+    function pairKey(a, b) {
+      return a < b ? a + '|' + b : b + '|' + a;
+    }
+
+    function sectionOwners(blocks) {
+      const owners = new Map();
+      const stack = [];
+      for (const block of blocks) {
+        if (block.kind === 'heading') {
+          while (stack.length && stack[stack.length - 1].level >= block.level) stack.pop();
+          owners.set(block.id, stack.length ? stack[stack.length - 1].id : null);
+          stack.push(block);
+        } else {
+          owners.set(block.id, stack.length ? stack[stack.length - 1].id : null);
+        }
+      }
+      return owners;
+    }
+
+    function pairThreshold(uniqueMinimum) {
+      const base = Number(app.settings.threshold) || .12;
+      if (uniqueMinimum <= 2) return Math.max(base, .24);
+      if (uniqueMinimum <= 5) return Math.max(base, .18);
+      return base;
+    }
+
+    function selectDisplayEdges(candidates, nodesById, maximum) {
+      const chosen = new Map();
+      const degree = new Map();
+      const byNode = new Map();
+      for (const candidate of candidates) {
+        if (!byNode.has(candidate.a)) byNode.set(candidate.a, []);
+        if (!byNode.has(candidate.b)) byNode.set(candidate.b, []);
+        byNode.get(candidate.a).push(candidate);
+        byNode.get(candidate.b).push(candidate);
+      }
+
+      const addIfPossible = edge => {
+        const key = pairKey(edge.a, edge.b);
+        if (chosen.has(key)) return true;
+        const da = degree.get(edge.a) || 0;
+        const db = degree.get(edge.b) || 0;
+        if (da >= maximum || db >= maximum) return false;
+        chosen.set(key, edge);
+        degree.set(edge.a, da + 1);
+        degree.set(edge.b, db + 1);
+        return true;
+      };
+
+      /* Börja med de mest begränsade noderna så att ryggraden sprids. */
+      const paragraphNodes = [...nodesById.values()]
+        .filter(node => node.kind === 'paragraph')
+        .sort((a, b) => (byNode.get(a.id)?.length || 0) - (byNode.get(b.id)?.length || 0));
+      for (const node of paragraphNodes) {
+        const ranked = (byNode.get(node.id) || []).sort((a, b) => b.score - a.score);
+        for (const edge of ranked) {
+          if (addIfPossible(edge)) break;
+        }
+      }
+
+      for (const edge of candidates.sort((a, b) => b.score - a.score)) {
+        addIfPossible(edge);
+      }
+      return [...chosen.values()];
+    }
+
+    function analyze(blocks) {
+      const hidden = new Set(activeDocument().hiddenWords || []);
+      const maps = new Map(blocks.map(block => [block.id, tokenize(block.text, hidden)]));
+      const paragraphBlocks = blocks.filter(block => block.kind === 'paragraph');
+      const idf = buildIdf(paragraphBlocks.map(block => maps.get(block.id)));
+      const vectors = new Map(paragraphBlocks.map(block => [block.id, buildVector(maps.get(block.id), idf)]));
+      const owners = sectionOwners(blocks);
+      const nodes = blocks.map((block, index) => ({
+        id: block.id,
+        index,
+        kind: block.kind,
+        level: block.level,
+        words: wordCount(block.text),
+        unique: maps.get(block.id).size,
+        owner: owners.get(block.id),
+        bestGlobal: 0,
+        bestQualified: 0,
+        qualifiedDegree: 0,
+        bestLocal: 0,
+        bestLocalQualified: 0,
+        localNeighbors: 0,
+        lonely: false,
+        flow: false,
+        insufficient: false
+      }));
+      const nodesById = new Map(nodes.map(node => [node.id, node]));
+      const scores = new Map();
+      const fullCohesion = [];
+
+      for (let i = 0; i < paragraphBlocks.length; i++) {
+        const a = paragraphBlocks[i];
+        for (let j = i + 1; j < paragraphBlocks.length; j++) {
+          const b = paragraphBlocks[j];
+          const score = cosine(vectors.get(a.id), vectors.get(b.id));
+          scores.set(pairKey(a.id, b.id), score);
+          const threshold = pairThreshold(Math.min(maps.get(a.id).size, maps.get(b.id).size));
+          if (score >= threshold) {
+            fullCohesion.push({
+              a: a.id,
+              b: b.id,
+              type: 'cohesion',
+              score,
+              threshold,
+              shared: commonWords(maps.get(a.id), maps.get(b.id), idf)
+            });
+            nodesById.get(a.id).bestQualified = Math.max(nodesById.get(a.id).bestQualified, score);
+            nodesById.get(b.id).bestQualified = Math.max(nodesById.get(b.id).bestQualified, score);
+            nodesById.get(a.id).qualifiedDegree += 1;
+            nodesById.get(b.id).qualifiedDegree += 1;
+          }
+          nodesById.get(a.id).bestGlobal = Math.max(nodesById.get(a.id).bestGlobal, score);
+          nodesById.get(b.id).bestGlobal = Math.max(nodesById.get(b.id).bestGlobal, score);
+        }
+      }
+
+      const paragraphsBySection = new Map();
+      for (const block of paragraphBlocks) {
+        const owner = owners.get(block.id) || '__root__';
+        if (!paragraphsBySection.has(owner)) paragraphsBySection.set(owner, []);
+        paragraphsBySection.get(owner).push(block);
+      }
+      for (const section of paragraphsBySection.values()) {
+        for (let i = 0; i < section.length; i++) {
+          const node = nodesById.get(section[i].id);
+          for (const offset of [-1, 1]) {
+            const neighbor = section[i + offset];
+            if (neighbor) {
+              const score = scores.get(pairKey(node.id, neighbor.id)) || 0;
+              const threshold = pairThreshold(Math.min(node.unique, maps.get(neighbor.id).size));
+              node.localNeighbors += 1;
+              node.bestLocal = Math.max(node.bestLocal, score);
+              if (score >= threshold) node.bestLocalQualified = Math.max(node.bestLocalQualified, score);
+            }
+          }
+        }
+      }
+
+      const warningReady = paragraphBlocks.length >= 4;
+      for (const node of nodes) {
+        if (node.kind !== 'paragraph') continue;
+        node.insufficient = node.unique < 6;
+        if (!warningReady || node.insufficient) continue;
+        node.lonely = node.qualifiedDegree === 0;
+        node.flow = !node.lonely &&
+          node.bestQualified >= .18 &&
+          node.localNeighbors > 0 &&
+          node.bestLocalQualified < (Number(app.settings.threshold) || .12);
+      }
+
+      const sequenceEdges = [];
+      for (let i = 0; i < blocks.length - 1; i++) {
+        sequenceEdges.push({ a: blocks[i].id, b: blocks[i + 1].id, type: 'sequence', score: 1 });
+      }
+
+      const hierarchyEdges = [];
+      for (const block of blocks) {
+        const owner = owners.get(block.id);
+        if (owner) hierarchyEdges.push({ a: owner, b: block.id, type: 'hierarchy', score: 1 });
+      }
+
+      const cohesionEdges = selectDisplayEdges(
+        fullCohesion.slice(),
+        nodesById,
+        Number(app.settings.maxEdges) || 3
+      );
+
+      const adjacency = new Map(nodes.map(node => [node.id, new Set()]));
+      for (const edge of [...sequenceEdges, ...hierarchyEdges, ...cohesionEdges]) {
+        adjacency.get(edge.a)?.add(edge.b);
+        adjacency.get(edge.b)?.add(edge.a);
+      }
+
+      return {
+        nodes,
+        nodesById,
+        maps,
+        idf,
+        owners,
+        scores,
+        fullCohesion,
+        cohesionEdges,
+        sequenceEdges,
+        hierarchyEdges,
+        edges: [...sequenceEdges, ...hierarchyEdges, ...cohesionEdges],
+        adjacency
+      };
+    }
+
+    function updateDraftMeta() {
+      const value = elements.draft.value;
+      const parsed = parseDraft(value);
+      const count = wordCount(parsed.text);
+      elements.draftCount.textContent = count + (count === 1 ? ' ord' : ' ord');
+      if (parsed.kind === 'heading') {
+        elements.blockKind.textContent = 'Rubrik H' + parsed.level;
+        elements.draft.dataset.heading = parsed.level;
+      } else {
+        elements.blockKind.textContent = recalledBlock ? 'Återtaget stycke' : 'Nytt stycke';
+        delete elements.draft.dataset.heading;
+      }
+      autoSizeDraft();
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => {
+        activeDocument().draft = value;
+        saveState(value.trim() ? 'Utkast sparat' : 'Lokalt sparat');
+      }, 220);
+    }
+
+    function autoSizeDraft() {
+      elements.draft.style.height = 'auto';
+      const availableHeight = window.visualViewport?.height || innerHeight;
+      const maximum = Math.max(132, availableHeight * .48);
+      elements.draft.style.height = Math.min(maximum, Math.max(132, elements.draft.scrollHeight)) + 'px';
+    }
+
+    function commitDraft() {
+      const parsed = parseDraft(elements.draft.value);
+      if (!parsed.text) return;
+      pushHistory(recalledBlock ? 'Återta och ändra block' : 'Väv in block');
+
+      let block;
+      if (recalledBlock) {
+        block = {
+          ...recalledBlock,
+          kind: parsed.kind,
+          level: parsed.level,
+          text: parsed.text
+        };
+        activeDocument().blocks.push(block);
+        recalledBlock = null;
+        activeDocument().recalledBlock = null;
+      } else {
+        block = {
+          id: uid('b'),
+          kind: parsed.kind,
+          level: parsed.level,
+          text: parsed.text,
+          comments: [],
+          created: new Date().toISOString()
+        };
+        activeDocument().blocks.push(block);
+      }
+
+      const ghostText = elements.draft.value;
+      activeDocument().draft = '';
+      elements.draft.value = '';
+      updateDraftMeta();
+      saveState();
+      recalculate(block.id);
+      animateCommit(block.id, ghostText);
+      announce((block.kind === 'heading' ? 'Rubrik' : 'Stycke') + ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.');
+    }
+
+    function recallLatestBlock() {
+      const document = activeDocument();
+      if (recalledBlock) {
+        elements.draft.value = recalledBlock.kind === 'heading'
+          ? '#'.repeat(recalledBlock.level) + ' ' + recalledBlock.text
+          : recalledBlock.text;
+        document.draft = elements.draft.value;
+        updateDraftMeta();
+        elements.draft.focus();
+        toast('Det återtagna blocket återställdes i skrivfältet');
+        return;
+      }
+      if (!document.blocks.length) return toast('Det finns inget block att ta tillbaka');
+      pushHistory('Ta tillbaka senaste blocket');
+      recalledBlock = document.blocks.pop();
+      document.recalledBlock = recalledBlock;
+      elements.draft.value = recalledBlock.kind === 'heading'
+        ? '#'.repeat(recalledBlock.level) + ' ' + recalledBlock.text
+        : recalledBlock.text;
+      document.draft = elements.draft.value;
+      saveState();
+      recalculate();
+      updateDraftMeta();
+      elements.draft.focus();
+      elements.draft.setSelectionRange(elements.draft.value.length, elements.draft.value.length);
+      toast('Senaste blocket är tillbaka i skrivfältet');
+      announce('Senaste blocket togs tillbaka till skrivfältet');
+    }
+
+    function animateCommit(id, text) {
+      const node = nodeStates.get(id);
+      if (!node || REDUCED_MOTION) return;
+      const rect = elements.composer.getBoundingClientRect();
+      const ghost = document.createElement('div');
+      ghost.className = 'commit-ghost';
+      ghost.textContent = snippet(text, 52);
+      ghost.style.left = rect.left + rect.width / 2 + 'px';
+      ghost.style.top = rect.top + rect.height / 2 + 'px';
+      ghost.style.transform = 'translate(-50%, -50%)';
+      document.body.appendChild(ghost);
+      const dx = node.x - (rect.left + rect.width / 2);
+      const dy = node.y - (rect.top + rect.height / 2);
+      ghost.animate([
+        { transform: 'translate(-50%, -50%) scale(1)', opacity: .78, filter: 'blur(0)' },
+        { offset: .65, opacity: .36 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.12)`, opacity: 0, filter: 'blur(2px)' }
+      ], { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' }).finished.finally(() => ghost.remove());
+    }
+
+    function diameterFor(node) {
+      if (node.kind === 'heading') return node.level === 1 ? 44 : (node.level === 2 ? 36 : 30);
+      return clamp(12, 36, 10 + 2.6 * Math.sqrt(Math.max(1, node.words)));
+    }
+
+    function initialPosition(node, index, total, bornId) {
+      const centerX = viewport.width / 2;
+      const centerY = viewport.height / 2;
+      if (node.id === bornId && elements.composer) {
+        const rect = elements.composer.getBoundingClientRect();
+        const angle = (Math.random() * .9 - .45) + (Math.random() > .5 ? 0 : Math.PI);
+        const radius = Math.max(rect.width, rect.height) * .58 + 65;
+        return {
+          x: clamp(rect.left + rect.width / 2 + Math.cos(angle) * radius, 30, viewport.width - 30),
+          y: clamp(rect.top + rect.height / 2 + Math.sin(angle) * radius, 90, viewport.height - 30)
+        };
+      }
+      const angle = total <= 1 ? 0 : index / total * Math.PI * 2 - Math.PI / 2;
+      const radius = Math.min(viewport.width, viewport.height) * (.18 + (index % 3) * .035);
+      return { x: centerX + Math.cos(angle) * radius, y: centerY + Math.sin(angle) * radius };
+    }
+
+    function createNodeElement(node) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'graph-node';
+      button.dataset.id = node.id;
+      button.innerHTML = '<span class="node-shape" aria-hidden="true"></span><span class="node-label"></span>';
+      button.addEventListener('pointerenter', () => {
+        focusLens(node.id, false);
+        showNodeTooltip(node.id);
+      });
+      button.addEventListener('pointerleave', () => {
+        hoveredId = null;
+        hideNodeTooltip();
+        updateNodeFocus();
+        drawGraph();
+      });
+      button.addEventListener('focus', () => {
+        focusLens(node.id, false);
+        showNodeTooltip(node.id);
+      });
+      button.addEventListener('blur', hideNodeTooltip);
+      button.addEventListener('click', () => {
+        if (suppressClickId === node.id) {
+          suppressClickId = null;
           return;
         }
-        redoStack.push(JSON.stringify(dok.block));
-        const tidigare = undoStack.pop();
-        dok.block = JSON.parse(tidigare);
-        spara();
-        TextContext.forceRescan();
-        analyseraOchUppdatera();
-        if (nuvarandeLage === 'trappan') renderaTrappan();
-        annonseraA11y('Ångrade senaste ändringen');
-        visaBrodrost('↺ Ångrade');
+        hideNodeTooltip();
+        selectNode(node.id, true);
+      });
+      button.addEventListener('pointerdown', startNodeDrag);
+      elements.nodeLayer.appendChild(button);
+      return button;
+    }
+
+    function syncGraph(bornId = null) {
+      const ids = new Set(analysis.nodes.map(node => node.id));
+      for (const [id, state] of nodeStates) {
+        if (!ids.has(id)) {
+          state.element.remove();
+          nodeStates.delete(id);
+        }
       }
 
-      function utforRedo() {
-        if (redoStack.length === 0) {
-          visaBrodrost('Ingenting att göra om');
+      analysis.nodes.forEach((node, index) => {
+        let state = nodeStates.get(node.id);
+        const isNew = !state;
+        if (!state) {
+          const initial = initialPosition(node, index, analysis.nodes.length, bornId);
+          state = {
+            id: node.id,
+            x: initial.x,
+            y: initial.y,
+            vx: 0,
+            vy: 0,
+            radius: diameterFor(node) / 2,
+            element: createNodeElement(node),
+            manual: false
+          };
+          nodeStates.set(node.id, state);
+        }
+        state.radius = diameterFor(node) / 2;
+        state.data = node;
+        const block = activeDocument().blocks[node.index];
+        const element = state.element;
+        element.dataset.kind = node.kind;
+        element.dataset.level = node.level || '';
+        element.dataset.lonely = String(node.lonely);
+        element.dataset.flow = String(node.flow);
+        element.dataset.selected = String(node.id === selectedId);
+        element.style.setProperty('--diameter', state.radius * 2 + 'px');
+        $('.node-label', element).textContent = node.kind === 'heading'
+          ? 'H' + node.level + ' · ' + snippet(block?.text, 24)
+          : String(node.index + 1).padStart(2, '0');
+        const status = node.lonely ? ', saknar mätbar lexikal återkoppling' : (node.flow ? ', svag återkoppling till närliggande stycken' : '');
+        element.setAttribute('aria-label', (node.kind === 'heading' ? 'Rubrik nivå ' + node.level : 'Stycke ' + (node.index + 1)) + ': ' + snippet(block?.text, 80) + status);
+        if (isNew && node.id === bornId) {
+          element.classList.add('is-born');
+          setTimeout(() => element.classList.remove('is-born'), 700);
+        }
+      });
+      updateNodePositions();
+      updateNodeInteractivity();
+      updateNodeFocus();
+    }
+
+    function updateNodeInteractivity() {
+      const interactive = view === 'graph';
+      for (const state of nodeStates.values()) {
+        state.element.tabIndex = interactive ? 0 : -1;
+        if (interactive) state.element.removeAttribute('aria-hidden');
+        else state.element.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function updateNodePositions() {
+      for (const state of nodeStates.values()) {
+        state.element.style.setProperty('--x', state.x + 'px');
+        state.element.style.setProperty('--y', state.y + 'px');
+      }
+      if (hoveredId && elements.tooltip.dataset.open === 'true') positionNodeTooltip(hoveredId);
+    }
+
+    function positionNodeTooltip(id) {
+      const state = nodeStates.get(id);
+      if (!state) return;
+      const width = elements.tooltip.offsetWidth || 280;
+      const height = elements.tooltip.offsetHeight || 70;
+      const left = clamp(state.x + state.radius + 12, 12, viewport.width - width - 12);
+      const top = clamp(state.y - height / 2, 78, viewport.height - height - 12);
+      elements.tooltip.style.left = left + 'px';
+      elements.tooltip.style.top = top + 'px';
+    }
+
+    function showNodeTooltip(id) {
+      if (view !== 'graph') return;
+      const node = analysis.nodesById.get(id);
+      const block = activeDocument().blocks[node?.index];
+      if (!block) return;
+      elements.tooltip.textContent = block.text;
+      elements.tooltip.dataset.open = 'true';
+      elements.tooltip.setAttribute('aria-hidden', 'false');
+      nodeStates.get(id)?.element.setAttribute('aria-describedby', 'node-tooltip');
+      positionNodeTooltip(id);
+    }
+
+    function hideNodeTooltip() {
+      elements.tooltip.dataset.open = 'false';
+      elements.tooltip.setAttribute('aria-hidden', 'true');
+      for (const state of nodeStates.values()) state.element.removeAttribute('aria-describedby');
+    }
+
+    function focusLens(id, persist) {
+      hoveredId = id;
+      if (persist) selectedId = id;
+      updateNodeFocus();
+      drawGraph();
+      if (persist) renderInspector(id);
+    }
+
+    function selectNode(id, openInspector) {
+      selectedId = id;
+      hoveredId = id;
+      updateNodeFocus();
+      drawGraph();
+      if (openInspector) renderInspector(id);
+    }
+
+    function updateNodeFocus() {
+      const focusId = hoveredId || selectedId;
+      const neighbors = focusId ? analysis.adjacency.get(focusId) || new Set() : new Set();
+      for (const [id, state] of nodeStates) {
+        state.element.dataset.selected = String(id === selectedId);
+        state.element.dataset.dimmed = String(Boolean(focusId && id !== focusId && !neighbors.has(id)));
+      }
+    }
+
+    function startNodeDrag(event) {
+      if (view !== 'graph' || event.button > 0) return;
+      const id = event.currentTarget.dataset.id;
+      const node = nodeStates.get(id);
+      if (!node) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragState = {
+        id,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: event.clientX - node.x,
+        offsetY: event.clientY - node.y,
+        moved: false,
+        element: event.currentTarget
+      };
+    }
+
+    function moveNodeDrag(event) {
+      if (!dragState || event.pointerId !== dragState.pointerId) return;
+      const node = nodeStates.get(dragState.id);
+      if (!node) return;
+      const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+      if (distance > 8 && !dragState.moved) {
+        dragState.moved = true;
+        simulationAlpha = Math.max(simulationAlpha, .3);
+        if (!REDUCED_MOTION) startSimulation('drag');
+      }
+      if (!dragState.moved) return;
+      node.x = clamp(event.clientX - dragState.offsetX, 22, viewport.width - 22);
+      node.y = clamp(event.clientY - dragState.offsetY, 82, viewport.height - 22);
+      node.vx = 0;
+      node.vy = 0;
+      node.manual = true;
+      updateNodePositions();
+      drawGraph();
+    }
+
+    function endNodeDrag(event) {
+      if (!dragState || (event.pointerId != null && event.pointerId !== dragState.pointerId)) return;
+      const node = nodeStates.get(dragState.id);
+      if (node) {
+        node.vx = 0;
+        node.vy = 0;
+        if (dragState.moved) node.manual = true;
+      }
+      if (dragState.moved) {
+        suppressClickId = dragState.id;
+        const id = dragState.id;
+        setTimeout(() => {
+          if (suppressClickId === id) suppressClickId = null;
+        }, 0);
+      }
+      try {
+        if (dragState.element.hasPointerCapture(dragState.pointerId)) dragState.element.releasePointerCapture(dragState.pointerId);
+      } catch (error) {}
+      dragState = null;
+    }
+
+    function edgeQuality(edge) {
+      const threshold = edge.threshold || Number(app.settings.threshold) || .12;
+      return clamp((edge.score - threshold) / (1 - threshold), 0, 1);
+    }
+
+    function physicsStep(delta = 1) {
+      if (!analysis || nodeStates.size < 1) return 0;
+      const nodes = [...nodeStates.values()];
+      const alpha = Math.max(.005, simulationAlpha);
+      const centerX = viewport.width / 2;
+      const centerY = viewport.height / 2;
+      let energy = 0;
+
+      const applyPairForce = (a, b) => {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const distance = Math.hypot(dx, dy) || .1;
+        const nx = dx / distance;
+        const ny = dy / distance;
+        const movableA = !a.manual && dragState?.id !== a.id;
+        const movableB = !b.manual && dragState?.id !== b.id;
+        const collision = a.radius + b.radius + 10 - distance;
+        if (collision > 0) {
+          const impulse = collision * .18 * alpha;
+          if (movableA) { a.vx -= nx * impulse; a.vy -= ny * impulse; }
+          if (movableB) { b.vx += nx * impulse; b.vy += ny * impulse; }
+        }
+        if (distance < 230) {
+          const headingBoost = a.data.kind === 'heading' && b.data.kind === 'heading' ? 1.45 : 1;
+          const impulse = Math.min(2.5, 900 / (distance * distance)) * headingBoost * alpha;
+          if (movableA) { a.vx -= nx * impulse; a.vy -= ny * impulse; }
+          if (movableB) { b.vx += nx * impulse; b.vy += ny * impulse; }
+        }
+      };
+
+      if (nodes.length <= 180) {
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) applyPairForce(nodes[i], nodes[j]);
+        }
+      } else {
+        const cellSize = 230;
+        const grid = new Map();
+        nodes.forEach((node, index) => {
+          const x = Math.floor(node.x / cellSize);
+          const y = Math.floor(node.y / cellSize);
+          const key = x + ',' + y;
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(index);
+        });
+        nodes.forEach((node, index) => {
+          const cellX = Math.floor(node.x / cellSize);
+          const cellY = Math.floor(node.y / cellSize);
+          for (let x = cellX - 1; x <= cellX + 1; x++) {
+            for (let y = cellY - 1; y <= cellY + 1; y++) {
+              for (const otherIndex of grid.get(x + ',' + y) || []) {
+                if (otherIndex > index) applyPairForce(node, nodes[otherIndex]);
+              }
+            }
+          }
+        });
+      }
+
+      for (const edge of analysis.edges) {
+        const a = nodeStates.get(edge.a);
+        const b = nodeStates.get(edge.b);
+        if (!a || !b) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const nx = dx / distance;
+        const ny = dy / distance;
+        let target = 95;
+        let stiffness = .0025;
+        if (edge.type === 'cohesion') {
+          const quality = edgeQuality(edge);
+          target = 150 - 70 * quality;
+          stiffness = .004 + .012 * quality;
+        } else if (edge.type === 'hierarchy') {
+          target = 82;
+          stiffness = .006;
+        }
+        const impulse = (distance - target) * stiffness * alpha;
+        if (!a.manual && dragState?.id !== a.id) { a.vx += nx * impulse; a.vy += ny * impulse; }
+        if (!b.manual && dragState?.id !== b.id) { b.vx -= nx * impulse; b.vy -= ny * impulse; }
+      }
+
+      const exclusion = view === 'write' ? elements.composer.getBoundingClientRect() : null;
+      const canExclude = exclusion && (exclusion.left > 64 || viewport.width - exclusion.right > 64 || exclusion.top > 64 || viewport.height - exclusion.bottom > 64);
+
+      for (const node of nodes) {
+        if (dragState?.id === node.id || node.manual) {
+          node.vx = 0;
+          node.vy = 0;
+          continue;
+        }
+        node.vx += (centerX - node.x) * .0005 * alpha;
+        node.vy += (centerY - node.y) * .0005 * alpha;
+
+        if (canExclude) {
+          const pad = 38 + node.radius;
+          const left = exclusion.left - pad;
+          const right = exclusion.right + pad;
+          const top = exclusion.top - pad;
+          const bottom = exclusion.bottom + pad;
+          if (node.x > left && node.x < right && node.y > top && node.y < bottom) {
+            const distances = [
+              { amount: node.x - left, x: -1, y: 0 },
+              { amount: right - node.x, x: 1, y: 0 },
+              { amount: node.y - top, x: 0, y: -1 },
+              { amount: bottom - node.y, x: 0, y: 1 }
+            ].sort((a, b) => a.amount - b.amount);
+            const nearest = distances[0];
+            node.vx += nearest.x * nearest.amount * .035 * alpha;
+            node.vy += nearest.y * nearest.amount * .035 * alpha;
+          }
+        }
+
+        node.vx *= Math.pow(.84, delta);
+        node.vy *= Math.pow(.84, delta);
+        const speed = Math.hypot(node.vx, node.vy);
+        if (speed > 10) {
+          node.vx = node.vx / speed * 10;
+          node.vy = node.vy / speed * 10;
+        }
+        node.x += node.vx * delta;
+        node.y += node.vy * delta;
+        const pad = Math.max(24, node.radius + 4);
+        node.x = clamp(node.x, pad, viewport.width - pad);
+        node.y = clamp(node.y, 76 + pad, viewport.height - pad);
+        energy += Math.abs(node.vx) + Math.abs(node.vy);
+      }
+      return energy;
+    }
+
+    function simulationLoop(now) {
+      animationFrame = null;
+      if (document.hidden) return;
+      const delta = clamp((now - lastFrame) / 16.67, .5, 2);
+      lastFrame = now;
+      const energy = physicsStep(delta);
+      simulationAlpha *= .965;
+      updateNodePositions();
+      drawGraph();
+      const writeWindowClosed = view === 'write' && now >= writeStopAt;
+      const normalizedEnergy = energy / Math.max(1, nodeStates.size);
+      if (!writeWindowClosed && (simulationAlpha >= .015 || normalizedEnergy > .025 || dragState?.moved)) {
+        animationFrame = requestAnimationFrame(simulationLoop);
+      }
+    }
+
+    function adaptiveStepCount(desired) {
+      const count = Math.max(1, nodeStates.size);
+      return clamp(Math.floor(220000 / (count * count)), 5, desired);
+    }
+
+    function startSimulation(kind = 'graph') {
+      if (REDUCED_MOTION) {
+        if (kind === 'drag') return drawGraph();
+        const steps = adaptiveStepCount(55);
+        for (let i = 0; i < steps; i++) {
+          simulationAlpha = Math.max(simulationAlpha * .94, .03);
+          physicsStep(1);
+        }
+        simulationAlpha = 0;
+        updateNodePositions();
+        drawGraph();
+        return;
+      }
+      const targetAlpha = kind === 'commit' ? .75 : (kind === 'drag' ? .3 : 1);
+      simulationAlpha = Math.max(simulationAlpha, targetAlpha);
+      if (view === 'write') writeStopAt = performance.now() + 700;
+      if (!animationFrame) {
+        lastFrame = performance.now();
+        animationFrame = requestAnimationFrame(simulationLoop);
+      }
+    }
+
+    function stopSimulation() {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+      simulationAlpha = 0;
+    }
+
+    function resizeCanvas(force = false) {
+      const width = Math.max(1, innerWidth);
+      const height = Math.max(1, innerHeight);
+      const pixelBudget = 12000000;
+      const dpr = clamp(Math.min(devicePixelRatio || 1, 2, Math.sqrt(pixelBudget / (width * height))), 1, 2);
+      const unchanged = width === viewport.width && height === viewport.height && dpr === viewport.dpr;
+      if (unchanged && !force) {
+        autoSizeDraft();
+        return;
+      }
+      viewport.width = width;
+      viewport.height = height;
+      viewport.dpr = dpr;
+      elements.canvas.width = Math.round(viewport.width * viewport.dpr);
+      elements.canvas.height = Math.round(viewport.height * viewport.dpr);
+      elements.canvas.style.width = viewport.width + 'px';
+      elements.canvas.style.height = viewport.height + 'px';
+      context.setTransform(viewport.dpr, 0, 0, viewport.dpr, 0, 0);
+      for (const node of nodeStates.values()) {
+        node.x = clamp(node.x, 24, viewport.width - 24);
+        node.y = clamp(node.y, 78, viewport.height - 24);
+      }
+      if (view === 'graph') startSimulation('graph');
+      else {
+        for (let i = 0; i < adaptiveStepCount(6); i++) physicsStep(1);
+        updateNodePositions();
+        drawGraph();
+      }
+    }
+
+    function scheduleResize() {
+      if (resizeFrame) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        updateVisualViewport();
+        resizeCanvas();
+      });
+    }
+
+    function updateVisualViewport() {
+      const visual = window.visualViewport;
+      document.documentElement.style.setProperty('--visual-height', (visual?.height || innerHeight) + 'px');
+      document.documentElement.style.setProperty('--visual-top', (visual?.offsetTop || 0) + 'px');
+    }
+
+    function clippedLine(a, b) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const distance = Math.hypot(dx, dy) || 1;
+      const nx = dx / distance;
+      const ny = dy / distance;
+      return {
+        x1: a.x + nx * a.radius,
+        y1: a.y + ny * a.radius,
+        x2: b.x - nx * b.radius,
+        y2: b.y - ny * b.radius
+      };
+    }
+
+    function drawGraph() {
+      context.clearRect(0, 0, viewport.width, viewport.height);
+      if (!analysis) return;
+      const focusId = hoveredId || selectedId;
+
+      for (const edge of analysis.edges) {
+        const a = nodeStates.get(edge.a);
+        const b = nodeStates.get(edge.b);
+        if (!a || !b) continue;
+        const line = clippedLine(a, b);
+        const focused = focusId && (edge.a === focusId || edge.b === focusId);
+        const unrelated = focusId && !focused;
+        context.save();
+        context.beginPath();
+        context.moveTo(line.x1, line.y1);
+
+        if (edge.type === 'cohesion') {
+          const quality = edgeQuality(edge);
+          const dx = line.x2 - line.x1;
+          const dy = line.y2 - line.y1;
+          const length = Math.hypot(dx, dy) || 1;
+          const bend = ((edge.a.charCodeAt(edge.a.length - 1) + edge.b.charCodeAt(edge.b.length - 1)) % 2 ? 1 : -1) * Math.min(14, length * .08);
+          const mx = (line.x1 + line.x2) / 2 - dy / length * bend;
+          const my = (line.y1 + line.y2) / 2 + dx / length * bend;
+          context.quadraticCurveTo(mx, my, line.x2, line.y2);
+          context.strokeStyle = `rgba(89,194,255,${unrelated ? .035 : (focused ? .9 : .12 + .46 * quality)})`;
+          context.lineWidth = focused ? 2.4 : .55 + 2.4 * Math.pow(quality, 1.55);
+          if (focused) {
+            context.shadowColor = 'rgba(179,229,255,.8)';
+            context.shadowBlur = 10;
+          }
+        } else if (edge.type === 'hierarchy') {
+          context.lineTo(line.x2, line.y2);
+          context.strokeStyle = `rgba(197,160,89,${unrelated ? .02 : (focused ? .48 : .12)})`;
+          context.lineWidth = focused ? 1.3 : .65;
+        } else {
+          context.lineTo(line.x2, line.y2);
+          context.setLineDash([3, 6]);
+          context.strokeStyle = `rgba(120,151,172,${unrelated ? .018 : (focused ? .44 : .15)})`;
+          context.lineWidth = focused ? 1.05 : .65;
+        }
+        context.stroke();
+        context.restore();
+      }
+    }
+
+    function statusLabel(node) {
+      if (node.insufficient) return 'Litet analysunderlag';
+      if (node.lonely) return 'Saknar lexikal återkoppling';
+      if (node.flow) return 'Svag återkoppling till närliggande stycken';
+      return node.kind === 'heading' ? 'Strukturnod' : 'Lexikalt förankrat';
+    }
+
+    function connectionEdges(id) {
+      return analysis.fullCohesion
+        .filter(edge => edge.a === id || edge.b === id)
+        .sort((a, b) => b.score - a.score);
+    }
+
+    function renderInspector(id) {
+      const node = analysis.nodesById.get(id);
+      const block = activeDocument().blocks.find(item => item.id === id);
+      if (!node || !block) return closeInspector();
+      const index = node.index;
+      const previous = activeDocument().blocks[index - 1];
+      const next = activeDocument().blocks[index + 1];
+      const connections = connectionEdges(id);
+      const suggestion = findMoveSuggestion(id);
+
+      const connectionsHtml = block.kind === 'heading'
+        ? '<p class="method-note">Rubriken deltar inte i den lexikala mätningen. Den binder i stället samman sin sektion genom dokumentets rubrikhierarki.</p>'
+        : connections.length
+          ? connections.slice(0, 5).map(edge => {
+            const otherId = edge.a === id ? edge.b : edge.a;
+            const other = activeDocument().blocks.find(item => item.id === otherId);
+            return `<button class="connection" data-connection-id="${escapeHtml(otherId)}">
+              <strong>${Math.round(edge.score * 100)} % lexikal återkoppling</strong>
+              ${escapeHtml(snippet(other?.text, 74))}
+              <small class="shared-words">${edge.shared.length ? 'Delar: ' + escapeHtml(edge.shared.join(', ')) : 'Inga tydliga ytformer att visa'}</small>
+            </button>`;
+            }).join('')
+          : '<p class="method-note">Ingen mätbar lexikal återkoppling ännu. Det kan bero på kort text, varierat ordval eller ett verkligt ämnesbyte.</p>';
+
+      elements.inspectorContent.innerHTML = `
+        <h2 id="inspector-title">${escapeHtml(block.text)}</h2>
+        <div class="inspector-meta">
+          <span class="status-chip">${block.kind === 'heading' ? 'Rubrik H' + block.level : 'Stycke ' + (index + 1)}</span>
+          <span class="status-chip ${node.lonely ? 'lonely' : (node.flow ? 'flow' : '')}">${escapeHtml(statusLabel(node))}</span>
+          <span class="status-chip">${wordCount(block.text)} ord</span>
+        </div>
+        <section class="inspector-section">
+          <h3>Närmiljö</h3>
+          ${previous ? `<p class="context-snippet"><strong>Före:</strong> ${escapeHtml(snippet(previous.text, 110))}</p>` : '<p class="context-snippet">Dokumentets början</p>'}
+          ${next ? `<p class="context-snippet"><strong>Efter:</strong> ${escapeHtml(snippet(next.text, 110))}</p>` : '<p class="context-snippet">Dokumentets slut</p>'}
+        </section>
+        <section class="inspector-section">
+          <h3>Starkaste samband</h3>
+          <div class="connection-list">${connectionsHtml}</div>
+        </section>
+        ${suggestion ? `<section class="inspector-section">
+          <h3>Omvävningsförslag</h3>
+          <p class="method-note">Blocket delar fler centrala ord med en annan plats i samma sektion. Förslaget är en möjlighet, inte en bedömning av vad som är rätt.</p>
+          <button class="plain-button" id="apply-suggestion">Placera efter stycke ${suggestion.targetIndex + 1}</button>
+        </section>` : ''}
+        <div class="inspector-actions">
+          <button class="plain-button primary" id="edit-selected">Redigera i Struktur</button>
+          <button class="plain-button" id="show-selected">Visa i disposition</button>
+        </div>`;
+
+      $$('.connection', elements.inspectorContent).forEach(button => {
+        button.addEventListener('click', () => selectNode(button.dataset.connectionId, true));
+      });
+      $('#edit-selected')?.addEventListener('click', () => {
+        switchView('structure');
+        requestAnimationFrame(() => startEditing(id));
+      });
+      $('#show-selected')?.addEventListener('click', () => {
+        switchView('structure');
+        requestAnimationFrame(() => {
+          const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+          card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
+          card?.focus({ preventScroll: true });
+        });
+      });
+      $('#apply-suggestion')?.addEventListener('click', () => applyMoveSuggestion(id, suggestion));
+      elements.inspector.dataset.open = 'true';
+      elements.inspector.removeAttribute('inert');
+    }
+
+    function closeInspector() {
+      elements.inspector.dataset.open = 'false';
+      elements.inspector.setAttribute('inert', '');
+      selectedId = null;
+      hoveredId = null;
+      updateNodeFocus();
+      drawGraph();
+    }
+
+    function scoreBetween(aId, bId) {
+      if (!aId || !bId) return 0;
+      return analysis.scores.get(pairKey(aId, bId)) || 0;
+    }
+
+    function gapFit(blockId, leftId, rightId) {
+      const values = [];
+      if (leftId && leftId !== blockId) values.push(scoreBetween(blockId, leftId));
+      if (rightId && rightId !== blockId) values.push(scoreBetween(blockId, rightId));
+      if (!values.length) return 0;
+      if (values.length === 1) return values[0];
+      return .6 * Math.min(...values) + .4 * Math.max(...values);
+    }
+
+    function findMoveSuggestion(id) {
+      const node = analysis.nodesById.get(id);
+      if (!node || !node.flow || node.bestQualified < .22) return null;
+      const best = analysis.fullCohesion
+        .filter(edge => edge.a === id || edge.b === id)
+        .sort((a, b) => b.score - a.score)[0];
+      if (!best || best.score < .22) return null;
+      const targetId = best.a === id ? best.b : best.a;
+      const targetNode = analysis.nodesById.get(targetId);
+      if (!targetNode || Math.abs(targetNode.index - node.index) <= 1) return null;
+      const owner = analysis.owners.get(id) || null;
+      if ((analysis.owners.get(targetId) || null) !== owner) return null;
+
+      const sectionIds = activeDocument().blocks
+        .filter(block => block.kind === 'paragraph' && (analysis.owners.get(block.id) || null) === owner)
+        .map(block => block.id);
+      const currentPosition = sectionIds.indexOf(id);
+      const currentFit = gapFit(id, sectionIds[currentPosition - 1], sectionIds[currentPosition + 1]);
+
+      const withoutSource = sectionIds.filter(blockId => blockId !== id);
+      const targetPosition = withoutSource.indexOf(targetId);
+      const proposedFit = gapFit(id, targetId, withoutSource[targetPosition + 1]);
+      if (proposedFit - currentFit < .08) return null;
+      return { targetId, targetIndex: targetNode.index, improvement: proposedFit - currentFit };
+    }
+
+    function applyMoveSuggestion(id, suggestion) {
+      if (!suggestion) return;
+      const block = activeDocument().blocks.find(item => item.id === id);
+      const target = activeDocument().blocks[suggestion.targetIndex];
+      if (!block || !target) return;
+      if (!confirm('Förhandsvisning: flytta blocket efter "' + snippet(target.text, 55) + '"?')) return;
+      pushHistory('Omvävningsförslag');
+      const blocks = activeDocument().blocks;
+      const from = blocks.findIndex(item => item.id === id);
+      const [moved] = blocks.splice(from, 1);
+      let targetIndex = blocks.findIndex(item => item.id === target.id);
+      blocks.splice(targetIndex + 1, 0, moved);
+      saveState();
+      recalculate();
+      renderInspector(id);
+      toast('Blocket flyttades. Du kan ångra med Ctrl eller Cmd + Z.');
+    }
+
+    function sectionRange(index) {
+      const blocks = activeDocument().blocks;
+      const block = blocks[index];
+      if (!block || block.kind !== 'heading') return { start: index, end: index + 1 };
+      let end = blocks.length;
+      for (let i = index + 1; i < blocks.length; i++) {
+        if (blocks[i].kind === 'heading' && blocks[i].level <= block.level) {
+          end = i;
+          break;
+        }
+      }
+      return { start: index, end };
+    }
+
+    function siblingHeadingIndex(index, direction) {
+      const blocks = activeDocument().blocks;
+      const block = blocks[index];
+      if (!block || block.kind !== 'heading') return null;
+      const owner = analysis.owners.get(block.id) || null;
+      if (direction < 0) {
+        for (let i = index - 1; i >= 0; i--) {
+          if (blocks[i].kind === 'heading' &&
+              blocks[i].level === block.level &&
+              (analysis.owners.get(blocks[i].id) || null) === owner) return i;
+        }
+      } else {
+        const ownRange = sectionRange(index);
+        for (let i = ownRange.end; i < blocks.length; i++) {
+          if (blocks[i].kind === 'heading' &&
+              blocks[i].level === block.level &&
+              (analysis.owners.get(blocks[i].id) || null) === owner) return i;
+        }
+      }
+      return null;
+    }
+
+    function canMoveUnit(index, direction) {
+      const block = activeDocument().blocks[index];
+      if (!block) return false;
+      if (block.kind === 'heading') return siblingHeadingIndex(index, direction) !== null;
+      return direction < 0 ? index > 0 : index < activeDocument().blocks.length - 1;
+    }
+
+    function moveBlockUnit(index, direction) {
+      const blocks = activeDocument().blocks;
+      const range = sectionRange(index);
+      if (!canMoveUnit(index, direction)) return;
+      const headingSibling = blocks[index].kind === 'heading' ? siblingHeadingIndex(index, direction) : null;
+      pushHistory(blocks[index].kind === 'heading' ? 'Flytta sektion' : 'Flytta block');
+
+      const unit = blocks.splice(range.start, range.end - range.start);
+      if (unit[0].kind === 'heading') {
+        if (direction < 0) {
+          blocks.splice(headingSibling, 0, ...unit);
+        } else {
+          const adjustedSibling = headingSibling - unit.length;
+          const siblingRange = sectionRange(adjustedSibling);
+          blocks.splice(siblingRange.end, 0, ...unit);
+        }
+      } else if (direction < 0) {
+        blocks.splice(range.start - 1, 0, ...unit);
+      } else {
+        blocks.splice(range.start + 1, 0, ...unit);
+      }
+      saveState();
+      recalculate();
+      requestAnimationFrame(() => {
+        const card = $(`[data-block-id="${CSS.escape(unit[0].id)}"]`, elements.outline);
+        card?.querySelector(`[data-action="${direction < 0 ? 'up' : 'down'}"]`)?.focus();
+        card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'nearest' });
+      });
+      const newIndex = blocks.findIndex(block => block.id === unit[0].id);
+      announce((unit[0].kind === 'heading' ? 'Sektionen' : 'Blocket') + ' flyttades till position ' + (newIndex + 1));
+      toast(unit[0].kind === 'heading' ? 'Sektionen flyttades' : 'Blocket flyttades');
+    }
+
+    function reorderByDrop(fromIndex, targetIndex) {
+      if (fromIndex == null || targetIndex == null || fromIndex === targetIndex) return;
+      const blocks = activeDocument().blocks;
+      const range = sectionRange(fromIndex);
+      if (targetIndex >= range.start && targetIndex < range.end) return;
+      pushHistory(blocks[fromIndex].kind === 'heading' ? 'Dra sektion' : 'Dra block');
+      const unit = blocks.splice(range.start, range.end - range.start);
+      let insert = targetIndex;
+      if (insert > range.start) insert -= unit.length;
+      blocks.splice(clamp(insert, 0, blocks.length), 0, ...unit);
+      saveState();
+      recalculate();
+    }
+
+    function deleteBlock(id) {
+      const index = activeDocument().blocks.findIndex(block => block.id === id);
+      if (index < 0) return;
+      const range = sectionRange(index);
+      const count = range.end - range.start;
+      const label = count > 1 ? 'rubriken och dess sektion' : 'blocket';
+      if (!confirm('Radera ' + label + '?')) return;
+      pushHistory(count > 1 ? 'Radera sektion' : 'Radera block');
+      activeDocument().blocks.splice(range.start, count);
+      const focusId = activeDocument().blocks[Math.min(index, activeDocument().blocks.length - 1)]?.id;
+      if (selectedId === id) closeInspector();
+      saveState();
+      recalculate();
+      if (focusId) focusBlockControl(focusId);
+      toast(count > 1 ? 'Sektionen raderades' : 'Blocket raderades');
+    }
+
+    function focusBlockControl(id, action = 'select') {
+      requestAnimationFrame(() => {
+        const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+        (card?.querySelector(`[data-action="${action}"]`) || card)?.focus();
+      });
+    }
+
+    function startEditing(id) {
+      editingId = id;
+      editingSnapshot = JSON.stringify(activeDocument().blocks);
+      renderOutline();
+      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+      const textarea = $('textarea', card);
+      textarea?.focus();
+      textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+      card?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
+    }
+
+    function cancelEditing() {
+      const id = editingId;
+      editingId = null;
+      editingSnapshot = null;
+      renderOutline();
+      if (id) focusBlockControl(id, 'edit');
+    }
+
+    function saveEditing(id) {
+      const card = $(`[data-block-id="${CSS.escape(id)}"]`, elements.outline);
+      const textarea = $('textarea', card);
+      const parsed = parseDraft(textarea?.value || '');
+      if (!parsed.text) return toast('Ett block kan inte vara tomt');
+      undoStack.push({ label: 'Redigera block', blocks: editingSnapshot });
+      if (undoStack.length > 60) undoStack.shift();
+      redoStack = [];
+      const block = activeDocument().blocks.find(item => item.id === id);
+      block.kind = parsed.kind;
+      block.level = parsed.level;
+      block.text = parsed.text;
+      editingId = null;
+      editingSnapshot = null;
+      saveState();
+      recalculate();
+      selectNode(id, false);
+      focusBlockControl(id, 'edit');
+      toast('Blocket uppdaterades');
+    }
+
+    function renderOutline() {
+      if (view !== 'structure') return;
+      const document = activeDocument();
+      elements.structureTitle.textContent = document.title;
+      const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length;
+      const headings = document.blocks.length - paragraphs;
+      elements.structureSummary.textContent = `${document.blocks.length} block, ${paragraphs} stycken och ${headings} rubriker. Dra med mus eller använd pilarna. En rubrik tar med sin sektion.`;
+
+      if (!document.blocks.length) {
+        elements.outline.innerHTML = '<li class="outline-empty">Dokumentet är tomt. Välj Skriv för att börja.</li>';
+        return;
+      }
+
+      elements.outline.innerHTML = document.blocks.map((block, index) => {
+        const node = analysis.nodesById.get(block.id);
+        const statusClass = node?.lonely ? 'lonely' : (node?.flow ? 'flow' : '');
+        const status = statusLabel(node);
+        const displayText = block.kind === 'heading' ? '#'.repeat(block.level) + ' ' + block.text : block.text;
+        const editContent = editingId === block.id
+          ? `<div class="edit-area">
+              <textarea aria-label="Redigera block">${escapeHtml(displayText)}</textarea>
+              <div class="edit-buttons">
+                <button class="small-button" data-action="cancel">Avbryt</button>
+                <button class="small-button primary" data-action="save">Spara</button>
+              </div>
+            </div>`
+          : `<button class="block-text" data-action="select">${escapeHtml(displayText)}</button>`;
+        return `<li class="block-card" tabindex="-1" draggable="${editingId ? 'false' : 'true'}"
+                  data-block-id="${escapeHtml(block.id)}" data-index="${index}" data-kind="${block.kind}"
+                  data-selected="${String(selectedId === block.id)}">
+          <button class="drag-handle" aria-label="Dra ${block.kind === 'heading' ? 'sektionen' : 'blocket'}" tabindex="-1">
+            <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="7" r="1.2"/><circle cx="15" cy="7" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="17" r="1.2"/><circle cx="15" cy="17" r="1.2"/></svg>
+          </button>
+          <div class="block-main">
+            <div class="block-meta">
+              <span>${block.kind === 'heading' ? 'Rubrik H' + block.level : 'Stycke ' + (index + 1)}</span>
+              <span>${wordCount(block.text)} ord</span>
+              <span class="status-chip ${statusClass}">${escapeHtml(status)}</span>
+            </div>
+            ${editContent}
+          </div>
+          <div class="block-tools">
+            <button class="icon-button" data-action="up" aria-label="Flytta upp" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
+            </button>
+            <button class="icon-button" data-action="down" aria-label="Flytta ned" ${canMoveUnit(index, 1) ? '' : 'disabled'}>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>
+            </button>
+            <button class="icon-button" data-action="edit" aria-label="Redigera block">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>
+            </button>
+            <button class="icon-button" data-action="delete" aria-label="Radera block">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 7h14M9 7V4h6v3M8 10v8M12 10v8M16 10v8M7 7l1 14h8l1-14"/></svg>
+            </button>
+          </div>
+        </li>`;
+      }).join('');
+
+      $$('.block-card', elements.outline).forEach(card => {
+        const id = card.dataset.blockId;
+        const index = Number(card.dataset.index);
+        card.addEventListener('dragstart', event => {
+          if (editingId) return event.preventDefault();
+          draggedBlockIndex = index;
+          card.dataset.dragging = 'true';
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', String(index));
+        });
+        card.addEventListener('dragover', event => {
+          event.preventDefault();
+          card.dataset.drop = 'true';
+        });
+        card.addEventListener('dragleave', () => delete card.dataset.drop);
+        card.addEventListener('drop', event => {
+          event.preventDefault();
+          delete card.dataset.drop;
+          reorderByDrop(draggedBlockIndex, index);
+        });
+        card.addEventListener('dragend', () => {
+          draggedBlockIndex = null;
+          delete card.dataset.dragging;
+          $$('.block-card', elements.outline).forEach(item => delete item.dataset.drop);
+        });
+        card.addEventListener('dblclick', event => {
+          if (!event.target.closest('.block-tools')) startEditing(id);
+        });
+        $$('[data-action]', card).forEach(button => {
+          button.addEventListener('click', () => {
+            const action = button.dataset.action;
+            if (action === 'select') {
+              selectedId = id;
+              renderOutline();
+              renderInspector(id);
+              focusBlockControl(id, 'select');
+            } else if (action === 'up') moveBlockUnit(index, -1);
+            else if (action === 'down') moveBlockUnit(index, 1);
+            else if (action === 'edit') startEditing(id);
+            else if (action === 'delete') deleteBlock(id);
+            else if (action === 'cancel') cancelEditing();
+            else if (action === 'save') saveEditing(id);
+          });
+        });
+        $('textarea', card)?.addEventListener('keydown', event => {
+          if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            saveEditing(id);
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelEditing();
+          }
+        });
+      });
+    }
+
+    function renderDocumentControls() {
+      elements.documentSelect.innerHTML = app.documents.map(document =>
+        `<option value="${escapeHtml(document.id)}">${escapeHtml(document.title)}</option>`
+      ).join('');
+      elements.documentSelect.value = app.activeId;
+      elements.documentTitle.value = activeDocument().title;
+    }
+
+    function renderStats() {
+      const document = activeDocument();
+      const words = document.blocks.reduce((sum, block) => sum + wordCount(block.text), 0);
+      $('#stat-words').textContent = words;
+      $('#stat-blocks').textContent = document.blocks.length;
+      $('#stat-links').textContent = analysis.cohesionEdges.length;
+      $('#threshold-output').textContent = Number(app.settings.threshold).toFixed(2).replace('.', ',');
+      $('#edge-count-output').textContent = app.settings.maxEdges;
+      elements.emptyGraph.hidden = document.blocks.length > 0;
+    }
+
+    function recalculate(bornId = null) {
+      analysis = analyze(activeDocument().blocks);
+      syncGraph(bornId);
+      renderStats();
+      renderOutline();
+      if (selectedId && analysis.nodesById.has(selectedId) && elements.inspector.dataset.open === 'true') {
+        renderInspector(selectedId);
+      } else if (selectedId && !analysis.nodesById.has(selectedId)) {
+        closeInspector();
+      }
+      if (bornId) startSimulation('commit');
+      else if (view === 'graph') startSimulation('graph');
+      else drawGraph();
+    }
+
+    function switchView(nextView) {
+      if (!['write', 'graph', 'structure'].includes(nextView)) return;
+      view = nextView;
+      elements.body.dataset.view = nextView;
+      $$('.mode-button').forEach(button => {
+        const active = button.dataset.viewTarget === nextView;
+        if (active) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      });
+      updateNodeInteractivity();
+      if (nextView === 'write') {
+        closeInspector();
+        stopSimulation();
+        for (let i = 0; i < 32; i++) physicsStep(1);
+        updateNodePositions();
+        drawGraph();
+        requestAnimationFrame(() => elements.draft.focus());
+      } else if (nextView === 'graph') {
+        renderOutline();
+        startSimulation('graph');
+        const first = nodeStates.values().next().value;
+        requestAnimationFrame(() => (nodeStates.get(selectedId)?.element || first?.element)?.focus());
+      } else {
+        stopSimulation();
+        renderOutline();
+        requestAnimationFrame(() => elements.outline.querySelector('.block-card')?.focus());
+      }
+      announce('Växlade till ' + (nextView === 'write' ? 'Skriv' : (nextView === 'graph' ? 'Väven' : 'Struktur')));
+    }
+
+    function applyWidth(index) {
+      const safeIndex = clamp(Number(index) || 0, 0, WIDTHS.length - 1);
+      app.settings.widthIndex = safeIndex;
+      elements.widthSlider.value = safeIndex;
+      document.documentElement.style.setProperty('--composer-width', WIDTHS[safeIndex] + 'px');
+    }
+
+    function openUtility() {
+      renderDocumentControls();
+      utilityReturnFocus = document.activeElement;
+      $('main').setAttribute('inert', '');
+      $('#topbar').setAttribute('inert', '');
+      elements.nodeLayer.setAttribute('inert', '');
+      elements.inspector.setAttribute('inert', '');
+      elements.utility.dataset.open = 'true';
+      elements.utility.removeAttribute('inert');
+      elements.scrim.dataset.open = 'true';
+      elements.utilityButton.setAttribute('aria-expanded', 'true');
+      requestAnimationFrame(() => elements.documentSelect.focus());
+    }
+
+    function closeUtility() {
+      const wasOpen = elements.utility.dataset.open === 'true';
+      elements.utility.dataset.open = 'false';
+      elements.utility.setAttribute('inert', '');
+      elements.scrim.dataset.open = 'false';
+      elements.utilityButton.setAttribute('aria-expanded', 'false');
+      $('main').removeAttribute('inert');
+      $('#topbar').removeAttribute('inert');
+      elements.nodeLayer.removeAttribute('inert');
+      if (elements.inspector.dataset.open === 'true') elements.inspector.removeAttribute('inert');
+      if (wasOpen) requestAnimationFrame(() => utilityReturnFocus?.focus?.());
+    }
+
+    function toast(message) {
+      clearTimeout(toastTimer);
+      elements.toast.textContent = message;
+      elements.toast.dataset.show = 'true';
+      toastTimer = setTimeout(() => elements.toast.dataset.show = 'false', 2400);
+    }
+
+    function announce(message) {
+      elements.live.textContent = '';
+      requestAnimationFrame(() => elements.live.textContent = message);
+    }
+
+    function copyMarkdown() {
+      const markdown = toMarkdown();
+      const fallback = () => {
+        const textarea = document.createElement('textarea');
+        textarea.value = markdown;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      };
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(markdown).then(() => toast('Markdown kopierad')).catch(() => {
+          fallback();
+          toast('Markdown kopierad');
+        });
+      } else {
+        fallback();
+        toast('Markdown kopierad');
+      }
+    }
+
+    function downloadMarkdown() {
+      const blob = new Blob([toMarkdown()], { type: 'text/markdown;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = (activeDocument().title || 'vavr-dokument').replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-|-$/g, '') + '.md';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 0);
+      toast('Markdown hämtad');
+    }
+
+    function changeActiveDocument(id, persistCurrent = true) {
+      if (!app.documents.some(document => document.id === id)) return;
+      if (persistCurrent) activeDocument().draft = elements.draft.value;
+      app.activeId = id;
+      selectedId = null;
+      recalledBlock = activeDocument().recalledBlock || null;
+      editingId = null;
+      undoStack = [];
+      redoStack = [];
+      for (const state of nodeStates.values()) state.element.remove();
+      nodeStates.clear();
+      elements.draft.value = activeDocument().draft || '';
+      renderDocumentControls();
+      updateDraftMeta();
+      saveState();
+      recalculate();
+      closeInspector();
+      toast('Öppnade ' + activeDocument().title);
+    }
+
+    function setupEvents() {
+      elements.draft.addEventListener('input', updateDraftMeta);
+      elements.draft.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+          event.preventDefault();
+          commitDraft();
           return;
         }
-        undoStack.push(JSON.stringify(dok.block));
-        const nasta = redoStack.pop();
-        dok.block = JSON.parse(nasta);
-        spara();
-        TextContext.forceRescan();
-        analyseraOchUppdatera();
-        if (nuvarandeLage === 'trappan') renderaTrappan();
-        annonseraA11y('Gjorde om ändringen');
-        visaBrodrost('↻ Gjorde om');
-      }
-
-      function annonseraA11y(text) {
-        const el = document.getElementById('a11y-announcer');
-        if (el) el.textContent = text;
-      }
-
-      /* ── 2. SINGLE SOURCE OF TRUTH & SPARA ────────────────────── */
-
-      function spara() {
-        if (!dok) return;
-        dok.andrad = new Date().toISOString();
-        const idx = dokumenter.findIndex(d => d.id === dok.id);
-        if (idx !== -1) dokumenter[idx] = dok;
-        sparaDokumenter();
-      }
-
-      function sparaDokumenter() {
-        localStorage.setItem('vavr-dokument', JSON.stringify(dokumenter));
-        localStorage.setItem('vavr-aktivt', aktivtId);
-        localStorage.setItem('vavr-inst', JSON.stringify(inst));
-      }
-
-      function visaBrodrost(meddelande) {
-        const b = document.getElementById('brodrost');
-        b.textContent = meddelande;
-        b.classList.add('syns');
-        setTimeout(() => b.classList.remove('syns'), 2600);
-      }
-
-      /* ── 3. TEXTCONTEXT & LJUDINTEGRATION ─────────────────────── */
-
-      window.getActiveDoc = () => ({
-        title: dok ? dok.titel : 'Namnlöst',
-        content: dok ? tillMarkdown(dok.block, false) : ''
-      });
-
-      function initTextContext() {
-        const skrivfalt = document.getElementById('skrivfalt');
-        TextContext.setKalla(() => tillMarkdown(dok.block, false) + '\n\n' + (skrivfalt ? skrivfalt.value : ''));
-      }
-
-      function uppdateraLjudmotor() {
-        const tema = dok.ljudtema || 'inget';
-        if (aktivMotor && typeof aktivMotor.destroy === 'function') {
-          try { aktivMotor.destroy(); } catch (e) {}
-          aktivMotor = null;
-        }
-
-        if (tema === 'inget') return;
-
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-
-        let MotorKlass = null;
-        if (tema === 'valsang') MotorKlass = window.ValsangEngine;
-        else if (tema === 'skogsklang') MotorKlass = window.SkogsklangEngine;
-        else if (tema === 'hardfork') MotorKlass = window.HardForkEngine;
-        else if (tema === 'space') MotorKlass = window.SpaceOdysseyEngine;
-
-        if (MotorKlass) {
-          aktivMotor = MotorKlass;
-          if (typeof aktivMotor.init === 'function') aktivMotor.init(audioCtx);
-          if (typeof aktivMotor.setVolume === 'function') aktivMotor.setVolume(inst.volym);
-          if (typeof aktivMotor.setDepth === 'function') aktivMotor.setDepth(inst.djup);
-        }
-      }
-
-      /* ── 4. BYT LÄGE ──────────────────────────────────────────── */
-
-      function bytLage(nyttLage) {
-        nuvarandeLage = nyttLage;
-        document.body.setAttribute('data-lage', nyttLage);
-
-        document.querySelectorAll('.vyknapp').forEach(k => {
-          k.classList.toggle('aktiv', k.getAttribute('data-vy') === nyttLage);
-        });
-
-        document.getElementById('vy-raden').style.display = (nyttLage === 'raden') ? 'block' : 'none';
-        document.getElementById('vy-trappan').style.display = (nyttLage === 'trappan') ? 'block' : 'none';
-        document.getElementById('vy-studion').style.display = (nyttLage === 'studion') ? 'block' : 'none';
-
-        const vavenCanvas = document.getElementById('vaven');
-        const nodlager = document.getElementById('nodlager');
-        if (nyttLage === 'raden' || nyttLage === 'vaven') {
-          vavenCanvas.removeAttribute('data-dold');
-          nodlager.removeAttribute('data-dold');
-        } else {
-          vavenCanvas.setAttribute('data-dold', 'true');
-          nodlager.setAttribute('data-dold', 'true');
-        }
-
-        if (nyttLage === 'raden') {
-          const sf = document.getElementById('skrivfalt');
-          sf.focus();
-        } else if (nyttLage === 'trappan') {
-          renderaTrappan();
-        } else if (nyttLage === 'studion' && !studioBlockId && dok.block.length) {
-          opnaStudion(dok.block[0].id);
-        }
-
-        annonseraA11y(`Växlade till läge ${nyttLage}`);
-        veckSimulering();
-      }
-
-      /* ── 5. RADEN (SKRIVLÄGET IN CENTRUM) ─────────────────────── */
-
-      const skrivfalt = document.getElementById('skrivfalt');
-      const skrivtrappa = document.getElementById('skrivtrappa');
-
-      function autoHojd() {
-        skrivfalt.style.height = 'auto';
-        skrivfalt.style.height = Math.max(42, skrivfalt.scrollHeight) + 'px';
-      }
-
-      function uppdateraRubrikNiva() {
-        const val = skrivfalt.value;
-        const m = /^(#{1,6})\s/.exec(val);
-        if (m) {
-          skrivfalt.setAttribute('data-niva', m[1].length);
-        } else {
-          skrivfalt.removeAttribute('data-niva');
-        }
-      }
-
-      function ritaTrappsteg() {
-        skrivtrappa.innerHTML = '';
-        let startIdx = lyftIndex !== null ? lyftIndex - 1 : dok.block.length - 1;
-        let count = 0;
-
-        for (let i = startIdx; i >= 0 && count < 2; i--) {
-          const b = dok.block[i];
-          const st = document.createElement('div');
-          st.className = 'trappsteg';
-          st.setAttribute('data-avstand', count + 1);
-          if (b.typ === 'rubrik') st.setAttribute('data-typ', 'rubrik');
-          st.textContent = (b.typ === 'rubrik' ? '#'.repeat(b.niva) + ' ' : '') + b.text;
-          const targetIndex = i;
-          st.addEventListener('click', () => lyftBlock(targetIndex));
-          skrivtrappa.prepend(st);
-          count++;
-        }
-      }
-
-      function commit() {
-        const ra = skrivfalt.value;
-        if (!ra.trim()) return;
-
-        sparaTillstand('Commit');
-
-        let nyaBlock = [];
-        if (lyftIndex !== null) {
-          const tolkat = franMarkdown(ra);
-          if (tolkat.length) {
-            dok.block[lyftIndex].text = tolkat[0].text;
-            dok.block[lyftIndex].typ = tolkat[0].typ;
-            dok.block[lyftIndex].niva = tolkat[0].niva;
-            nyaBlock = [dok.block[lyftIndex]];
-          }
-          lyftIndex = null;
-        } else {
-          nyaBlock = franMarkdown(ra);
-          dok.block = dok.block.concat(nyaBlock);
-        }
-
-        skrivfalt.value = '';
-        skrivfalt.removeAttribute('data-niva');
-        autoHojd();
-        ritaTrappsteg();
-        spara();
-
-        TextContext.forceRescan();
-        analyseraOchUppdatera();
-
-        for (const b of nyaBlock) {
-          const el = document.querySelector(`.nod[data-id="${b.id}"]`);
-          if (el) {
-            el.classList.add('ny');
-            setTimeout(() => el.classList.remove('ny'), 600);
-          }
-        }
-
-        annonseraA11y(`Stycke sparat. Totalt ${dok.block.length} block.`);
-      }
-
-      function lyftBlock(index) {
-        if (index < 0 || index >= dok.block.length) return;
-        lyftIndex = index;
-        const b = dok.block[index];
-        skrivfalt.value = (b.typ === 'rubrik' ? '#'.repeat(b.niva) + ' ' : '') + b.text;
-        autoHojd();
-        uppdateraRubrikNiva();
-        ritaTrappsteg();
-        skrivfalt.focus();
-      }
-
-      function slappLyftBlock() {
-        lyftIndex = null;
-        skrivfalt.value = '';
-        skrivfalt.removeAttribute('data-niva');
-        autoHojd();
-        ritaTrappsteg();
-      }
-
-      let skrivTimer = null;
-      skrivfalt.addEventListener('input', (e) => {
-        autoHojd();
-        uppdateraRubrikNiva();
-        if (e.data && e.data.length === 1) {
-          TextContext.taTecken(e.data);
-          if (aktivMotor && typeof aktivMotor.handleChar === 'function') {
-            aktivMotor.handleChar(e.data);
-          }
-        }
-        uppdateraSkrivmal();
-        
-        // Debouncad realtidsanalys så grafen lever när man skriver
-        clearTimeout(skrivTimer);
-        skrivTimer = setTimeout(() => {
-          analyseraOchUppdatera();
-        }, 150);
-      });
-
-      skrivfalt.addEventListener('keydown', (e) => {
-        if (aktivMotor && typeof aktivMotor.handleKey === 'function') {
-          aktivMotor.handleKey(e);
-        }
-
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          commit();
-        } else if (e.key === 'ArrowUp' && skrivfalt.selectionStart === 0 && skrivfalt.selectionEnd === 0) {
-          e.preventDefault();
-          if (lyftIndex === null) {
-            if (dok.block.length > 0) lyftBlock(dok.block.length - 1);
-          } else if (lyftIndex > 0) {
-            lyftBlock(lyftIndex - 1);
-          }
-        } else if (e.key === 'ArrowDown' && lyftIndex !== null) {
-          if (lyftIndex < dok.block.length - 1) {
-            lyftBlock(lyftIndex + 1);
-          } else {
-            slappLyftBlock();
-          }
-        } else if (e.key === 'Escape' && lyftIndex !== null) {
-          slappLyftBlock();
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !event.shiftKey && !elements.draft.value) {
+          event.preventDefault();
+          recallLatestBlock();
+        } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && event.shiftKey && !elements.draft.value) {
+          event.preventDefault();
+          redoDocument();
         }
       });
 
-      /* ── 6. VÄVEN (SUBTILT NÄTVERK & SIMULERING) ────────────── */
-
-      const vavenCanvas = document.getElementById('vaven');
-      const ctx = vavenCanvas.getContext('2d');
-      const nodlager = document.getElementById('nodlager');
-
-      let noderMap = new Map();
-      let simKorer = false;
-      let simAnimFrame = null;
-      let dragenNodId = null;
-      let hovradNodId = null;
-
-      function anpassaCanvas() {
-        vavenCanvas.width = window.innerWidth;
-        vavenCanvas.height = window.innerHeight;
-      }
-      window.addEventListener('resize', () => {
-        anpassaCanvas();
-        veckSimulering();
+      $$('.mode-button').forEach(button => button.addEventListener('click', () => switchView(button.dataset.viewTarget)));
+      $('#structure-add').addEventListener('click', () => switchView('write'));
+      $('#inspector-close').addEventListener('click', closeInspector);
+      elements.utilityButton.addEventListener('click', () => elements.utility.dataset.open === 'true' ? closeUtility() : openUtility());
+      $('#utility-close').addEventListener('click', closeUtility);
+      elements.scrim.addEventListener('click', closeUtility);
+      $('#help-button').addEventListener('click', () => {
+        openUtility();
+        requestAnimationFrame(() => elements.utility.scrollTo({ top: elements.utility.scrollHeight, behavior: REDUCED_MOTION ? 'auto' : 'smooth' }));
       });
-      anpassaCanvas();
 
-      function analyseraOchUppdatera() {
-        const instTroskel = parseFloat(inst.troskel) || 0.12;
-        const instMaxKanter = parseInt(inst.maxPerNod, 10) || 3;
-
-        // Inkludera pågående text i Raden som ett virtuellt block för realtidsfeedback i nätverket
-        let blockAttAnalysera = dok.block.slice();
-        if (skrivfalt && document.body.getAttribute('data-lage') === 'raden') {
-          const pagaendeText = skrivfalt.value.trim();
-          if (pagaendeText.length > 0) {
-            let niva = 0;
-            let typ = 'stycke';
-            const match = pagaendeText.match(/^(#{1,6})\s+(.*)$/);
-            if (match) {
-               niva = match[1].length;
-               typ = 'rubrik';
-            }
-            blockAttAnalysera.push({
-              id: 'virtuell_pagaende',
-              typ: typ,
-              niva: niva,
-              text: pagaendeText
-            });
-          }
-        }
-
-        beraknatResultat = berakna(blockAttAnalysera, {
-          doldaOrd: dok.doldaOrd || [],
-          troskel: instTroskel,
-          maxPerNod: instMaxKanter
-        });
-
-        renderaNodKnappar();
-        renderaOrdlista();
-        renderaTextuellGraf();
-        uppdateraNyckeltal();
-        uppdateraSkrivmal();
-        veckSimulering();
-      }
-
-      function renderaNodKnappar() {
-        if (!beraknatResultat) return;
-        nodlager.innerHTML = '';
-        nodlager.classList.add('framme');
-
-        const { noder } = beraknatResultat;
-        const maxOrd = Math.max(1, ...noder.map(n => n.ord || 1));
-
-        const existerandeIds = new Set(noder.map(n => n.id));
-        for (const id of noderMap.keys()) {
-          if (!existerandeIds.has(id)) noderMap.delete(id);
-        }
-
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-
-        noder.forEach((n, idx) => {
-          const d = Math.round(7 + 14 * Math.sqrt((n.ord || 1) / maxOrd));
-          let pos = noderMap.get(n.id);
-          if (!pos) {
-            const vinkel = (idx / Math.max(1, noder.length)) * Math.PI * 2;
-            const r = 140 + Math.random() * 80;
-            pos = {
-              id: n.id,
-              x: cx + Math.cos(vinkel) * r,
-              y: cy + Math.sin(vinkel) * r,
-              vx: (Math.random() - 0.5) * 2,
-              vy: (Math.random() - 0.5) * 2,
-              d: d,
-              typ: n.typ
-            };
-            noderMap.set(n.id, pos);
-          } else {
-            pos.d = d;
-            pos.typ = n.typ;
-          }
-
-          const btn = document.createElement('button');
-          btn.className = 'nod';
-          btn.setAttribute('data-id', n.id);
-          btn.setAttribute('data-typ', n.typ);
-          if (n.ensam) btn.setAttribute('data-ensam', 'true');
-          if (n.flodesbrott) btn.setAttribute('data-flodesbrott', 'true');
-          btn.style.setProperty('--d', `${d}px`);
-
-          const block = dok.block.find(b => b.id === n.id);
-          const snippet = block ? block.text.slice(0, 30) : '';
-          const statusText = n.ensam ? 'saknar koppling' : (n.flodesbrott ? 'flödesbrott' : 'kopplad');
-          btn.setAttribute('aria-label', `${n.typ === 'rubrik' ? 'Rubrik' : 'Stycke'}, ${snippet}, ${statusText}`);
-
-          const prick = document.createElement('span');
-          prick.className = 'prick';
-          btn.appendChild(prick);
-
-          btn.addEventListener('click', () => {
-            if (n.typ === 'rubrik') bytLage('trappan');
-            else opnaStudion(n.id);
-          });
-          btn.addEventListener('mouseenter', () => {
-            hovradNodId = n.id;
-            uppdateraNodKlasser();
-            ritaVavenCanvas();
-          });
-          btn.addEventListener('mouseleave', () => {
-            hovradNodId = null;
-            uppdateraNodKlasser();
-            ritaVavenCanvas();
-          });
-          btn.addEventListener('focus', () => {
-            hovradNodId = n.id;
-            uppdateraNodKlasser();
-            ritaVavenCanvas();
-          });
-          btn.addEventListener('blur', () => {
-            hovradNodId = null;
-            uppdateraNodKlasser();
-            ritaVavenCanvas();
-          });
-          btn.addEventListener('mousedown', (e) => {
-            dragenNodId = n.id;
-          });
-          btn.addEventListener('touchstart', (e) => {
-            dragenNodId = n.id;
-          }, { passive: true });
-
-          nodlager.appendChild(btn);
-        });
-      }
-
-      function uppdateraNodKlasser() {
-        if (!beraknatResultat) return;
-        const { kanter } = beraknatResultat;
-        const grannar = new Set();
-        if (hovradNodId) {
-          grannar.add(hovradNodId);
-          kanter.forEach(k => {
-            if (k.a === hovradNodId) grannar.add(k.b);
-            if (k.b === hovradNodId) grannar.add(k.a);
-          });
-        }
-
-        document.querySelectorAll('#nodlager .nod').forEach(btn => {
-          const id = btn.getAttribute('data-id');
-          if (hovradNodId && !grannar.has(id)) {
-            btn.classList.add('avlagsen');
-          } else {
-            btn.classList.remove('avlagsen');
-          }
-        });
-      }
-
-      window.addEventListener('mousemove', (e) => {
-        if (!dragenNodId) return;
-        const pos = noderMap.get(dragenNodId);
-        if (pos) {
-          pos.x = e.clientX;
-          pos.y = e.clientY;
-          pos.vx = 0;
-          pos.vy = 0;
-          veckSimulering();
-        }
+      elements.widthSlider.addEventListener('input', event => {
+        applyWidth(event.target.value);
+        saveState();
+        resizeCanvas();
       });
-      window.addEventListener('mouseup', () => { dragenNodId = null; });
 
-      function korSimuleringSteg() {
-        if (!beraknatResultat) return 0;
-        const { noder, kanter } = beraknatResultat;
-        const nList = Array.from(noderMap.values());
-        if (nList.length <= 1) return 0;
-
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        const agareMap = agare(dok.block);
-
-        let totalEnergi = 0;
-
-        for (let i = 0; i < nList.length; i++) {
-          for (let j = i + 1; j < nList.length; j++) {
-            const a = nList[i];
-            const b = nList[j];
-            let dx = b.x - a.x;
-            let dy = b.y - a.y;
-            let dist = Math.hypot(dx, dy) || 1;
-            if (dist < 280) {
-              const f = 800 / (dist * dist);
-              const fx = (dx / dist) * f;
-              const fy = (dy / dist) * f;
-              if (a.id !== dragenNodId) { a.vx -= fx; a.vy -= fy; }
-              if (b.id !== dragenNodId) { b.vx += fx; b.vy += fy; }
-            }
-          }
-        }
-
-        for (const k of kanter) {
-          const a = noderMap.get(k.a);
-          const b = noderMap.get(k.b);
-          if (!a || !b) continue;
-
-          let dx = b.x - a.x;
-          let dy = b.y - a.y;
-          let dist = Math.hypot(dx, dy) || 1;
-
-          let onskadDist = k.typ === 'sekvens' ? 75 : 120;
-          let stivhet = k.typ === 'sekvens' ? 0.04 : 0.02 * (k.vikt || 1);
-
-          let avvikelse = dist - onskadDist;
-          let fx = (dx / dist) * avvikelse * stivhet;
-          let fy = (dy / dist) * avvikelse * stivhet;
-
-          if (a.id !== dragenNodId) { a.vx += fx; a.vy += fy; }
-          if (b.id !== dragenNodId) { b.vx -= fx; b.vy -= fy; }
-        }
-
-        for (const a of nList) {
-          if (a.id === dragenNodId) continue;
-
-          const agarId = agareMap.get(a.id);
-          if (agarId) {
-            const rubrikPos = noderMap.get(agarId);
-            if (rubrikPos) {
-              a.vx += (rubrikPos.x - a.x) * 0.015;
-              a.vy += (rubrikPos.y - a.y) * 0.015;
-            }
-          }
-
-          // Håll noder borta från mitten där texten är (Halo-effekt i Raden-läge)
-          if (document.body.getAttribute('data-lage') === 'raden') {
-            let dcx = a.x - cx;
-            let dcy = a.y - cy;
-            let dCenter = Math.hypot(dcx, dcy) || 1;
-            if (dCenter < 380) {
-              let force = (380 - dCenter) * 0.08;
-              a.vx += (dcx / dCenter) * force;
-              a.vy += (dcy / dCenter) * force;
-            } else {
-              // Svag dragning inåt så de håller sig kring kanten
-              a.vx += (cx - a.x) * 0.001;
-              a.vy += (cy - a.y) * 0.001;
-            }
-          } else {
-            // Normal dragning inåt i Väven-läget
-            a.vx += (cx - a.x) * 0.003;
-            a.vy += (cy - a.y) * 0.003;
-          }
-
-          // Extrema magnetiska dämpningen så noderna stannar direkt!
-          a.vx *= 0.40;
-          a.vy *= 0.40;
-
-          a.x += a.vx;
-          a.y += a.vy;
-
-          const pad = 30;
-          a.x = Math.max(pad, Math.min(window.innerWidth - pad, a.x));
-          a.y = Math.max(pad, Math.min(window.innerHeight - pad, a.y));
-
-          totalEnergi += Math.abs(a.vx) + Math.abs(a.vy);
-        }
-
-        return totalEnergi;
-      }
-
-      function ritaVavenCanvas() {
-        ctx.clearRect(0, 0, vavenCanvas.width, vavenCanvas.height);
-        if (!beraknatResultat) return;
-
-        const { kanter } = beraknatResultat;
-
-        const arIRaden = document.body.getAttribute('data-lage') === 'raden';
-
-        for (const k of kanter) {
-          const a = noderMap.get(k.a);
-          const b = noderMap.get(k.b);
-          if (!a || !b) continue;
-
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-
-          let o = Math.min(0.7, 0.2 + (k.vikt || 0) * 0.8);
-          
-          if (arIRaden) {
-            // Neonblå estetik (Raden)
-            if (hovradNodId) {
-              if (k.a === hovradNodId || k.b === hovradNodId) {
-                ctx.strokeStyle = `rgba(89, 194, 255, ${Math.min(1, o + 0.4)})`;
-                ctx.lineWidth = 2.0;
-              } else {
-                ctx.strokeStyle = `rgba(13, 82, 122, ${o * 0.25})`; // Mörk cyan
-                ctx.lineWidth = 0.5;
-              }
-            } else {
-              if (k.typ === 'sekvens') {
-                ctx.strokeStyle = 'rgba(89, 194, 255, 0.3)';
-                ctx.lineWidth = 2.0;
-              } else {
-                ctx.strokeStyle = `rgba(13, 82, 122, ${o * 0.8})`; // Mörk cyan
-                ctx.lineWidth = 0.8;
-              }
-            }
-          } else {
-            // Mässings-estetik (Väven/Trappan)
-            if (hovradNodId) {
-              if (k.a === hovradNodId || k.b === hovradNodId) {
-                ctx.strokeStyle = `rgba(197, 160, 89, ${Math.min(1, o + 0.4)})`;
-                ctx.lineWidth = 2.0;
-              } else {
-                ctx.strokeStyle = `rgba(155, 151, 142, ${o * 0.15})`;
-                ctx.lineWidth = 0.5;
-              }
-            } else {
-              if (k.typ === 'sekvens') {
-                ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
-                ctx.lineWidth = 2.0;
-              } else {
-                ctx.strokeStyle = `rgba(155, 151, 142, ${o})`;
-                ctx.lineWidth = 0.8;
-              }
-            }
-          }
-          ctx.stroke();
-        }
-
-        for (const [id, pos] of noderMap) {
-          const btn = document.querySelector(`.nod[data-id="${id}"]`);
-          if (btn) {
-            btn.style.transform = `translate3d(${Math.round(pos.x - 22)}px, ${Math.round(pos.y - 22)}px, 0)`;
-          }
-        }
-      }
-
-      function simLoop() {
-        if (!simKorer) return;
-        const energi = korSimuleringSteg();
-        ritaVavenCanvas();
-
-        // Stanna extremt tidigt för statiskt nätverk
-        if (energi < 0.6 && !dragenNodId) {
-          simKorer = false;
-          simAnimFrame = null;
-        } else {
-          simAnimFrame = requestAnimationFrame(simLoop);
-        }
-      }
-
-      function veckSimulering() {
-        if (!simKorer) {
-          simKorer = true;
-          simAnimFrame = requestAnimationFrame(simLoop);
-        }
-      }
-
-      /* ── 7. TRAPPAN (DISPOSITION & OMORDNING) ─────────────────── */
-
-      const trappanInnehall = document.getElementById('trappan-innehall');
-      let draKallaIndex = null;
-
-      function renderaTrappan() {
-        trappanInnehall.innerHTML = '';
-        const vyEl = document.getElementById('vy-trappan');
-        const utfallning = parseInt(vyEl.getAttribute('data-utfallning') || '2', 10);
-
-        dok.block.forEach((b, i) => {
-          if (b.typ === 'rubrik') {
-            const h = document.createElement('h' + Math.min(3, Math.max(1, b.niva)));
-            h.className = 'rubrik-' + Math.min(3, Math.max(1, b.niva));
-            h.textContent = '#'.repeat(b.niva) + ' ' + b.text;
-            h.draggable = true;
-            h.addEventListener('dragstart', (e) => {
-              draKallaIndex = i;
-              e.dataTransfer.setData('text/plain', i);
-            });
-            h.addEventListener('dragover', (e) => e.preventDefault());
-            h.addEventListener('drop', (e) => {
-              e.preventDefault();
-              handteraBlockDrop(i);
-            });
-            trappanInnehall.appendChild(h);
-          } else if (utfallning > 0) {
-            const p = document.createElement('p');
-            p.className = 'stycke';
-            p.draggable = true;
-
-            const resNode = beraknatResultat && beraknatResultat.noder.find(n => n.id === b.id);
-            if (resNode && resNode.ensam) p.setAttribute('data-ensam', 'true');
-
-            const m = /^(.*?[.!?])(\s+)([\s\S]*)$/.exec(b.text);
-            if (m) {
-              const ing = document.createElement('span');
-              ing.className = 'ingress';
-              ing.textContent = m[1];
-
-              const rest = document.createElement('span');
-              rest.className = 'rest';
-              rest.textContent = m[2] + m[3];
-
-              p.appendChild(ing);
-              p.appendChild(rest);
-            } else {
-              p.textContent = b.text;
-            }
-
-            if (b.kommentarer && b.kommentarer.length) {
-              const km = document.createElement('span');
-              km.className = 'kommentarsmarke';
-              km.title = `${b.kommentarer.length} kommentar(er)`;
-              p.appendChild(km);
-            }
-
-            p.addEventListener('click', () => opnaStudion(b.id));
-
-            p.addEventListener('dragstart', (e) => {
-              draKallaIndex = i;
-              p.classList.add('dras');
-              e.dataTransfer.setData('text/plain', i);
-            });
-
-            p.addEventListener('dragend', () => p.classList.remove('dras'));
-
-            p.addEventListener('dragover', (e) => {
-              e.preventDefault();
-              visaLiveKohesionMarkor(p, i);
-            });
-
-            p.addEventListener('drop', (e) => {
-              e.preventDefault();
-              handteraBlockDrop(i);
-            });
-
-            trappanInnehall.appendChild(p);
-          }
-        });
-      }
-
-      function visaLiveKohesionMarkor(targetEl, mIndex) {
-        document.querySelectorAll('.slappmark').forEach(m => m.remove());
-        const markor = document.createElement('div');
-        markor.className = 'slappmark';
-        targetEl.parentNode.insertBefore(markor, targetEl);
-      }
-
-      function handteraBlockDrop(tillIndex) {
-        document.querySelectorAll('.slappmark').forEach(m => m.remove());
-        if (draKallaIndex === null || draKallaIndex === tillIndex) return;
-
-        sparaTillstand('Blockflytt');
-
-        const franBlock = dok.block[draKallaIndex];
-        if (franBlock.typ === 'rubrik') {
-          const sek = sektioner(dok.block).find(s => s.rubrikId === franBlock.id);
-          if (sek) {
-            const sektionsBlock = dok.block.slice(sek.fran, sek.till);
-            dok.block.splice(sek.fran, sektionsBlock.length);
-            const nyTill = tillIndex > sek.fran ? tillIndex - sektionsBlock.length : tillIndex;
-            dok.block.splice(nyTill, 0, ...sektionsBlock);
-          }
-        } else {
-          dok.block = flyttaBlock(dok.block, draKallaIndex, tillIndex);
-        }
-
-        draKallaIndex = null;
-        spara();
-        TextContext.forceRescan();
-        analyseraOchUppdatera();
-        renderaTrappan();
-        annonseraA11y('Flyttade block');
-      }
-
-      document.querySelectorAll('.reglage-knapp').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.reglage-knapp').forEach(b => b.classList.remove('aktiv'));
-          btn.classList.add('aktiv');
-          const ut = btn.getAttribute('data-ut');
-          document.getElementById('vy-trappan').setAttribute('data-utfallning', ut);
-          renderaTrappan();
+      $$('.composer-grip').forEach(grip => {
+        grip.addEventListener('pointerdown', event => {
+          grip.setPointerCapture(event.pointerId);
+          const startX = event.clientX;
+          const startWidth = WIDTHS[app.settings.widthIndex];
+          const side = grip.classList.contains('left') ? -1 : 1;
+          const move = moveEvent => {
+            const wanted = startWidth + (moveEvent.clientX - startX) * side * 2;
+            const closest = WIDTHS.reduce((best, width, index) =>
+              Math.abs(width - wanted) < Math.abs(WIDTHS[best] - wanted) ? index : best, 0);
+            applyWidth(closest);
+          };
+          const end = () => {
+            grip.removeEventListener('pointermove', move);
+            grip.removeEventListener('pointerup', end);
+            grip.removeEventListener('pointercancel', end);
+            saveState();
+            resizeCanvas();
+          };
+          grip.addEventListener('pointermove', move);
+          grip.addEventListener('pointerup', end);
+          grip.addEventListener('pointercancel', end);
         });
       });
 
-      /* ── 8. STUDION (SINGLE BLOCK FOCUS) ─────────────────────── */
+      window.addEventListener('pointermove', moveNodeDrag);
+      window.addEventListener('pointerup', endNodeDrag);
+      window.addEventListener('pointercancel', endNodeDrag);
+      window.addEventListener('resize', scheduleResize);
+      window.visualViewport?.addEventListener('resize', scheduleResize);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopSimulation();
+        else drawGraph();
+      });
 
-      function opnaStudion(blockId) {
-        studioBlockId = blockId;
-        const bIdx = dok.block.findIndex(b => b.id === blockId);
-        if (bIdx === -1) return;
-
-        const block = dok.block[bIdx];
-        document.getElementById('studio-block-typ').textContent = block.typ === 'rubrik' ? `Rubrik nivå ${block.niva}` : 'Stycke';
-
-        const foralderEl = document.getElementById('studio-foralder');
-        const efterEl = document.getElementById('studio-efterfoljande');
-        foralderEl.textContent = bIdx > 0 ? dok.block[bIdx - 1].text : '(Starten på dokumentet)';
-        efterEl.textContent = bIdx < dok.block.length - 1 ? dok.block[bIdx + 1].text : '(Slutet på dokumentet)';
-
-        const sf = document.getElementById('studio-falt');
-        sf.value = block.text;
-
-        renderaStudioKommentarer(block);
-        bytLage('studion');
-      }
-
-      function renderaStudioKommentarer(block) {
-        const lista = document.getElementById('studio-kommentarer-lista');
-        lista.innerHTML = '';
-        if (!block.kommentarer || !block.kommentarer.length) {
-          lista.innerHTML = '<div class="tyst-text">Inga kommentarer ännu.</div>';
+      window.addEventListener('keydown', event => {
+        const command = event.ctrlKey || event.metaKey;
+        const editingText = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+        if (elements.utility.dataset.open === 'true' && event.key === 'Tab') {
+          const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])', elements.utility)
+            .filter(element => !element.hasAttribute('inert'));
+          if (focusable.length) {
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first.focus();
+            }
+          }
           return;
         }
+        if (command && !event.shiftKey && event.key === '1') {
+          event.preventDefault();
+          switchView('write');
+        } else if (command && !event.shiftKey && event.key === '2') {
+          event.preventDefault();
+          switchView('graph');
+        } else if (command && !event.shiftKey && event.key === '3') {
+          event.preventDefault();
+          switchView('structure');
+        } else if (command && event.key.toLowerCase() === 'b') {
+          event.preventDefault();
+          elements.utility.dataset.open === 'true' ? closeUtility() : openUtility();
+        } else if (command && event.key.toLowerCase() === 'z' && !editingText) {
+          event.preventDefault();
+          event.shiftKey ? redoDocument() : undoDocument();
+        } else if (command && event.key.toLowerCase() === 'y' && !editingText) {
+          event.preventDefault();
+          redoDocument();
+        } else if (event.key === 'Escape') {
+          if (elements.utility.dataset.open === 'true') closeUtility();
+          else if (editingId) cancelEditing();
+          else if (elements.inspector.dataset.open === 'true') closeInspector();
+        }
+      });
 
-        block.kommentarer.forEach(k => {
-          const div = document.createElement('div');
-          div.className = 'kommentar';
-          div.innerHTML = `<span class="etikett">&gt; Kommentar:</span><span class="text">${escapeHtml(k.text)}</span>`;
-          lista.appendChild(div);
-        });
+      elements.documentSelect.addEventListener('change', event => changeActiveDocument(event.target.value));
+      elements.documentTitle.addEventListener('input', event => {
+        activeDocument().title = event.target.value || 'Namnlöst dokument';
+        elements.structureTitle.textContent = activeDocument().title;
+        clearTimeout(titleSaveTimer);
+        titleSaveTimer = setTimeout(() => {
+          saveState();
+          renderDocumentControls();
+        }, 260);
+      });
+
+      $('#new-document').addEventListener('click', () => {
+        const document = createDocument('Nytt dokument');
+        app.documents.push(document);
+        changeActiveDocument(document.id);
+        closeUtility();
+        switchView('write');
+      });
+
+      $('#delete-document').addEventListener('click', () => {
+        if (!confirm('Radera dokumentet "' + activeDocument().title + '"?')) return;
+        const index = app.documents.findIndex(document => document.id === app.activeId);
+        app.documents.splice(index, 1);
+        if (!app.documents.length) app.documents.push(createDocument());
+        const nextId = app.documents[Math.max(0, Math.min(index - 1, app.documents.length - 1))].id;
+        changeActiveDocument(nextId, false);
+        toast('Dokumentet raderades');
+      });
+
+      $('#threshold-input').addEventListener('input', event => {
+        app.settings.threshold = Number(event.target.value);
+        saveState();
+        $('#threshold-output').textContent = app.settings.threshold.toFixed(2).replace('.', ',');
+      });
+      $('#threshold-input').addEventListener('change', () => {
+        recalculate();
+      });
+      $('#edge-count-input').addEventListener('input', event => {
+        app.settings.maxEdges = Number(event.target.value);
+        saveState();
+        $('#edge-count-output').textContent = app.settings.maxEdges;
+      });
+      $('#edge-count-input').addEventListener('change', () => {
+        recalculate();
+      });
+
+      $('#copy-markdown').addEventListener('click', copyMarkdown);
+      $('#download-markdown').addEventListener('click', downloadMarkdown);
+      $('#import-markdown').addEventListener('click', () => $('#import-file').click());
+      $('#import-file').addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const markdown = await file.text();
+        const document = createDocument(file.name.replace(/\.(md|markdown)$/i, '') || 'Importerat dokument');
+        document.blocks = parseMarkdown(markdown);
+        app.documents.push(document);
+        changeActiveDocument(document.id);
+        event.target.value = '';
+        closeUtility();
+        switchView('structure');
+        toast('Markdown importerad som nytt dokument');
+      });
+
+      $('#clear-document').addEventListener('click', () => {
+        if (!activeDocument().blocks.length) return;
+        if (!confirm('Töm hela dokumentet? Åtgärden kan ångras under denna session.')) return;
+        pushHistory('Töm dokument');
+        activeDocument().blocks = [];
+        activeDocument().draft = '';
+        activeDocument().recalledBlock = null;
+        recalledBlock = null;
+        elements.draft.value = '';
+        saveState();
+        recalculate();
+        updateDraftMeta();
+        toast('Dokumentet tömdes');
+      });
+    }
+
+    function initialize() {
+      applyWidth(app.settings.widthIndex);
+      updateVisualViewport();
+      elements.draft.value = activeDocument().draft || '';
+      recalledBlock = activeDocument().recalledBlock || null;
+      $('#threshold-input').value = app.settings.threshold;
+      $('#edge-count-input').value = app.settings.maxEdges;
+      renderDocumentControls();
+      resizeCanvas(true);
+      updateDraftMeta();
+      analysis = analyze(activeDocument().blocks);
+      syncGraph();
+      const initialSteps = adaptiveStepCount(80);
+      for (let i = 0; i < initialSteps; i++) {
+        simulationAlpha = Math.max(.04, 1 - i / initialSteps);
+        physicsStep(1);
       }
-
-      document.getElementById('studio-falt').addEventListener('input', (e) => {
-        if (!studioBlockId) return;
-        const b = dok.block.find(x => x.id === studioBlockId);
-        if (b) {
-          b.text = e.target.value;
-          spara();
-          TextContext.forceRescan();
-          analyseraOchUppdatera();
-        }
-      });
-
-      document.getElementById('ny-kommentar-knapp').addEventListener('click', () => {
-        const inp = document.getElementById('ny-kommentar-input');
-        const val = inp.value.trim();
-        if (!val || !studioBlockId) return;
-
-        sparaTillstand('Kommentar');
-        const b = dok.block.find(x => x.id === studioBlockId);
-        if (b) {
-          if (!b.kommentarer) b.kommentarer = [];
-          b.kommentarer.push({
-            id: nyttId('k'),
-            text: val,
-            skapad: new Date().toISOString()
-          });
-          inp.value = '';
-          spara();
-          renderaStudioKommentarer(b);
-          visaBrodrost('Kommentar tillagd');
-        }
-      });
-
-      document.getElementById('studio-tillbaka').addEventListener('click', () => {
-        bytLage('raden');
-      });
-
-      /* ── 9. SIDOPANEL, ORDLISTA & TEXTUELL GRAF (A11Y) ───────── */
-
-      const panel = document.getElementById('sidopanel');
-
-      function togglePanel(oppen) {
-        if (oppen === undefined) oppen = !panel.hasAttribute('data-oppen');
-        if (oppen) panel.setAttribute('data-oppen', 'true');
-        else panel.removeAttribute('data-oppen');
-      }
-
-      document.getElementById('paneltoggle').addEventListener('click', () => togglePanel());
-      document.getElementById('panel-stang').addEventListener('click', () => togglePanel(false));
-
-      function renderaDokumentLista() {
-        const container = document.getElementById('dok-lista');
-        container.innerHTML = '';
-
-        dokumenter.forEach(d => {
-          const div = document.createElement('div');
-          div.className = 'dok-rad' + (d.id === aktivtId ? ' aktiv' : '');
-
-          const titleSpan = document.createElement('span');
-          titleSpan.className = 'titel';
-          titleSpan.textContent = d.titel || 'Namnlöst';
-          titleSpan.addEventListener('click', () => bytAktivtDokument(d.id));
-
-          const slettBtn = document.createElement('button');
-          slettBtn.className = 'knapp-liten-radera';
-          slettBtn.textContent = '✕';
-          slettBtn.title = 'Radera dokument';
-          slettBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            raderaDokument(d.id);
-          });
-
-          div.appendChild(titleSpan);
-          div.appendChild(slettBtn);
-          container.appendChild(div);
-        });
-      }
-
-      function bytAktivtDokument(id) {
-        const ny = dokumenter.find(d => d.id === id);
-        if (!ny) return;
-        dok = ny;
-        aktivtId = id;
-        undoStack = [];
-        redoStack = [];
-        sparaDokumenter();
-
-        document.getElementById('dok-titel-input').value = dok.titel;
-        document.getElementById('ljud-select').value = dok.ljudtema || 'inget';
-
-        noderMap.clear();
-        slappLyftBlock();
-        initTextContext();
-        uppdateraLjudmotor();
-        analyseraOchUppdatera();
-        renderaDokumentLista();
-        visaBrodrost(`Öppnade "${dok.titel}"`);
-      }
-
-      function raderaDokument(id) {
-        if (dokumenter.length <= 1) {
-          visaBrodrost('Kan inte radera sista dokumentet');
-          return;
-        }
-        if (!confirm('Vill du radera dokumentet?')) return;
-
-        dokumenter = dokumenter.filter(d => d.id !== id);
-        if (aktivtId === id) {
-          aktivtId = dokumenter[0].id;
-          dok = dokumenter[0];
-        }
-        sparaDokumenter();
-        bytAktivtDokument(aktivtId);
-      }
-
-      document.getElementById('nytt-dok-knapp').addEventListener('click', () => {
-        const ny = nyttDokument('Nytt dokument');
-        dokumenter.push(ny);
-        sparaDokumenter();
-        bytAktivtDokument(ny.id);
-      });
-
-      document.getElementById('dok-titel-input').addEventListener('input', (e) => {
-        if (dok) {
-          dok.titel = e.target.value;
-          spara();
-          renderaDokumentLista();
-        }
-      });
-
-      // Textuell Graf (a11y-parallell enligt Anneli Ros krav)
-      function renderaTextuellGraf() {
-        const container = document.getElementById('textuell-graf-container');
-        if (!container || !beraknatResultat) return;
-
-        container.innerHTML = '';
-        const { noder, kanter } = beraknatResultat;
-
-        noder.forEach((n, idx) => {
-          const b = dok.block.find(x => x.id === n.id);
-          if (!b) return;
-
-          const item = document.createElement('div');
-          item.className = 'graf-item' + (n.ensam ? ' ensam' : '') + (n.flodesbrott ? ' flodesbrott' : '');
-          item.setAttribute('role', 'treeitem');
-          item.tabIndex = 0;
-
-          const rubricText = b.typ === 'rubrik' ? `[Rubrik ${b.niva}] ` : `[Stycke ${idx + 1}] `;
-          const snippet = b.text.slice(0, 35) + (b.text.length > 35 ? '...' : '');
-
-          let bindingarText = 'Inga kohesionslänkar';
-          if (n.ensam) bindingarText = '⚠️ Saknar koppling (ensam nod)';
-          else if (n.flodesbrott) bindingarText = '⚡ Flödesbrott (länk finns men saknas mot grannar)';
-          else {
-            const relKanter = kanter.filter(k => k.typ === 'kohesion' && (k.a === n.id || k.b === n.id));
-            if (relKanter.length) {
-              const koppladeIds = relKanter.map(k => (k.a === n.id ? k.b : k.a));
-              bindingarText = `Binder till ${koppladeIds.length} block`;
-            }
-          }
-
-          item.innerHTML = `<strong>${escapeHtml(rubricText)}</strong> ${escapeHtml(snippet)}<br><small style="color:var(--papper-dim);">${escapeHtml(bindingarText)}</small>`;
-
-          item.addEventListener('click', () => {
-            if (b.typ === 'rubrik') bytLage('trappan');
-            else opnaStudion(b.id);
-          });
-
-          container.appendChild(item);
-        });
-      }
-
-      // Ordlistan & Dolda ord
-      function renderaOrdlista() {
-        const container = document.getElementById('ordlista-container');
-        container.innerHTML = '';
-
-        if (!beraknatResultat || !beraknatResultat.ordlista) return;
-        const { ordlista } = beraknatResultat;
-
-        const doldaSet = new Set(dok.doldaOrd || []);
-        const doldaNotis = document.getElementById('dolda-ord-notis');
-        if (doldaSet.size > 0) {
-          doldaNotis.style.display = 'flex';
-          document.getElementById('dolda-antal').textContent = `${doldaSet.size} dolda ord`;
-        } else {
-          doldaNotis.style.display = 'none';
-        }
-
-        ordlista.slice(0, 40).forEach(rad => {
-          const btn = document.createElement('button');
-          btn.className = 'ordrad';
-
-          const ordSpan = document.createElement('span');
-          ordSpan.textContent = rad.ord;
-
-          const ledare = document.createElement('span');
-          ledare.className = 'ledare';
-
-          const antal = document.createElement('span');
-          antal.className = 'antal';
-          antal.textContent = rad.antal;
-
-          const oga = document.createElement('span');
-          oga.className = 'oga';
-          oga.textContent = '👁';
-          oga.title = 'Dölj ord';
-          oga.addEventListener('click', (e) => {
-            e.stopPropagation();
-            doljOrd(rad.nyckel || rad.ord.toLowerCase());
-          });
-
-          btn.appendChild(ordSpan);
-          btn.appendChild(ledare);
-          btn.appendChild(antal);
-          btn.appendChild(oga);
-
-          btn.addEventListener('click', () => {
-            const radBlockSet = new Set(rad.block);
-            document.querySelectorAll('.nod').forEach(el => {
-              const id = el.getAttribute('data-id');
-              if (radBlockSet.has(id)) {
-                el.classList.add('ny');
-                setTimeout(() => el.classList.remove('ny'), 1200);
-              }
-            });
-          });
-
-          container.appendChild(btn);
-        });
-      }
-
-      function doljOrd(ord) {
-        if (!dok.doldaOrd) dok.doldaOrd = [];
-        if (!dok.doldaOrd.includes(ord)) {
-          dok.doldaOrd.push(ord);
-          spara();
-          analyseraOchUppdatera();
-        }
-      }
-
-      document.getElementById('rensa-dolda').addEventListener('click', () => {
-        dok.doldaOrd = [];
-        spara();
-        analyseraOchUppdatera();
-      });
-
-      function uppdateraNyckeltal() {
-        const stats = statistik(dok.block);
-        const tcStats = TextContext.getStats();
-
-        document.getElementById('stat-ord').textContent = stats.ord;
-        document.getElementById('stat-tecken').textContent = stats.tecken;
-        document.getElementById('stat-stycken').textContent = stats.stycken;
-        document.getElementById('stat-rubriker').textContent = stats.rubriker;
-        document.getElementById('stat-lastid').textContent = `${stats.lastidMin} min`;
-        document.getElementById('stat-lix').textContent = tcStats.lix || 0;
-      }
-
-      function uppdateraSkrivmal() {
-        if (!dok.skrivmal) dok.skrivmal = { typ: 'ord', varde: 800 };
-        const typ = document.getElementById('mal-typ').value;
-        const varde = parseInt(document.getElementById('mal-varde').value, 10) || 800;
-        dok.skrivmal = { typ, varde };
-
-        const stats = statistik(dok.block);
-        const nuVarde = typ === 'ord' ? stats.ord : stats.tecken;
-        const proc = Math.min(100, Math.round((nuVarde / varde) * 100));
-
-        document.getElementById('mal-framgang').style.width = proc + '%';
-        document.getElementById('mal-text').textContent = `${nuVarde} / ${varde} ${typ}`;
-        document.getElementById('mal-procent').textContent = proc + '%';
-      }
-
-      document.getElementById('mal-typ').addEventListener('change', () => { spara(); uppdateraSkrivmal(); });
-      document.getElementById('mal-varde').addEventListener('input', () => { spara(); uppdateraSkrivmal(); });
-
-      // Timer (Pomodoro)
-      const timerDisplay = document.getElementById('timer-display');
-      const timerStartBtn = document.getElementById('timer-start');
-
-      function uppdateraTimerDisplay() {
-        const m = Math.floor(timerSekunder / 60);
-        const s = timerSekunder % 60;
-        timerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-      }
-
-      timerStartBtn.addEventListener('click', () => {
-        timerKor = !timerKor;
-        timerStartBtn.textContent = timerKor ? 'Pausa' : 'Starta';
-        if (timerKor) {
-          timerInterval = setInterval(() => {
-            if (timerSekunder > 0) {
-              timerSekunder--;
-              uppdateraTimerDisplay();
-            } else {
-              clearInterval(timerInterval);
-              timerKor = false;
-              timerStartBtn.textContent = 'Starta';
-              visaBrodrost('⏳ Timern har gått ut!');
-            }
-          }, 1000);
-        } else {
-          clearInterval(timerInterval);
-        }
-      });
-
-      document.getElementById('timer-nollstall').addEventListener('click', () => {
-        clearInterval(timerInterval);
-        timerKor = false;
-        timerSekunder = 25 * 60;
-        timerStartBtn.textContent = 'Starta';
-        uppdateraTimerDisplay();
-      });
-
-      // Ljudväljare & volym
-      document.getElementById('ljud-select').addEventListener('change', (e) => {
-        dok.ljudtema = e.target.value;
-        spara();
-        uppdateraLjudmotor();
-      });
-
-      document.getElementById('ljud-volym').addEventListener('input', (e) => {
-        inst.volym = parseFloat(e.target.value);
-        sparaDokumenter();
-        if (aktivMotor && typeof aktivMotor.setVolume === 'function') aktivMotor.setVolume(inst.volym);
-      });
-
-      document.getElementById('ljud-djup').addEventListener('input', (e) => {
-        inst.djup = parseFloat(e.target.value);
-        sparaDokumenter();
-        if (aktivMotor && typeof aktivMotor.setDepth === 'function') aktivMotor.setDepth(inst.djup);
-      });
-
-      // Inställningar
-      document.getElementById('inst-paus').value = inst.pausMs;
-      document.getElementById('inst-troskel').value = inst.troskel;
-      document.getElementById('inst-maxkanter').value = inst.maxPerNod;
-
-      document.getElementById('inst-paus').addEventListener('change', (e) => {
-        inst.pausMs = parseInt(e.target.value, 10);
-        sparaDokumenter();
-      });
-      document.getElementById('inst-troskel').addEventListener('change', (e) => {
-        inst.troskel = parseFloat(e.target.value);
-        sparaDokumenter();
-        analyseraOchUppdatera();
-      });
-      document.getElementById('inst-maxkanter').addEventListener('change', (e) => {
-        inst.maxPerNod = parseInt(e.target.value, 10);
-        sparaDokumenter();
-        analyseraOchUppdatera();
-      });
-
-      // Export & File System Access API (Mira Löfgren krav)
-      document.getElementById('export-fs-api').addEventListener('click', async () => {
-        const medK = document.getElementById('export-kommentarer').checked;
-        const md = tillMarkdown(dok.block, medK);
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await window.showSaveFilePicker({
-              suggestedName: `${dok.titel || 'dokument'}.md`,
-              types: [{ description: 'Markdown-fil', accept: { 'text/markdown': ['.md'] } }]
-            });
-            const writable = await handle.createWritable();
-            await writable.write(md);
-            await writable.close();
-            visaBrodrost('💾 Sparat direkt på disk!');
-            return;
-          } catch (err) {
-            if (err.name !== 'AbortError') console.error(err);
-          }
-        }
-        laddaNerFil(`${dok.titel || 'dokument'}.md`, md);
-      });
-
-      document.getElementById('export-kopiera').addEventListener('click', () => {
-        const medK = document.getElementById('export-kommentarer').checked;
-        const md = tillMarkdown(dok.block, medK);
-        navigator.clipboard.writeText(md).then(() => {
-          visaBrodrost('Kopierade Markdown till urklipp');
-        });
-      });
-
-      document.getElementById('export-ladda-ner').addEventListener('click', () => {
-        const medK = document.getElementById('export-kommentarer').checked;
-        const md = tillMarkdown(dok.block, medK);
-        laddaNerFil(`${dok.titel || 'dokument'}.md`, md);
-      });
-
-      document.getElementById('ladda-ner-alla-knapp').addEventListener('click', () => {
-        dokumenter.forEach(d => {
-          const md = tillMarkdown(d.block, true);
-          laddaNerFil(`${d.titel || 'dokument'}.md`, md);
-        });
-        visaBrodrost('Laddade ner alla dokument');
-      });
-
-      function laddaNerFil(filnamn, innehall) {
-        const blob = new Blob([innehall], { type: 'text/markdown;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = filnamn;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      }
-
-      function escapeHtml(str) {
-        return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-
-      /* ── 10. TANGENTBORDSGENVÄGAR & UNDO/REDO ─────────────────── */
-
-      window.addEventListener('keydown', (e) => {
-        const isCmd = e.metaKey || e.ctrlKey;
-
-        // Undo (Cmd+Z) & Redo (Cmd+Shift+Z / Cmd+Y)
-        if (isCmd && !e.shiftKey && e.key.toLowerCase() === 'z') {
-          e.preventDefault();
-          utforUndo();
-        } else if (isCmd && e.shiftKey && e.key.toLowerCase() === 'z') {
-          e.preventDefault();
-          utforRedo();
-        } else if (isCmd && e.key.toLowerCase() === 'y') {
-          e.preventDefault();
-          utforRedo();
-        }
-
-        // Vybyte (Cmd+1..4)
-        if (isCmd && !e.shiftKey && e.key === '1') { e.preventDefault(); bytLage('raden'); }
-        if (isCmd && !e.shiftKey && e.key === '2') { e.preventDefault(); bytLage('vaven'); }
-        if (isCmd && !e.shiftKey && e.key === '3') { e.preventDefault(); bytLage('trappan'); }
-        if (isCmd && !e.shiftKey && e.key === '4') { e.preventDefault(); bytLage('studion'); }
-
-        if (isCmd && e.key.toLowerCase() === 'b') {
-          e.preventDefault();
-          togglePanel();
-        }
-        if (isCmd && !e.shiftKey && e.key.toLowerCase() === 's') {
-          e.preventDefault();
-          const medK = document.getElementById('export-kommentarer').checked;
-          laddaNerFil(`${dok.titel || 'dokument'}.md`, tillMarkdown(dok.block, medK));
-          visaBrodrost('Dokument sparat/nedladdat');
-        }
-        if (isCmd && e.shiftKey && e.key.toLowerCase() === 'c') {
-          e.preventDefault();
-          const medK = document.getElementById('export-kommentarer').checked;
-          navigator.clipboard.writeText(tillMarkdown(dok.block, medK));
-          visaBrodrost('Kopierade Markdown till urklipp');
-        }
-        if (e.key === 'Escape') {
-          if (panel.hasAttribute('data-oppen')) togglePanel(false);
-          else if (nuvarandeLage === 'studion') bytLage('raden');
-        }
-      });
-
-      document.querySelectorAll('.vyknapp').forEach(btn => {
-        btn.addEventListener('click', () => {
-          bytLage(btn.getAttribute('data-vy'));
-        });
-      });
-
-      /* ── 11. INITIALISERING ───────────────────────────────────── */
-
-      document.getElementById('dok-titel-input').value = dok.titel;
-      document.getElementById('ljud-select').value = dok.ljudtema || 'inget';
-
-      initTextContext();
-      uppdateraLjudmotor();
-      renderaDokumentLista();
-      ritaTrappsteg();
-      autoHojd();
-      analyseraOchUppdatera();
-    });
+      simulationAlpha = 0;
+      updateNodePositions();
+      renderStats();
+      drawGraph();
+      setupEvents();
+      requestAnimationFrame(() => elements.draft.focus());
+    }
+
+    initialize();
+  })();
   </script>
 </body>
 </html>
