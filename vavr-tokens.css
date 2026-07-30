@@ -17,6 +17,10 @@
   --massing:    #c5a059;
   --massing-lj: #dcc08a;
 
+  --neon-ljus:  #b3e5ff;
+  --neon-bas:   #59c2ff;
+  --neon-dim:   #0d527a;
+
   --harfin:     rgba(242, 239, 233, 0.10);
   --harfin-2:   rgba(242, 239, 233, 0.18);
 
@@ -234,24 +238,37 @@ body[data-lage="raden"] #huvudomrade {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  padding: 0.5rem 0;
+  padding: 1.25rem 1.5rem;
   position: relative;
+  
+  background: rgba(19, 19, 23, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--harfin-2);
+  border-radius: var(--r);
+  box-shadow: 0 0 40px rgba(89, 194, 255, 0.04), 0 0 90px rgba(89, 194, 255, 0.02);
+  transition: border-color 0.15s ease, box-shadow 0.3s ease;
 }
 
-/* Enkel subtil linje i Mässing */
+.raden.aktiv {
+  border-color: var(--neon-bas);
+  box-shadow: 0 0 24px rgba(89, 194, 255, 0.15), 0 0 60px rgba(89, 194, 255, 0.08);
+}
+
 .raden .marke {
-  width: 2px;
+  width: 3px;
   align-self: stretch;
   min-height: 2.2rem;
   flex-shrink: 0;
-  background: var(--massing);
-  opacity: 0;
+  border-radius: 2px;
+  background: linear-gradient(var(--neon-ljus), var(--neon-bas));
+  opacity: 0.4;
   transition: opacity 0.5s, box-shadow 0.5s;
 }
 
 .raden.aktiv .marke {
-  opacity: 0.6;
-  box-shadow: 0 0 12px rgba(197, 160, 89, 0.4);
+  opacity: 0.8;
+  box-shadow: 0 0 12px rgba(89, 194, 255, 0.5);
 }
 
 #skrivfalt {
@@ -268,7 +285,7 @@ body[data-lage="raden"] #huvudomrade {
   font-weight: 300;
   line-height: 1.6;
   padding: 0;
-  caret-color: var(--massing);
+  caret-color: var(--neon-bas);
   transition: color 0.3s;
 }
 
@@ -304,8 +321,8 @@ body[data-lage="raden"] #huvudomrade {
 #nodlager[data-dold] .nod { visibility: hidden; }
 
 /* Subtilt nätverk i skrivläget (Raden) */
-body[data-lage="raden"] #vaven { opacity: 0.28; }
-body[data-lage="raden"] #nodlager { opacity: 0.35; }
+body[data-lage="raden"] #vaven { opacity: 0.35; }
+body[data-lage="raden"] #nodlager { opacity: 0.25; }
 body[data-lage="vaven"] #vaven,
 body[data-lage="vaven"] #nodlager { opacity: 1; }
 
@@ -344,7 +361,12 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
   border-radius: 50%;
   background: var(--massing);
   box-shadow: 0 0 10px rgba(197, 160, 89, 0.3);
-  transition: box-shadow var(--rorelse-snabb), transform var(--rorelse-snabb);
+  transition: box-shadow var(--rorelse-snabb), transform var(--rorelse-snabb), background var(--rorelse-snabb), border-color var(--rorelse-snabb);
+}
+
+body[data-lage="raden"] .nod .prick {
+  background: var(--neon-bas);
+  box-shadow: 0 0 10px rgba(89, 194, 255, 0.3);
 }
 
 .nod[data-typ="rubrik"] .prick {
@@ -353,10 +375,19 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
   box-shadow: 0 0 10px rgba(197, 160, 89, 0.2);
 }
 
+body[data-lage="raden"] .nod[data-typ="rubrik"] .prick {
+  border-color: var(--neon-bas);
+  box-shadow: 0 0 10px rgba(89, 194, 255, 0.2);
+}
+
 .nod[data-ensam] .prick {
   background: var(--sot-3);
   border: 1px solid var(--harfin-2);
   box-shadow: none;
+}
+
+body[data-lage="raden"] .nod[data-ensam] .prick {
+  background: var(--sot-3);
 }
 
 /* Flödesbrott: Högkontrast stiplad ring för tillgänglighet */
@@ -366,9 +397,20 @@ body[data-lage="vaven"] #nodlager { opacity: 1; }
   box-shadow: 0 0 0 2px var(--sot), 0 0 12px rgba(197, 160, 89, 0.4);
 }
 
+body[data-lage="raden"] .nod[data-flodesbrott] .prick {
+  outline-color: var(--neon-bas);
+  box-shadow: 0 0 0 2px var(--sot), 0 0 12px rgba(89, 194, 255, 0.4);
+}
+
 .nod:hover .prick, .nod:focus-visible .prick, .nod.vald .prick {
   transform: scale(1.3);
   box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.2);
+}
+
+body[data-lage="raden"] .nod:hover .prick, 
+body[data-lage="raden"] .nod:focus-visible .prick, 
+body[data-lage="raden"] .nod.vald .prick {
+  box-shadow: 0 0 0 4px rgba(89, 194, 255, 0.2);
 }
 
 /* ── Trappan (Disposition) & Studion ────────────────────────── */

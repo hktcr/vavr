@@ -858,6 +858,8 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
 
         const { kanter } = beraknatResultat;
 
+        const arIRaden = document.body.getAttribute('data-lage') === 'raden';
+
         for (const k of kanter) {
           const a = noderMap.get(k.a);
           const b = noderMap.get(k.b);
@@ -868,21 +870,44 @@ Raden är skrivläget där du fokuserar på ett stycke i taget. Väven visar hel
           ctx.lineTo(b.x, b.y);
 
           let o = Math.min(0.7, 0.2 + (k.vikt || 0) * 0.8);
-          if (hovradNodId) {
-            if (k.a === hovradNodId || k.b === hovradNodId) {
-              ctx.strokeStyle = `rgba(197, 160, 89, ${Math.min(1, o + 0.4)})`;
-              ctx.lineWidth = 2.0;
+          
+          if (arIRaden) {
+            // Neonblå estetik (Raden)
+            if (hovradNodId) {
+              if (k.a === hovradNodId || k.b === hovradNodId) {
+                ctx.strokeStyle = `rgba(89, 194, 255, ${Math.min(1, o + 0.4)})`;
+                ctx.lineWidth = 2.0;
+              } else {
+                ctx.strokeStyle = `rgba(13, 82, 122, ${o * 0.25})`; // Mörk cyan
+                ctx.lineWidth = 0.5;
+              }
             } else {
-              ctx.strokeStyle = `rgba(155, 151, 142, ${o * 0.15})`;
-              ctx.lineWidth = 0.5;
+              if (k.typ === 'sekvens') {
+                ctx.strokeStyle = 'rgba(89, 194, 255, 0.3)';
+                ctx.lineWidth = 2.0;
+              } else {
+                ctx.strokeStyle = `rgba(13, 82, 122, ${o * 0.8})`; // Mörk cyan
+                ctx.lineWidth = 0.8;
+              }
             }
           } else {
-            if (k.typ === 'sekvens') {
-              ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
-              ctx.lineWidth = 2.0;
+            // Mässings-estetik (Väven/Trappan)
+            if (hovradNodId) {
+              if (k.a === hovradNodId || k.b === hovradNodId) {
+                ctx.strokeStyle = `rgba(197, 160, 89, ${Math.min(1, o + 0.4)})`;
+                ctx.lineWidth = 2.0;
+              } else {
+                ctx.strokeStyle = `rgba(155, 151, 142, ${o * 0.15})`;
+                ctx.lineWidth = 0.5;
+              }
             } else {
-              ctx.strokeStyle = `rgba(155, 151, 142, ${o})`;
-              ctx.lineWidth = 0.8;
+              if (k.typ === 'sekvens') {
+                ctx.strokeStyle = 'rgba(197, 160, 89, 0.4)';
+                ctx.lineWidth = 2.0;
+              } else {
+                ctx.strokeStyle = `rgba(155, 151, 142, ${o})`;
+                ctx.lineWidth = 0.8;
+              }
             }
           }
           ctx.stroke();
