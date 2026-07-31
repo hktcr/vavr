@@ -1,18 +1,22 @@
 /**
- * ValsangEngine (BYGGSPEC v4)
+ * ValsangEngine (BYGGSPEC v5)
  * 
  * En ljudmotor för SkrivR baserad på Web Audio API. 
- * Skapar ett kontinuerligt, dynamiskt fokusljud där melodi, andning 
- * och rum formas av vad och hur man skriver enligt Kontextprincipen.
+ * Skapar ett dynamiskt fokusljud där fraser, andning och en fast flock av
+ * korsfadande röster formas av dokumentets text och struktur.
  */
 
 window.ValsangEngine = (() => {
     let ctx = null;
     let masterGain, dryGain, wetGain, compressor, convolver;
     let voiceOsc1, voiceOsc2, subOsc, voiceGain;
-    let voiceFilter, formantFilter;
+    let voiceFilter, formantFilter, upperFormantFilter;
     let vibratoLFO, vibratoGain;
     let songLFO, songGain;
+    let voices = [];
+    let activeVoiceIndex = 0;
+    let voiceGeneration = 0;
+    let commitCount = 0;
 
     let noiseBuffer = null;
     let irBuffer = null;
@@ -29,6 +33,7 @@ window.ValsangEngine = (() => {
     let currentDegree = 4;
     let prevAlphaIdx = null;
     let sentenceBuffer = [];
+    let blockBuffer = [];
     
     // Timing and Breathing
     let lastKeyTime = 0;
@@ -46,7 +51,10 @@ window.ValsangEngine = (() => {
         g: 1,
         meanAlpha: 14,
         vowelRatio: 0.38,
-        paragraphs: 0
+        paragraphs: 0,
+        cohesion: 0,
+        connectedness: 0,
+        averageSentenceWords: 12
     };
 
     // Helper functions
@@ -76,7 +84,7 @@ window.ValsangEngine = (() => {
     };
 
     const createImpulseResponse = () => {
-        const length = ctx.sampleRate * 6.5;
+        const length = ctx.sampleRate * 3.8;
         const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
         for (let channel = 0; channel < 2; channel++) {
             const channelData = impulse.getChannelData(channel);
@@ -107,8 +115,99 @@ window.ValsangEngine = (() => {
             headings: Math.max(0, Number(profile.headings) || 0),
             lastHeadingLevel: Math.max(0, Number(profile.headingDepth) || 0),
             harmonicShiftCount: Math.max(0, Number(profile.harmonicShiftCount) || 0),
-            connectedness: clamp(Number(profile.connectedness) || 0, 0, 1)
+            connectedness: clamp(Number(profile.connectedness) || 0, 0, 1),
+            cohesion: clamp(Number(profile.cohesion) || 0, 0, 1),
+            averageSentenceWords: clamp(Number(profile.averageSentenceWords) || 12, 3, 45)
         };
+    }
+
+    function createVoice(index) {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const sub = ctx.createOscillator();
+        const fundamentalLevel = ctx.createGain();
+        const overtoneLevel = ctx.createGain();
+        const subLevel = ctx.createGain();
+        const gain = ctx.createGain();
+        const lowpass = ctx.createBiquadFilter();
+        const formant = ctx.createBiquadFilter();
+        const upperFormant = ctx.createBiquadFilter();
+        const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc2.detune.value = 5 + index * 1.5;
+        sub.type = 'sine';
+        fundamentalLevel.gain.value = .62;
+        overtoneLevel.gain.value = .22;
+        subLevel.gain.value = .16;
+        gain.gain.value = 0;
+
+        lowpass.type = 'lowpass';
+        lowpass.frequency.value = 1450;
+        lowpass.Q.value = .48;
+        formant.type = 'peaking';
+        formant.frequency.value = 540 + index * 70;
+        formant.Q.value = 1.12;
+        formant.gain.value = 5.2;
+        upperFormant.type = 'peaking';
+        upperFormant.frequency.value = 980 + index * 85;
+        upperFormant.Q.value = .82;
+        upperFormant.gain.value = 2.8;
+        if (panner) panner.pan.value = [-.22, .18, .02][index] || 0;
+
+        osc1.connect(fundamentalLevel).connect(gain);
+        osc2.connect(overtoneLevel).connect(gain);
+        sub.connect(subLevel).connect(gain);
+        gain.connect(lowpass).connect(formant).connect(upperFormant);
+        const output = panner || upperFormant;
+        if (panner) upperFormant.connect(panner);
+        output.connect(dryGain);
+        output.connect(wetGain);
+
+        vibratoGain.connect(osc1.detune);
+        vibratoGain.connect(osc2.detune);
+        songGain.connect(osc1.detune);
+        songGain.connect(osc2.detune);
+        idleGain.connect(osc1.detune);
+        idleGain.connect(osc2.detune);
+
+        osc1.start();
+        osc2.start();
+        sub.start();
+        return {
+            index,
+            osc1,
+            osc2,
+            sub,
+            gain,
+            lowpass,
+            formant,
+            upperFormant,
+            panner,
+            tailUntil: 0
+        };
+    }
+
+    function useVoice(index) {
+        activeVoiceIndex = index;
+        const voice = voices[index];
+        voiceOsc1 = voice?.osc1 || null;
+        voiceOsc2 = voice?.osc2 || null;
+        subOsc = voice?.sub || null;
+        voiceGain = voice?.gain || null;
+        voiceFilter = voice?.lowpass || null;
+        formantFilter = voice?.formant || null;
+        upperFormantFilter = voice?.upperFormant || null;
+        return voice;
+    }
+
+    function setVoiceFrequency(voice, frequency, timeConstant = .5, when = ctx.currentTime) {
+        if (!voice || !Number.isFinite(frequency)) return;
+        const safeFrequency = clamp(frequency, 32, 1600);
+        voice.osc1.frequency.setTargetAtTime(safeFrequency, when, timeConstant);
+        voice.osc2.frequency.setTargetAtTime(safeFrequency, when, timeConstant * 1.08);
+        voice.sub.frequency.setTargetAtTime(safeFrequency / 2, when, timeConstant * 1.18);
     }
 
     function init(audioContext, destination) {
@@ -130,7 +229,7 @@ window.ValsangEngine = (() => {
         dryGain.connect(masterGain);
         
         wetGain = ctx.createGain();
-        wetGain.gain.value = 0.22;
+        wetGain.gain.value = 0.18;
         
         convolver = ctx.createConvolver();
         irBuffer = createImpulseResponse();
@@ -139,81 +238,48 @@ window.ValsangEngine = (() => {
         wetGain.connect(convolver);
         convolver.connect(masterGain);
         
-        // Voice
-        voiceOsc1 = ctx.createOscillator();
-        voiceOsc1.type = 'sine';
-        voiceOsc2 = ctx.createOscillator();
-        voiceOsc2.type = 'sine';
-        voiceOsc2.detune.value = 6; // +6 cents
-        subOsc = ctx.createOscillator();
-        subOsc.type = 'sine';
-        
-        const subGain = ctx.createGain();
-        subGain.gain.value = 0.18;
-        subOsc.connect(subGain);
-        
-        voiceGain = ctx.createGain();
-        voiceGain.gain.value = 0.0;
-        
-        voiceOsc1.connect(voiceGain);
-        voiceOsc2.connect(voiceGain);
-        subGain.connect(voiceGain);
-        
-        voiceFilter = ctx.createBiquadFilter();
-        voiceFilter.type = 'lowpass';
-        voiceFilter.frequency.value = 1600;
-        voiceFilter.Q.value = 0.4;
-
-        formantFilter = ctx.createBiquadFilter();
-        formantFilter.type = 'peaking';
-        formantFilter.frequency.value = 620;
-        formantFilter.Q.value = 1.15;
-        formantFilter.gain.value = 5.5;
-        
-        voiceGain.connect(voiceFilter);
-        voiceFilter.connect(formantFilter);
-        formantFilter.connect(dryGain);
-        formantFilter.connect(wetGain);
-        
-        // Vibrato
+        // Tre förberedda röster delar långsamma rörelser och rum. Poolen gör att
+        // stycken kan överlappa utan att nya permanenta ljudnoder byggs under skrivandet.
         vibratoLFO = ctx.createOscillator();
         vibratoLFO.type = 'sine';
         vibratoLFO.frequency.value = 4.5;
-        
         vibratoGain = ctx.createGain();
-        vibratoGain.gain.value = 4; // cents
-        
+        vibratoGain.gain.value = 4;
         vibratoLFO.connect(vibratoGain);
-        vibratoGain.connect(voiceOsc1.detune);
-        vibratoGain.connect(voiceOsc2.detune);
 
-        // En mycket långsam, organisk tonböjning ger den bärande rösten
-        // samma sjungande rörelse även mellan de tydligare vibratopulserna.
         songLFO = ctx.createOscillator();
         songLFO.type = 'sine';
         songLFO.frequency.value = 0.075;
         songGain = ctx.createGain();
         songGain.gain.value = 12;
         songLFO.connect(songGain);
-        songGain.connect(voiceOsc1.detune);
-        songGain.connect(voiceOsc2.detune);
-        
-        // Start constant nodes
-        voiceOsc1.start();
-        voiceOsc2.start();
-        subOsc.start();
+
+        idleLFO = ctx.createOscillator();
+        idleLFO.type = 'sine';
+        idleLFO.frequency.value = .05;
+        idleGain = ctx.createGain();
+        idleGain.gain.value = 0;
+        idleLFO.connect(idleGain);
+
         vibratoLFO.start();
         songLFO.start();
+        idleLFO.start();
+        voices = [0, 1, 2].map(createVoice);
+        useVoice(0);
         
         noiseBuffer = createNoiseBuffer();
         
-        // Init state
         const initialFreq = midiToFreq(degreeToMidi(currentDegree, rootMidi));
-        voiceOsc1.frequency.value = initialFreq;
-        voiceOsc2.frequency.value = initialFreq;
-        subOsc.frequency.value = initialFreq / 2;
+        voices.forEach((voice, index) => {
+            voice.osc1.frequency.value = initialFreq * [1, .92, 1.08][index];
+            voice.osc2.frequency.value = initialFreq * [1, .92, 1.08][index];
+            voice.sub.frequency.value = initialFreq * [1, .92, 1.08][index] / 2;
+        });
         
         isIdle = false;
+        voiceGeneration = 0;
+        commitCount = 0;
+        blockBuffer = [];
         lastKeyTime = performance.now();
     }
 
@@ -221,14 +287,30 @@ window.ValsangEngine = (() => {
         if (!ctx) return;
         clearTimeout(idleTimer);
         try {
-            voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop(); songLFO.stop();
-            if (idleLFO) idleLFO.stop();
+            voices.forEach(voice => {
+                voice.osc1.stop();
+                voice.osc2.stop();
+                voice.sub.stop();
+            });
+            vibratoLFO.stop();
+            songLFO.stop();
+            idleLFO.stop();
         } catch(e) {}
         idleTimer = null;
         idleLFO = null;
         idleGain = null;
+        voices = [];
+        voiceOsc1 = voiceOsc2 = subOsc = voiceGain = null;
+        voiceFilter = formantFilter = upperFormantFilter = null;
         sentenceBuffer = [];
+        blockBuffer = [];
         prevAlphaIdx = null;
+        voiceGeneration = 0;
+        commitCount = 0;
+        stateObj.voicePoolSize = 0;
+        stateObj.activeVoices = 0;
+        stateObj.voiceGeneration = 0;
+        stateObj.lastCommitKind = null;
         isIdle = true;
         ctx = null;
     }
@@ -238,7 +320,7 @@ window.ValsangEngine = (() => {
     }
 
     function setDepth(val) {
-        depthMultiplier = val;
+        depthMultiplier = clamp(Number(val) || 1, .72, 1.12);
     }
 
     let depthMultiplier = 1.0;
@@ -246,7 +328,6 @@ window.ValsangEngine = (() => {
     // Play transient sounds
     function playTransient(type, freq, q, gainVol, duration, routing) {
         if (!ctx) return;
-        const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         
         if (type === 'noise') {
@@ -267,6 +348,7 @@ window.ValsangEngine = (() => {
             noise.stop(ctx.currentTime + duration);
         } else {
             // Sine blip
+            const osc = ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.value = freq;
             gain.gain.setValueAtTime(gainVol, ctx.currentTime);
@@ -326,14 +408,32 @@ window.ValsangEngine = (() => {
         }
     }
 
-    const stateObj = { pitchNorm: 0.5, tempoNorm: 0.5, verse: 0, idle: false };
+    const stateObj = {
+        pitchNorm: 0.5,
+        tempoNorm: 0.5,
+        verse: 0,
+        idle: false,
+        voicePoolSize: 0,
+        foregroundVoice: 0,
+        voiceGeneration: 0,
+        activeVoices: 0,
+        lastCommitKind: null,
+        lastFadeSeconds: 0,
+        lastAttackSeconds: 0
+    };
     
     function getState() {
         if (!ctx) return stateObj;
         stateObj.pitchNorm = clamp(currentDegree / 12, 0, 1);
         stateObj.tempoNorm = clamp((dtEma - 90) / (1400 - 90), 0, 1);
-        stateObj.verse = 0; // Not used exactly as before, but mapped in visuals maybe
+        stateObj.verse = commitCount;
         stateObj.idle = isIdle;
+        stateObj.voicePoolSize = voices.length;
+        stateObj.foregroundVoice = activeVoiceIndex;
+        stateObj.voiceGeneration = voiceGeneration;
+        stateObj.activeVoices = voices.filter((voice, index) =>
+            index === activeVoiceIndex || voice.tailUntil > ctx.currentTime
+        ).length;
         return stateObj;
     }
 
@@ -349,17 +449,6 @@ window.ValsangEngine = (() => {
             if (!ctx) return;
             isIdle = true;
             voiceGain.gain.setTargetAtTime(0.018, ctx.currentTime, 2.5);
-            
-            if (!idleLFO) {
-                idleLFO = ctx.createOscillator();
-                idleLFO.type = 'sine';
-                idleLFO.frequency.value = 0.05;
-                idleGain = ctx.createGain();
-                idleLFO.connect(idleGain);
-                idleGain.connect(voiceOsc1.detune);
-                idleGain.connect(voiceOsc2.detune);
-                idleLFO.start();
-            }
             idleGain.gain.setTargetAtTime(45, ctx.currentTime, 2.0); // ±45 cent
 
             // Glid till centerDegree vid vila
@@ -400,7 +489,11 @@ window.ValsangEngine = (() => {
         
         vibratoLFO.frequency.setTargetAtTime(lerp(4.5, 0.18, x), ctx.currentTime, 0.1);
         vibratoGain.gain.setTargetAtTime(lerp(4, 18, x), ctx.currentTime, 0.1);
-        wetGain.gain.setTargetAtTime(lerp(0.22, 0.55, x) * depthMultiplier, ctx.currentTime, 0.1);
+        wetGain.gain.setTargetAtTime(
+            clamp(lerp(0.18, 0.36, x) * depthMultiplier, .15, .40),
+            ctx.currentTime,
+            0.1
+        );
         
         wakeUp();
 
@@ -444,6 +537,7 @@ window.ValsangEngine = (() => {
             voiceOsc2.detune.linearRampToValueAtTime(6, ctx.currentTime + 0.22);
             
             if (sentenceBuffer.length > 0) sentenceBuffer.pop();
+            if (blockBuffer.length > 0) blockBuffer.pop();
             
         } else if (key === ' ') {
             const currentVol = voiceGain.gain.value;
@@ -500,16 +594,7 @@ window.ValsangEngine = (() => {
             gain.gain.setValueAtTime(0.2, ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
             
-            const delay = ctx.createDelay();
-            delay.delayTime.value = 0.260;
-            const feedback = ctx.createGain();
-            feedback.gain.value = 0.42;
-            
             osc.connect(gain);
-            gain.connect(delay);
-            delay.connect(feedback);
-            feedback.connect(delay);
-            delay.connect(wetGain);
             gain.connect(wetGain);
             
             osc.start();
@@ -544,6 +629,9 @@ window.ValsangEngine = (() => {
                 voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide);
                 voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, glide);
                 subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, glide);
+                const openness = clamp(stats.vowelRatio, .2, .65);
+                formantFilter.frequency.setTargetAtTime(430 + openness * 470 + ix * 4, ctx.currentTime, .18);
+                upperFormantFilter.frequency.setTargetAtTime(880 + openness * 680 + ix * 7, ctx.currentTime, .22);
                 voiceGain.gain.setTargetAtTime(0.20, ctx.currentTime, 0.05);
                 voiceGain.gain.setTargetAtTime(0.05, ctx.currentTime + 0.1, releaseTC);
             } else {
@@ -569,8 +657,117 @@ window.ValsangEngine = (() => {
             }
             
             sentenceBuffer.push({deg: currentDegree});
+            blockBuffer.push({deg: currentDegree, vowel: isVowel, ix});
             emitTrace(degreeToMidi(currentDegree, rootMidi), traceType, isVowel ? 300 : 150);
         }
+    }
+
+    function textSignature(text) {
+        return Array.from(String(text || '').toLowerCase()).reduce(
+            (sum, character, index) => (sum + character.charCodeAt(0) * (index + 3)) % 4093,
+            17
+        );
+    }
+
+    function commit(kind = 'paragraph', blockProfile = {}) {
+        if (!ctx || !voices.length) return;
+        const now = ctx.currentTime;
+        const heading = kind === 'heading';
+        const headingLevel = clamp(Number(blockProfile.level) || contextStats.lastHeadingLevel || 1, 1, 3);
+        const similarity = clamp(
+            Number.isFinite(Number(blockProfile.similarityToPrevious))
+                ? Number(blockProfile.similarityToPrevious)
+                : contextStats.cohesion * .62 + contextStats.connectedness * .38,
+            0,
+            1
+        );
+        const localVowelRatio = clamp(Number(blockProfile.vowelRatio) || contextStats.vowelRatio, .2, .65);
+        const localSentenceWords = clamp(
+            Number(blockProfile.averageSentenceWords) || contextStats.averageSentenceWords,
+            3,
+            45
+        );
+        const signature = textSignature(blockProfile.text) + blockBuffer.reduce(
+            (sum, point, index) => sum + (point.deg + 1) * (index + 5),
+            0
+        );
+        const direction = signature % 2 ? 1 : -1;
+        const inheritedDegree = blockBuffer.length
+            ? blockBuffer.slice(-8).reduce((sum, point) => sum + point.deg, 0) / Math.min(8, blockBuffer.length)
+            : currentDegree;
+        const contourDistance = heading
+            ? 2 + headingLevel
+            : 1 + Math.round((1 - similarity) * 3);
+
+        if (heading) {
+            const headingSteps = [-5, 2, 4];
+            rootMidi = clamp(43 + headingSteps[headingLevel - 1] + (signature % 3) - 1, 36, 50);
+        }
+
+        const oldVoice = voices[activeVoiceIndex];
+        const nextIndex = (activeVoiceIndex + 1) % voices.length;
+        const nextVoice = voices[nextIndex];
+        const fadeSeconds = clamp((heading ? 10 : 8) + similarity * 4, 8, 14);
+        const attackSeconds = clamp((heading ? 2.7 : 2.1) + (1 - similarity) * .45, 2, 3.2);
+        const phraseSeconds = clamp(2.4 + localSentenceWords * .19, 2.8, 8.5);
+        const targetGain = heading ? .145 : .125;
+
+        oldVoice.gain.gain.cancelScheduledValues(now);
+        oldVoice.gain.gain.setValueAtTime(clamp(oldVoice.gain.gain.value || .12, .0001, .2), now);
+        oldVoice.gain.gain.setTargetAtTime(.0001, now + .16, fadeSeconds / 3);
+        oldVoice.tailUntil = now + fadeSeconds;
+
+        nextVoice.gain.gain.cancelScheduledValues(now);
+        nextVoice.gain.gain.setValueAtTime(.0001, now);
+        nextVoice.gain.gain.setTargetAtTime(targetGain, now + .04, attackSeconds / 3);
+        nextVoice.tailUntil = 0;
+
+        const startDegree = clamp(Math.round(inheritedDegree + direction * contourDistance), 0, 15);
+        const middleDegree = clamp(startDegree + direction * (heading ? 2 : 1), 0, 15);
+        const endDegree = clamp(
+            middleDegree + (signature % 3 === 0 ? -direction : direction) * (heading ? 2 : 1),
+            0,
+            15
+        );
+        const startFrequency = midiToFreq(degreeToMidi(startDegree, rootMidi));
+        const middleFrequency = midiToFreq(degreeToMidi(middleDegree, rootMidi));
+        const endFrequency = midiToFreq(degreeToMidi(endDegree, rootMidi));
+        const detuneBias = signature % 37 - 18;
+
+        for (const [oscillator, ratio] of [
+            [nextVoice.osc1, 1],
+            [nextVoice.osc2, 1],
+            [nextVoice.sub, .5]
+        ]) {
+            oscillator.frequency.cancelScheduledValues(now);
+            oscillator.frequency.setValueAtTime(Math.max(30, startFrequency * ratio * .78), now);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, startFrequency * ratio), now + attackSeconds);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, middleFrequency * ratio), now + attackSeconds + phraseSeconds * .48);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency * ratio), now + attackSeconds + phraseSeconds);
+        }
+        nextVoice.osc1.detune.setValueAtTime(detuneBias, now);
+        nextVoice.osc2.detune.setValueAtTime(detuneBias + 5 + nextIndex * 1.5, now);
+        nextVoice.lowpass.frequency.setTargetAtTime(1050 + localVowelRatio * 980, now, .7);
+        nextVoice.formant.frequency.setTargetAtTime(430 + localVowelRatio * 520, now, .55);
+        nextVoice.upperFormant.frequency.setTargetAtTime(900 + localVowelRatio * 760, now, .7);
+        if (nextVoice.panner) {
+            const spread = .08 + (1 - similarity) * .22;
+            nextVoice.panner.pan.setTargetAtTime(direction * spread, now, .8);
+        }
+
+        useVoice(nextIndex);
+        currentDegree = endDegree;
+        degreeFloat = endDegree;
+        commitCount += 1;
+        voiceGeneration += 1;
+        stateObj.lastCommitKind = heading ? 'heading' : 'paragraph';
+        stateObj.lastFadeSeconds = fadeSeconds;
+        stateObj.lastAttackSeconds = attackSeconds;
+        playTransient('noise', 310 + localVowelRatio * 260, .72, heading ? .036 : .025, 1.15, 'wet');
+        emitTrace(degreeToMidi(startDegree, rootMidi), heading ? 'theme' : 'voice', attackSeconds * 1000);
+        sentenceBuffer = [];
+        blockBuffer = [];
+        prevAlphaIdx = null;
     }
 
     return {
@@ -581,6 +778,7 @@ window.ValsangEngine = (() => {
         setVolume,
         setDepth,
         setContext,
+        commit,
         mute: (m) => setVolume(m ? 0 : 0.6), // Standardvolym 0.6, justeras av slider
         onTrace: (cb) => { onTraceCallback = cb; },
         getState

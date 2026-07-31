@@ -1579,6 +1579,54 @@
       gap: 9px;
     }
 
+    .edit-focus-card {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding: 17px;
+      border: 1px solid rgba(255, 211, 92, .72);
+      border-radius: 15px;
+      background:
+        radial-gradient(circle at 14% 0%, rgba(255, 211, 92, .13), transparent 42%),
+        linear-gradient(145deg, rgba(36, 30, 14, .96), rgba(8, 10, 14, .97) 62%);
+      box-shadow:
+        0 0 0 1px rgba(255, 211, 92, .08),
+        0 0 34px rgba(255, 198, 61, .17),
+        inset 0 1px 0 rgba(255, 241, 183, .09);
+    }
+
+    .edit-focus-heading {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .edit-focus-heading .eyebrow {
+      margin: 0 0 4px;
+      color: #ffd96f;
+    }
+
+    .edit-focus-heading h2,
+    .edit-focus-heading h3 {
+      margin: 0;
+      color: #fff1bb;
+      font: 650 18px/1.2 var(--sans);
+    }
+
+    .edit-focus-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(255, 218, 111, .58);
+      border-radius: 12px;
+      background: rgba(255, 203, 66, .12);
+      box-shadow: 0 0 16px rgba(255, 203, 66, .16);
+      color: #ffe18a;
+      font-size: 18px;
+    }
+
     .structure-heading-editor {
       margin: -7px 0 20px;
       padding: 15px;
@@ -1602,7 +1650,7 @@
       width: 100%;
       min-height: 130px;
       padding: 13px;
-      border: 1px solid rgba(89, 194, 255, .35);
+      border: 1px solid rgba(255, 216, 105, .42);
       border-radius: 10px;
       outline: 0;
       resize: vertical;
@@ -1611,10 +1659,29 @@
       font: 17px/1.6 var(--serif);
     }
 
+    .edit-focus-card textarea:focus {
+      border-color: rgba(255, 222, 123, .88);
+      box-shadow: 0 0 0 3px rgba(255, 211, 92, .12), 0 0 24px rgba(255, 198, 61, .12);
+    }
+
     .edit-buttons {
       display: flex;
       justify-content: flex-end;
       gap: 7px;
+    }
+
+    .edit-focus-card .edit-buttons .primary {
+      border-color: rgba(255, 216, 105, .54);
+      background: rgba(255, 205, 70, .13);
+      color: #fff1bb;
+    }
+
+    .edit-shortcut {
+      margin: -3px 0 0;
+      color: rgba(245, 227, 177, .52);
+      font: 9px/1.4 var(--mono);
+      letter-spacing: .04em;
+      text-align: right;
     }
 
     .structure-grid.spine-list {
@@ -1661,6 +1728,12 @@
       background: linear-gradient(90deg, rgba(89, 194, 255, .035), transparent 75%);
     }
 
+    .structure-grid.spine-list .block-card[data-editing="true"] {
+      z-index: 3;
+      border-bottom-color: rgba(255, 216, 105, .48);
+      background: linear-gradient(90deg, rgba(255, 205, 70, .075), transparent 82%);
+    }
+
     .structure-grid.spine-list .block-card[data-kind="heading"] {
       margin-top: 15px;
       border-bottom-color: rgba(197, 160, 89, .2);
@@ -1695,15 +1768,27 @@
       position: relative;
       z-index: 1;
       display: grid;
+      width: 56px;
       min-height: 44px;
+      padding: 0;
+      border: 0;
       align-content: start;
       justify-items: center;
       gap: 6px;
+      background: transparent;
       color: var(--paper-faint);
       cursor: grab;
       font: 8px/1 var(--mono);
       letter-spacing: .05em;
       text-transform: uppercase;
+    }
+
+    .spine-gutter:active { cursor: grabbing; }
+
+    .spine-gutter:focus-visible {
+      border-radius: 12px;
+      outline: 2px solid rgba(89, 194, 255, .7);
+      outline-offset: 2px;
     }
 
     .spine-knot {
@@ -1725,6 +1810,46 @@
       border-color: var(--amber);
       border-radius: 8px 14px 8px 8px;
       color: var(--amber);
+    }
+
+    .spine-position {
+      color: rgba(179, 229, 255, .48);
+    }
+
+    .spine-action-label {
+      color: rgba(179, 229, 255, .46);
+      font-size: 7px;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity .16s, transform .16s;
+    }
+
+    .spine-gutter:hover .spine-action-label,
+    .spine-gutter:focus-visible .spine-action-label,
+    .block-card[data-lifted="true"] .spine-action-label {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .spine-gutter:hover .spine-knot,
+    .spine-gutter:focus-visible .spine-knot {
+      border-color: var(--cyan-bright);
+      box-shadow: 0 0 15px rgba(89, 194, 255, .34);
+    }
+
+    .structure-grid.spine-list[data-moving="true"] .block-card[data-lifted-unit="true"] {
+      border-bottom-color: rgba(89, 194, 255, .34);
+      background: linear-gradient(90deg, rgba(89, 194, 255, .08), transparent 76%);
+    }
+
+    .structure-grid.spine-list[data-moving="true"] .block-card[data-lifted="true"] {
+      z-index: 3;
+      box-shadow: inset 3px 0 0 var(--cyan-bright), 0 0 30px rgba(89, 194, 255, .1);
+    }
+
+    .structure-grid.spine-list[data-moving="true"] .block-card:not([data-lifted="true"]) .block-tools {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .structure-grid.spine-list .block-main {
@@ -1842,6 +1967,78 @@
       color: var(--cyan-bright);
     }
 
+    .move-session {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 8px 0 13px;
+      padding: 15px 16px 15px 18px;
+      border: 1px solid rgba(89, 194, 255, .42);
+      border-radius: 15px;
+      background: linear-gradient(110deg, rgba(26, 65, 84, .65), rgba(8, 12, 18, .94) 72%);
+      box-shadow: 0 0 28px rgba(89, 194, 255, .11);
+      list-style: none;
+    }
+
+    .move-session div {
+      display: grid;
+      gap: 4px;
+    }
+
+    .move-session strong {
+      color: var(--cyan-bright);
+      font: 650 15px/1.3 var(--sans);
+    }
+
+    .move-session small {
+      color: var(--paper-dim);
+      font: 10px/1.45 var(--mono);
+    }
+
+    .move-seam-row {
+      min-height: 10px;
+    }
+
+    .move-seam-row[data-valid-move="true"] {
+      min-height: 66px;
+    }
+
+    .writing-seam.move-seam,
+    .structure-grid.spine-list[data-dragging="true"] .writing-seam[data-valid-move="true"] {
+      min-width: min(430px, calc(100vw - 84px));
+      min-height: 48px;
+      flex-wrap: wrap;
+      padding: 8px 16px;
+      border: 1px solid rgba(89, 194, 255, .38);
+      background: rgba(36, 112, 150, .13);
+      box-shadow: 0 0 20px rgba(89, 194, 255, .1);
+      color: var(--cyan-bright);
+      cursor: pointer;
+    }
+
+    .writing-seam.move-seam .writing-seam-copy,
+    .structure-grid.spine-list[data-dragging="true"] .writing-seam[data-valid-move="true"] .writing-seam-copy {
+      color: var(--cyan-bright);
+    }
+
+    .writing-seam.move-seam small {
+      flex-basis: 100%;
+      color: var(--paper-dim);
+      font: 9px/1.35 var(--mono);
+      letter-spacing: 0;
+      text-align: center;
+      text-transform: none;
+    }
+
+    .writing-seam[data-drop="true"] {
+      border-color: var(--cyan-bright) !important;
+      background: rgba(89, 194, 255, .22) !important;
+      box-shadow: 0 0 0 3px rgba(89, 194, 255, .12), 0 0 32px rgba(89, 194, 255, .22) !important;
+    }
+
     .node-editor-sheet textarea {
       width: 100%;
       min-height: 230px;
@@ -1853,6 +2050,10 @@
       background: rgba(3, 6, 10, .72);
       color: var(--paper);
       font: 17px/1.62 var(--serif);
+    }
+
+    .node-editor-sheet.edit-focus-card textarea {
+      border-color: rgba(255, 216, 105, .42);
     }
 
     .node-editor-note {
@@ -3136,6 +3337,24 @@
         left: 21px;
       }
 
+      .structure-grid.spine-list .spine-gutter {
+        width: 44px;
+      }
+
+      .spine-action-label {
+        opacity: 1;
+      }
+
+      .move-session {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 11px;
+      }
+
+      .move-session .small-button {
+        width: 100%;
+      }
+
       .structure-grid.spine-list .block-tools {
         grid-column: 2;
         width: 100%;
@@ -3278,6 +3497,10 @@
 
       .writing-seam-copy {
         display: none;
+      }
+
+      .structure-grid.spine-list[data-moving="true"] .writing-seam-copy {
+        display: inline;
       }
 
       .writing-seam-mark {
@@ -3909,7 +4132,7 @@
         name: 'Valsång',
         adaptive: true,
         dynamic: true,
-        description: 'SkrivR:s sjungande dubbelröst, vidareutvecklad för VävR. Bokstäver formar glidande valfraser, konsonanter blir andning och meningar återkommer som långa ekon.'
+        description: 'En biologiskt inspirerad flock av glidande röster. Varje nytt stycke väcker en ny valfras medan den föregående långsamt tonar bort; likhet, rubriker och meningsrytm formar släktskapet mellan dem.'
       },
       hardfork: {
         name: 'Hard Fork',
@@ -4740,11 +4963,14 @@
         });
       }
 
-      function commit(kind) {
+      function commit(kind, blockProfile = {}) {
         const active = session;
         if (!active || !reactive) return;
         ensureRunning(active);
-        if (active.externalEngine) return;
+        if (active.externalEngine) {
+          active.externalEngine.commit?.(kind, blockProfile);
+          return;
+        }
         if (active.dynamic?.kind === 'valsang') {
           const scale = active.dynamic.openScale ? dynamicScales.open : dynamicScales.minor;
           const degrees = kind === 'heading' ? [0, 4, 7] : [0, 2, 4];
@@ -5264,7 +5490,8 @@
     let editingId = null;
     let editingSnapshot = null;
     let editingBuffer = null;
-    let draggedBlockIndex = null;
+    let liftedMove = null;
+    let draggedBlockId = null;
     let structureSectionId = null;
     let graphLens = 'all';
     let pendingInsertContext = null;
@@ -6364,6 +6591,42 @@
       };
     }
 
+    function soundBlockProfile(block) {
+      const document = activeDocument();
+      const index = document.blocks.findIndex(item => item.id === block?.id);
+      const text = String(block?.text || '');
+      const words = text.match(/[\p{L}\p{N}]+/gu) || [];
+      const letters = text.toLowerCase().match(/[a-zåäö]/g) || [];
+      const vowels = letters.filter(letter => 'aeiouyåäö'.includes(letter)).length;
+      const sentenceWordCounts = text
+        .split(/[.!?]+/)
+        .map(sentence => wordCount(sentence))
+        .filter(Boolean);
+      let previousParagraph = null;
+      for (let cursor = index - 1; cursor >= 0; cursor--) {
+        if (document.blocks[cursor]?.kind === 'paragraph') {
+          previousParagraph = document.blocks[cursor];
+          break;
+        }
+      }
+      return {
+        id: block?.id || '',
+        kind: block?.kind || 'paragraph',
+        level: block?.level || null,
+        text,
+        words: words.length,
+        characters: characterCount(text),
+        vowelRatio: letters.length ? vowels / letters.length : .38,
+        averageSentenceWords: sentenceWordCounts.length
+          ? sentenceWordCounts.reduce((sum, count) => sum + count, 0) / sentenceWordCounts.length
+          : Math.max(3, words.length),
+        similarityToPrevious: previousParagraph
+          ? clamp(analysis?.scores?.get(pairKey(block.id, previousParagraph.id)) || 0, 0, 1)
+          : 0,
+        sectionId: analysis?.owners?.get(block?.id) || null
+      };
+    }
+
     function scheduleSoundTextUpdate() {
       if (!Soundscape.isAdaptive()) return;
       clearTimeout(soundProfileTimer);
@@ -6710,7 +6973,7 @@
       commitsThisSession += 1;
       recalculate(block.id);
       animateCommit(block.id, ghostText);
-      Soundscape.commit(block.kind);
+      Soundscape.commit(block.kind, soundBlockProfile(block));
       announce((block.kind === 'heading' ? 'Rubrik' : 'Stycke') + ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.');
     }
 
@@ -7525,16 +7788,25 @@
           ? '#'.repeat(block.level) + ' ' + block.text
           : block.text;
         const displayText = editingBuffer ?? canonicalText;
+        const editLabel = block.kind === 'heading'
+          ? `Redigerar rubrik H${block.level}`
+          : `Redigerar stycke ${node.index + 1}`;
         elements.inspectorContent.innerHTML = `
-          <div class="node-editor-sheet">
-            <p class="eyebrow">Utrullad nod</p>
-            <h2 id="inspector-title">Redigera ${block.kind === 'heading' ? 'rubriken' : 'stycket'}</h2>
-            <p class="node-editor-note">Noden stannar på samma plats medan du skriver. Analysen räknas om först när du sparar.</p>
-            <textarea id="node-edit-text" aria-label="Redigera vald nod">${escapeHtml(displayText)}</textarea>
+          <div class="node-editor-sheet edit-focus-card" role="group" aria-labelledby="inspector-title">
+            <div class="edit-focus-heading">
+              <span class="edit-focus-mark" aria-hidden="true">✎</span>
+              <div>
+                <p class="eyebrow">Redigeringsläge</p>
+                <h2 id="inspector-title">${escapeHtml(editLabel)}</h2>
+              </div>
+            </div>
+            <p class="node-editor-note" id="node-edit-note">Noden stannar på samma plats medan du skriver. Analysen räknas om först när du sparar.</p>
+            <textarea id="node-edit-text" aria-label="${escapeHtml(editLabel)}" aria-describedby="node-edit-note">${escapeHtml(displayText)}</textarea>
             <div class="edit-buttons">
               <button id="node-edit-cancel" class="small-button" type="button">Avbryt</button>
-              <button id="node-edit-save" class="small-button primary" type="button">Spara noden</button>
+              <button id="node-edit-save" class="small-button primary" type="button">Spara ändring</button>
             </div>
+            <p class="edit-shortcut">Ctrl eller Cmd + Enter sparar · Escape avbryter</p>
           </div>`;
         $('#node-edit-cancel')?.addEventListener('click', cancelEditing);
         $('#node-edit-save')?.addEventListener('click', () => saveEditing(id));
@@ -7598,6 +7870,7 @@
         </section>` : ''}
         <div class="inspector-actions">
           <button class="plain-button primary" id="edit-selected">${view === 'graph' ? 'Redigera noden här' : 'Redigera här'}</button>
+          ${view === 'graph' ? '<button class="plain-button" id="move-selected">Flytta i manuset</button>' : ''}
           ${view === 'graph' ? '<button class="plain-button" id="show-selected">Visa i Lista</button>' : ''}
         </div>`;
 
@@ -7607,6 +7880,7 @@
       $('#edit-selected')?.addEventListener('click', () => {
         startEditing(id);
       });
+      $('#move-selected')?.addEventListener('click', () => startLiftedMove(id));
       $('#show-selected')?.addEventListener('click', () => {
         structureSectionId = null;
         switchVavbordView('list');
@@ -7781,30 +8055,114 @@
       return paragraphSiblingIndex(index, direction) !== null;
     }
 
-    function moveBlockUnit(index, direction) {
-      if (!guardActiveEdit()) return;
+    function moveUnitRange(blockId) {
       const blocks = activeDocument().blocks;
-      const range = sectionRange(index);
-      if (!canMoveUnit(index, direction)) return;
-      const headingSibling = blocks[index].kind === 'heading' ? siblingHeadingIndex(index, direction) : null;
-      const paragraphSibling = blocks[index].kind === 'paragraph' ? paragraphSiblingIndex(index, direction) : null;
-      pushHistory(blocks[index].kind === 'heading' ? 'Flytta sektion' : 'Flytta block');
+      const index = blocks.findIndex(block => block.id === blockId);
+      if (index < 0) return null;
+      return { ...sectionRange(index), index, block: blocks[index] };
+    }
 
-      const unit = blocks.splice(range.start, range.end - range.start);
-      if (unit[0].kind === 'heading') {
-        if (direction < 0) {
-          blocks.splice(headingSibling, 0, ...unit);
-        } else {
-          const adjustedSibling = headingSibling - unit.length;
-          const siblingRange = sectionRange(adjustedSibling);
-          blocks.splice(siblingRange.end, 0, ...unit);
+    function validMoveBoundaries(blockId) {
+      const blocks = activeDocument().blocks;
+      const range = moveUnitRange(blockId);
+      const boundaries = new Set();
+      if (!range) return boundaries;
+      if (range.block.kind === 'paragraph') {
+        for (let boundary = 0; boundary <= blocks.length; boundary++) {
+          if (boundary !== range.start && boundary !== range.end) boundaries.add(boundary);
         }
       } else {
-        const siblingId = activeDocument().blocks[paragraphSibling > index ? paragraphSibling - 1 : paragraphSibling]?.id;
-        const currentSiblingIndex = blocks.findIndex(block => block.id === siblingId);
-        const insertion = direction < 0 ? currentSiblingIndex : currentSiblingIndex + 1;
-        blocks.splice(insertion, 0, ...unit);
+        const owner = analysis.owners.get(range.block.id) || null;
+        blocks.forEach((block, index) => {
+          if (block.id === blockId || block.kind !== 'heading' || block.level !== range.block.level) return;
+          if ((analysis.owners.get(block.id) || null) !== owner) return;
+          boundaries.add(index);
+          boundaries.add(sectionRange(index).end);
+        });
+        boundaries.delete(range.start);
+        boundaries.delete(range.end);
+        for (const boundary of [...boundaries]) {
+          if (boundary > range.start && boundary < range.end) boundaries.delete(boundary);
+        }
       }
+      return boundaries;
+    }
+
+    function moveBoundaryContext(blockId, boundary) {
+      const blocks = activeDocument().blocks;
+      const range = moveUnitRange(blockId);
+      if (!range) return { label: 'Placera här', detail: '' };
+      const remaining = blocks.filter((_, index) => index < range.start || index >= range.end);
+      const insertion = boundary > range.end ? boundary - (range.end - range.start) : boundary;
+      const previous = remaining[insertion - 1];
+      const next = remaining[insertion];
+      const relation = previous && next
+        ? `mellan "${snippet(previous.text, 28)}" och "${snippet(next.text, 28)}"`
+        : (previous
+          ? `efter "${snippet(previous.text, 38)}"`
+          : (next ? `före "${snippet(next.text, 38)}"` : 'i dokumentet'));
+      return { label: 'Placera här', detail: relation };
+    }
+
+    function liftedMoveDescription(blockId) {
+      const range = moveUnitRange(blockId);
+      if (!range) return '';
+      if (range.block.kind === 'heading') {
+        const count = range.end - range.start;
+        return `Flyttar sektionen "${snippet(range.block.text, 46)}" med ${count} block`;
+      }
+      return `Flyttar stycke ${range.index + 1}`;
+    }
+
+    function cancelLiftedMove(shouldAnnounce = true) {
+      const id = liftedMove?.id;
+      liftedMove = null;
+      if (view === 'structure') renderOutline();
+      if (id) focusBlockControl(id);
+      if (shouldAnnounce) announce('Flytten avbröts. Dokumentordningen är oförändrad.');
+    }
+
+    function startLiftedMove(blockId) {
+      if (!guardActiveEdit()) return;
+      const range = moveUnitRange(blockId);
+      if (!range) return;
+      const destinations = validMoveBoundaries(blockId);
+      if (!destinations.size) {
+        toast(range.block.kind === 'heading'
+          ? 'Sektionen har ingen annan giltig plats på samma rubriknivå'
+          : 'Stycket har ingen annan plats att flytta till');
+        return;
+      }
+      if (view !== 'structure') {
+        lastVavbordFocusId = blockId;
+        if (elements.inspector.dataset.open === 'true' && closeInspector() === false) return;
+        switchVavbordView('list');
+        requestAnimationFrame(() => startLiftedMove(blockId));
+        return;
+      }
+      liftedMove = { id: blockId };
+      lastVavbordFocusId = blockId;
+      renderOutline();
+      requestAnimationFrame(() => {
+        const firstTarget = $('.writing-seam[data-valid-move="true"]', elements.outline);
+        firstTarget?.focus();
+        firstTarget?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
+      });
+      announce(liftedMoveDescription(blockId) + '. Välj en lysande flyttsöm och tryck Enter för att placera. Escape avbryter.');
+    }
+
+    function moveUnitToBoundary(blockId, boundary) {
+      if (!guardActiveEdit()) return false;
+      const blocks = activeDocument().blocks;
+      const range = moveUnitRange(blockId);
+      const destination = Number(boundary);
+      if (!range || !validMoveBoundaries(blockId).has(destination)) return false;
+      const moveLabel = range.block.kind === 'heading' ? 'Flytta sektion' : 'Flytta stycke';
+      pushHistory(moveLabel);
+      const unit = blocks.splice(range.start, range.end - range.start);
+      const insertion = destination > range.end ? destination - unit.length : destination;
+      blocks.splice(clamp(insertion, 0, blocks.length), 0, ...unit);
+      liftedMove = null;
       saveState();
       recalculate();
       requestAnimationFrame(() => {
@@ -7814,36 +8172,22 @@
       });
       const newIndex = blocks.findIndex(block => block.id === unit[0].id);
       announce((unit[0].kind === 'heading' ? 'Sektionen' : 'Blocket') + ' flyttades till position ' + (newIndex + 1));
-      toast(unit[0].kind === 'heading' ? 'Sektionen flyttades' : 'Blocket flyttades');
+      toast((unit[0].kind === 'heading' ? 'Sektionen' : 'Stycket') + ' flyttades. Ångra med Ctrl eller Cmd + Z.');
+      return true;
     }
 
-    function reorderByDrop(fromIndex, targetIndex) {
-      if (fromIndex == null || targetIndex == null || fromIndex === targetIndex) return;
-      if (!guardActiveEdit()) return;
+    function moveBlockUnit(index, direction) {
       const blocks = activeDocument().blocks;
-      const source = blocks[fromIndex];
-      const target = blocks[targetIndex];
-      if (!source || !target || source.kind !== target.kind) return;
-      const sameOwner = (analysis.owners.get(source.id) || null) === (analysis.owners.get(target.id) || null);
-      if (!sameOwner || (source.kind === 'heading' && source.level !== target.level)) {
-        return toast('Flytta bara mellan kort på samma nivå');
-      }
-      const range = sectionRange(fromIndex);
-      if (targetIndex >= range.start && targetIndex < range.end) return;
-      pushHistory(blocks[fromIndex].kind === 'heading' ? 'Dra sektion' : 'Dra block');
-      const movingForward = fromIndex < targetIndex;
-      const targetId = target.id;
-      const unit = blocks.splice(range.start, range.end - range.start);
-      const currentTargetIndex = blocks.findIndex(block => block.id === targetId);
-      let insert = currentTargetIndex;
-      if (movingForward) {
-        insert = source.kind === 'heading'
-          ? sectionRange(currentTargetIndex).end
-          : currentTargetIndex + 1;
-      }
-      blocks.splice(clamp(insert, 0, blocks.length), 0, ...unit);
-      saveState();
-      recalculate();
+      const block = blocks[index];
+      if (!block || !canMoveUnit(index, direction)) return;
+      const targetIndex = block.kind === 'heading'
+        ? siblingHeadingIndex(index, direction)
+        : paragraphSiblingIndex(index, direction);
+      if (targetIndex == null) return;
+      const boundary = direction < 0
+        ? targetIndex
+        : (block.kind === 'heading' ? sectionRange(targetIndex).end : targetIndex + 1);
+      moveUnitToBoundary(block.id, boundary);
     }
 
     function deleteBlock(id) {
@@ -8132,12 +8476,27 @@
         ? '#'.repeat(block.level) + ' ' + block.text
         : block.text;
       const displayText = editingId === block.id && editingBuffer != null ? editingBuffer : canonicalText;
-      return `<div class="edit-area">
-        <textarea aria-label="Redigera block">${escapeHtml(displayText)}</textarea>
+      const index = activeDocument().blocks.findIndex(item => item.id === block.id);
+      const editLabel = block.kind === 'heading'
+        ? `Redigerar rubrik H${block.level}`
+        : `Redigerar stycke ${index + 1}`;
+      const titleId = `edit-title-${block.id}`;
+      const noteId = `edit-note-${block.id}`;
+      return `<div class="edit-area edit-focus-card" role="group" aria-labelledby="${escapeHtml(titleId)}">
+        <div class="edit-focus-heading">
+          <span class="edit-focus-mark" aria-hidden="true">✎</span>
+          <div>
+            <p class="eyebrow">Redigeringsläge</p>
+            <h3 id="${escapeHtml(titleId)}">${escapeHtml(editLabel)}</h3>
+          </div>
+        </div>
+        <p class="node-editor-note" id="${escapeHtml(noteId)}">Texten och analysen uppdateras först när du sparar.</p>
+        <textarea aria-label="${escapeHtml(editLabel)}" aria-describedby="${escapeHtml(noteId)}">${escapeHtml(displayText)}</textarea>
         <div class="edit-buttons">
           <button class="small-button" data-action="cancel">Avbryt</button>
-          <button class="small-button primary" data-action="save">Spara</button>
+          <button class="small-button primary" data-action="save">Spara ändring</button>
         </div>
+        <p class="edit-shortcut">Ctrl eller Cmd + Enter sparar · Escape avbryter</p>
       </div>`;
     }
 
@@ -8224,6 +8583,19 @@
     }
 
     function writingSeam(index, total) {
+      if (liftedMove) {
+        const valid = validMoveBoundaries(liftedMove.id).has(index);
+        if (!valid) return '<li class="writing-seam-row move-seam-row" data-valid-move="false" aria-hidden="true"></li>';
+        const destination = moveBoundaryContext(liftedMove.id, index);
+        return `<li class="writing-seam-row move-seam-row" data-valid-move="true">
+          <button class="writing-seam move-seam" type="button" data-move-boundary="${index}" data-valid-move="true"
+                  aria-label="${escapeHtml(destination.label + ', ' + destination.detail)}">
+            <span class="writing-seam-mark" aria-hidden="true">◇</span>
+            <span class="writing-seam-copy">Placera här</span>
+            <small>${escapeHtml(destination.detail)}</small>
+          </button>
+        </li>`;
+      }
       const label = total === 0
         ? 'Skriv dokumentets första block'
         : (index === 0 ? 'Skriv före första blocket' : (index === total ? 'Skriv efter sista blocket' : `Skriv mellan block ${index} och ${index + 1}`));
@@ -8235,9 +8607,24 @@
       </li>`;
     }
 
+    function liftedMoveBanner() {
+      if (!liftedMove) return '';
+      return `<li class="move-session" role="status">
+        <div>
+          <span class="eyebrow">Lyft och placera</span>
+          <strong>${escapeHtml(liftedMoveDescription(liftedMove.id))}</strong>
+          <small>Välj en lysande flyttsöm. Endast giltiga platser visas.</small>
+        </div>
+        <button class="small-button" type="button" data-cancel-move>Avbryt flytt</button>
+      </li>`;
+    }
+
     function spineCard(block, index) {
       const node = analysis.nodesById.get(block.id);
       const editing = editingId === block.id;
+      const liftedRange = liftedMove ? moveUnitRange(liftedMove.id) : null;
+      const lifted = liftedMove?.id === block.id;
+      const liftedUnit = Boolean(liftedRange && index >= liftedRange.start && index < liftedRange.end);
       const tension = Boolean(node?.flow);
       const kindLabel = block.kind === 'heading' ? `Rubrik H${block.level}` : `Stycke ${index + 1}`;
       const tensionLabel = node?.flow
@@ -8247,11 +8634,16 @@
                 data-block-id="${escapeHtml(block.id)}" data-index="${index}"
                 data-kind="${block.kind}" data-level="${block.level || ''}"
                 data-editing="${editing}" data-selected="${String(selectedId === block.id)}"
-                data-tension="${String(tension)}">
-        <span class="spine-gutter" draggable="${editingId ? 'false' : 'true'}" aria-hidden="true" title="Dra för att flytta i läsordningen">
+                data-tension="${String(tension)}" data-lifted="${String(lifted)}"
+                data-lifted-unit="${String(liftedUnit)}">
+        <button class="spine-gutter" type="button" data-action="${lifted ? 'cancel-move' : 'lift'}"
+                draggable="${!editingId && !liftedMove ? 'true' : 'false'}"
+                aria-label="${lifted ? 'Avbryt flytt av ' : 'Lyft och flytta '}${escapeHtml(kindLabel.toLowerCase())}"
+                title="${lifted ? 'Avbryt flytt' : 'Lyft och placera'}">
           <span class="spine-knot">${block.kind === 'heading' ? 'H' + block.level : '¶'}</span>
-          <span>${String(index + 1).padStart(2, '0')}</span>
-        </span>
+          <span class="spine-position">${String(index + 1).padStart(2, '0')}</span>
+          <span class="spine-action-label">${lifted ? 'Lyft' : 'Flytta'}</span>
+        </button>
         <div class="block-main">
           <div class="block-meta">
             <span>${kindLabel}</span>
@@ -8261,11 +8653,8 @@
           ${editing ? editMarkup(block) : `<button class="block-text" data-action="select">${escapeHtml(block.text)}</button>`}
         </div>
         <div class="block-tools">
-          <button class="icon-button" data-action="up" aria-label="Flytta ${block.kind === 'heading' ? 'sektionen' : 'stycket'} tidigare" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
-          </button>
-          <button class="icon-button" data-action="down" aria-label="Flytta ${block.kind === 'heading' ? 'sektionen' : 'stycket'} senare" ${canMoveUnit(index, 1) ? '' : 'disabled'}>
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>
+          <button class="icon-button" data-action="lift" aria-label="Lyft och flytta ${block.kind === 'heading' ? 'sektionen' : 'stycket'}" title="Lyft och placera">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>
           </button>
           <button class="icon-button" data-action="edit" aria-label="Redigera ${block.kind === 'heading' ? 'rubrik' : 'stycke'}">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z"/></svg>
@@ -8334,7 +8723,10 @@
         });
         card.addEventListener('keydown', event => {
           if (event.target !== card) return;
-          if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+          if (event.key === ' ' || event.key.toLowerCase() === 'm') {
+            event.preventDefault();
+            startLiftedMove(id);
+          } else if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
             event.preventDefault();
             moveBlockUnit(index, event.key === 'ArrowUp' ? -1 : 1);
           } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
@@ -8355,35 +8747,36 @@
           }
         });
         card.addEventListener('dragstart', event => {
-          if (editingId) return event.preventDefault();
-          draggedBlockIndex = index;
+          if (editingId || liftedMove || !event.target.closest('.spine-gutter')) return event.preventDefault();
+          draggedBlockId = id;
           card.dataset.dragging = 'true';
+          grid.dataset.dragging = 'true';
+          const valid = validMoveBoundaries(id);
+          $$('.writing-seam', grid).forEach(seam => {
+            seam.dataset.validMove = String(valid.has(Number(seam.dataset.writingIndex)));
+          });
           event.dataTransfer.effectAllowed = 'move';
-          event.dataTransfer.setData('text/plain', String(index));
-        });
-        card.addEventListener('dragover', event => {
-          if (draggedBlockIndex == null) return;
-          event.preventDefault();
-          card.dataset.drop = 'true';
-        });
-        card.addEventListener('dragleave', () => delete card.dataset.drop);
-        card.addEventListener('drop', event => {
-          event.preventDefault();
-          delete card.dataset.drop;
-          reorderByDrop(draggedBlockIndex, index);
+          event.dataTransfer.setData('text/plain', id);
         });
         card.addEventListener('dragend', () => {
-          draggedBlockIndex = null;
+          draggedBlockId = null;
           delete card.dataset.dragging;
-          $$('.block-card', elements.structureBoard).forEach(item => delete item.dataset.drop);
+          delete grid.dataset.dragging;
+          $$('.writing-seam', grid).forEach(seam => {
+            delete seam.dataset.drop;
+            if (!liftedMove) delete seam.dataset.validMove;
+          });
         });
         card.addEventListener('dblclick', event => {
-          if (!event.target.closest('.block-tools')) startEditing(id);
+          if (!liftedMove && !event.target.closest('.block-tools, .spine-gutter')) startEditing(id);
         });
         $$('[data-action]', card).forEach(button => {
           button.addEventListener('click', () => {
             const action = button.dataset.action;
-            if (action === 'open') openStructureSection(id);
+            if (action === 'cancel-move') cancelLiftedMove();
+            else if (action === 'lift') startLiftedMove(id);
+            else if (liftedMove) return;
+            else if (action === 'open') openStructureSection(id);
             else if (action === 'select') {
               if (!guardActiveEdit()) return;
               selectedId = id;
@@ -8411,11 +8804,30 @@
           }
         });
       });
+      $$('.writing-seam', grid).forEach(seam => {
+        seam.addEventListener('dragover', event => {
+          if (!draggedBlockId || seam.dataset.validMove !== 'true') return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          seam.dataset.drop = 'true';
+        });
+        seam.addEventListener('dragleave', () => delete seam.dataset.drop);
+        seam.addEventListener('drop', event => {
+          if (!draggedBlockId || seam.dataset.validMove !== 'true') return;
+          event.preventDefault();
+          const movingId = draggedBlockId;
+          const boundary = Number(seam.dataset.writingIndex);
+          draggedBlockId = null;
+          delete grid.dataset.dragging;
+          moveUnitToBoundary(movingId, boundary);
+        });
+      });
     }
 
     function renderOutline() {
       if (view !== 'structure') return;
       const document = activeDocument();
+      if (liftedMove && !moveUnitRange(liftedMove.id)) liftedMove = null;
       const metrics = documentMetrics(document);
       const tensionCount = analysis.nodes.filter(node => node.kind === 'paragraph' && node.flow).length;
       const tensionSummary = graphLens === 'tension'
@@ -8425,7 +8837,9 @@
         : (tensionCount ? ` ${tensionCount} block bär uppmätt spänning.` : '');
       structureSectionId = null;
       elements.structureTitle.textContent = document.title;
-      elements.structureSummary.textContent = `${formatNumber(metrics.words)} ord i ${document.blocks.length} block. Klicka i en skrivsöm för exakt infogning. Alt + pil flyttar, E redigerar och S skriver efter fokuserat block.${tensionSummary}`;
+      elements.structureSummary.textContent = liftedMove
+        ? `${liftedMoveDescription(liftedMove.id)}. Välj en lysande flyttsöm. Escape avbryter.`
+        : `${formatNumber(metrics.words)} ord i ${document.blocks.length} block. Klicka på en knut eller tryck mellanslag för att lyfta. Alt + pil snabbflyttar, E redigerar och S skriver efter fokuserat block.${tensionSummary}`;
       elements.structureUp.hidden = true;
       elements.structureEditHeading.hidden = true;
       elements.structureHeadingEditor.hidden = true;
@@ -8436,7 +8850,9 @@
       elements.paragraphZoneCount.textContent = document.blocks.length + (document.blocks.length === 1 ? ' block' : ' block');
       elements.sectionZoneCount.textContent = '';
       elements.outline.classList.add('spine-list');
+      elements.outline.dataset.moving = String(Boolean(liftedMove));
       elements.outline.innerHTML = [
+        liftedMoveBanner(),
         writingSeam(0, document.blocks.length),
         ...document.blocks.flatMap((block, index) => [spineCard(block, index), writingSeam(index + 1, document.blocks.length)])
       ].join('');
@@ -8451,6 +8867,11 @@
           seams.forEach(item => item.tabIndex = item === button ? 0 : -1);
         });
         button.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && liftedMove) {
+            event.preventDefault();
+            cancelLiftedMove();
+            return;
+          }
           if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
           event.preventDefault();
           const targetPosition = event.key === 'Home'
@@ -8460,9 +8881,14 @@
         });
         button.addEventListener('click', () => {
           lastWritingSeamIndex = position;
-          beginWritingAt(Number(button.dataset.writingIndex));
+          if (button.dataset.moveBoundary != null && liftedMove) {
+            moveUnitToBoundary(liftedMove.id, Number(button.dataset.moveBoundary));
+          } else {
+            beginWritingAt(Number(button.dataset.writingIndex));
+          }
         });
       });
+      $('[data-cancel-move]', elements.outline)?.addEventListener('click', () => cancelLiftedMove());
       wireStructureGrid(elements.outline);
     }
 
@@ -8761,6 +9187,10 @@
     function switchView(nextView) {
       if (!['write', 'graph', 'structure'].includes(nextView)) return;
       if (nextView !== view && !guardActiveEdit()) return;
+      if (nextView !== 'structure') {
+        liftedMove = null;
+        draggedBlockId = null;
+      }
       view = nextView;
       if (nextView === 'graph' || nextView === 'structure') {
         app.settings.vavbordView = nextView === 'graph' ? 'nodes' : 'list';
@@ -9229,6 +9659,8 @@
       editingId = null;
       editingSnapshot = null;
       editingBuffer = null;
+      liftedMove = null;
+      draggedBlockId = null;
       lastVavbordFocusId = null;
       inspectorReturnFocusId = null;
       undoStack = [];
@@ -9584,6 +10016,7 @@
         } else if (event.key === 'Escape') {
           if (elements.utility.dataset.open === 'true') closeUtility();
           else if (editingId) cancelEditing();
+          else if (liftedMove) cancelLiftedMove();
           else if (elements.inspector.dataset.open === 'true') closeInspector();
           else if (view === 'structure' && structureSectionId) {
             const { sections } = buildStructureTree();

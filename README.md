@@ -37,14 +37,18 @@ ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
 
    - **Lista** visar hela manuset som en linjär ryggrad i verklig läsordning.
      Rubriker, stycken och nivåer har olika form men texten förblir läsbar.
-     Block redigeras direkt, Alt + pil flyttar dem och rubrikflytt tar med
-     hela sektionen. Skrivsömmar mellan varje block placerar nästa nya block
-     exakt där användaren väljer. S på ett fokuserat block öppnar sömmen efter
-     blocket.
+     Ett klick på knuten lyfter ett stycke eller en hel rubriksektion. Då blir
+     endast giltiga Skrivsömmar synliga som stora mål märkta Placera här.
+     Samma flöde fungerar med tryck på pekskärm och med mellanslag, piltangent
+     och Enter på tangentbord. Alt + pil finns kvar som snabbväg. Vanlig
+     musdragning släpper på samma exakta sömmar. Skrivsömmar i normalläget
+     placerar nästa nya block där användaren väljer.
    - **Noder** visar samma block som namngivna textfragment. Den vertikala
      positionen är mjukt förankrad i läsordningen medan lexikala samband
      påverkar sidledsdragningen. Ett valt block kan rullas ut till ett
-     redigeringsblad utan att nodfältet lämnas.
+     redigeringsblad utan att nodfältet lämnas. Flytta i manuset öppnar samma
+     Lyft och placera-flöde i Lista, medan fri noddragning bara ändrar nodens
+     visuella placering.
 
 Valt block och fokus följer med mellan Lista och Noder. Webbläsare med stöd
 för View Transitions låter blocket övergå mjukt mellan lägena, medan reducerad
@@ -53,6 +57,9 @@ rörelse ger ett omedelbart skifte.
 En pågående direktredigering är en skyddad transaktion. Dokumentbyte,
 linsbyte och arbetsrumsbyte väntar tills texten har sparats eller avbrutits,
 och webbläsaren varnar om sidan stängs med osparad redigering.
+Redigeringsläget har samma mörka fokuskort i Lista och Noder, med stilla
+bärnstensgul kant, pennmarkering och en utskriven status som inte förlitar sig
+på färgen ensam.
 
 **Spänningslinsen** visar block där läsordningen och ordsläktskapet drar åt
 olika håll. Den är en fråga att undersöka, inte ett kvalitetsbetyg, och ändrar
@@ -90,9 +97,14 @@ Två dynamiska kompositioner svarar både på varje tecken och på textens
 sammanlagda form:
 
 - **Valsång** formar melodisk riktning av bokstavsföljder, låter vokaler
-  andas längre och bygger fraser av skrivtempo, ordform och meningar. Temat
-  bevarar SkrivR-originalets kontinuerliga dubbelröst, subröst,
-  konsonantklanger, långsamma valglid och reverbererande meningsekon.
+  andas längre och bygger fraser av skrivtempo, ordform och meningar. En fast
+  pool med tre röster gör styckesväxlingen tydlig utan växande resursbruk.
+  När ett nytt stycke vävs in växer nästa röst fram under ungefär två till
+  tre sekunder medan den föregående tonar bort under åtta till fjorton
+  sekunder. Rubriknivå, lokal likhet med föregående stycke, vokalandel och
+  meningslängd styr register, motivsläktskap, formanter och överlappning.
+  Enter avslutar en fras men skapar inte en ny röst förrän blocket verkligen
+  har vävts in.
 - **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
   bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
   Ett nytt direktanslag hörs vid själva tangenten, medan det fylligare lagret

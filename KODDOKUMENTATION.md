@@ -21,7 +21,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | Fil | Roll |
 |---|---|
 | `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, dokumentyta, dokumentlikhet, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
-| `valsang-engine.js` | SkrivR:s kontinuerliga Valsångsmotor, anpassad till VävR:s ljudkontext och utökad med långsam organisk tonböjning |
+| `valsang-engine.js` | Biologiskt inspirerad Valsångsmotor med omedelbar tangentrespons, frasminne och en fast tre-rösterspool för styckesvisa korsfader |
 | `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills och ett nytt omedelbart tangentanslag |
 | `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
 | `sw.js` | Versionsstyrd appskal-cache, offlinefallback och användarstyrd uppdatering |
@@ -30,7 +30,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 162 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, nodlayout, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
+| `vavr-shell-test.mjs` | 173 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, nodlayout, strukturflytt, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
@@ -211,15 +211,22 @@ rubriknivå, styckeantal och ordmängd. Dessa värden styr långsamma
 filterförändringar, brusnivåer och oscillatorfrekvenser. De innebär ingen
 tolkning av textens betydelse eller kvalitet.
 
-Valsång är en portning av den fullständiga SkrivR-motorn, inte en förenklad
-återskapning. Två kontinuerliga sinusoscillatorer, en suboscillator, ett
-formantfilter, tempoformad vibrato, en mycket långsam tonböjning och ett
-6,5 sekunder långt syntetiskt reverbrum bildar rösten. Bokstavsrörelse mappas
-deterministiskt till pentatoniska skalsteg. Vokaler får längre andning medan
-klusiler, frikativor och resonanta konsonanter får olika brus- och
-tontransienter. Meningsslut spelar tillbaka ett sammandrag av meningens
-tonföljd en oktav högre. Vokalandel, textlängd, alfabetiskt tyngdcentrum och
-styckeantal ändrar skalfärg, gravitation och tonart.
+Valsång bevarar SkrivR-motorns direkta bokstavsrespons, frasminne,
+konsonanttransienter och långsamma tonböjning men använder nu en fast pool med
+tre förberedda röster. Varje röst har två närliggande deltoner, subton, två
+formantfilter och egen panorering. Tre delade LFO:er ger vibrato, långsam
+tonkontur och vilodrift. Totalt finns högst tolv permanenta oscillatorer och
+inga nya skapas vid ett styckecommit.
+
+`Soundscape.commit(kind, blockProfile)` förmedlar den semantiska skillnaden
+mellan ett Enter och ett faktiskt invävt block. Enter avslutar en fras. Ett
+commit roterar exakt en gång till nästa röst. Den nya rösten växer fram under
+ungefär två till tre sekunder och den föregående tonar bort under åtta till
+fjorton sekunder. Rubriknivå väljer motivfamilj och register. Lokal
+TF/IDF-likhet, vokalandel och meningslängd styr konturavstånd, formanter,
+stereobredd och fraslängd. Röstpoolen återanvänds cirkulärt, masterkedjan har
+kompressor och reverbet använder en kortare 3,8 sekunders impulsrespons för
+lägre startkostnad på mobil.
 
 Hard Fork är på motsvarande sätt SkrivR:s fullständiga 125 BPM-motor.
 En lookahead-scheduler driver ett swingande sextondelsnät med kick, bas,
@@ -295,11 +302,20 @@ block fortsätter att vävas in från samma söm. Skrivsömmarna använder rovin
 tabindex, så endast en söm ligger i Tab-ordningen. Upp, ned, Home och End
 flyttar mellan sömmarna. S på ett fokuserat block öppnar sömmen efter det.
 
-Text redigeras med riktig `textarea`. Ctrl eller Cmd + Enter sparar och
-Escape avbryter. Alt + pil flyttar. Stycken kan bara flyttas mellan stycken
-med samma ägarrubrik. Rubriker kan bara flyttas mellan syskon med samma nivå
-och ägare, och hela sektionen följer med rubriken. Dragning startar visuellt
-från ryggradens särskilda nålgrepp, medan tangentbordsvägen alltid finns.
+Text redigeras med riktig `textarea` i ett gemensamt fokuskort för Lista och
+Noder. Kortet har mörk skrivyta, stilla bärnstensgul kant, pennmarkering och
+utskriven redigeringsstatus. Ctrl eller Cmd + Enter sparar och Escape
+avbryter.
+
+`startLiftedMove()` gör ryggradens knut till huvudvägen för omordning.
+`validMoveBoundaries()` härleder alla tillåtna mål och `writingSeam()` visar
+dem som stora flyttsömmar märkta Placera här. `moveUnitToBoundary()` är den
+enda muterande flyttfunktionen för tryck, tangentbord, musdragning och
+Alt + pil. Stycken kan placeras vid en annan giltig gräns och därmed även byta
+sektion. Rubriker får endast mål mellan syskon med samma nivå och ägare, och
+hela sektionen följer med. En flytt skapar en historikhändelse, sparar en
+gång, räknar om analysen och återställer fokus. Escape avbryter ett lyft utan
+att mutera dokumentet.
 
 `editingBuffer` bevarar arbetskopian och `guardActiveEdit()` spärrar
 dokumentbyte, linsbyte, flytt, radering, modalöppning och arbetsrumsbyte tills
@@ -329,6 +345,11 @@ nod. Upp och ned följer läsordningen. Vänster och höger följer närmaste
 geometriska granne. Nodfältet använder roving tabindex, `aria-controls` och
 `aria-expanded`, så endast en nod ligger i Tab-ordningen och Kantnotens öppna
 läge går att uppfatta med hjälpmedel.
+
+Kantnoten har dessutom Flytta i manuset. Den växlar till Lista och startar
+samma Lyft och placera-flöde för vald nod. Fri dragning i Noder fortsätter
+endast att påverka den visuella koordinaten och kan därför inte oavsiktligt
+ändra dokumentets kanoniska läsordning.
 
 `graphLens` är ett rent presentationsläge och sparas inte i dokumentet.
 Trådkontrollen visar `all`, `connections` och `structure`. Den globala
@@ -376,9 +397,10 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 - Ljud startar aldrig automatiskt och kan stängas av samlat från toppbaren.
 - Viktiga händelser köas i en polite live-region.
 - Vävbordets listkort följer blocklistans DOM-ordning. Pilar flyttar fokus,
-  Alt + pil flyttar, E redigerar, S skriver efter, Enter väljer och Delete
-  raderar efter bekräftelse. Skrivsömmarna är namngivna knappar med exakta
-  index och ett enda roving-tabbstopp.
+  mellanslag eller M lyfter, Alt + pil snabbflyttar, E redigerar, S skriver
+  efter, Enter väljer och Delete raderar efter bekräftelse. Flyttsömmarna är
+  namngivna knappar med exakta index och ett enda roving-tabbstopp. Endast
+  giltiga mål exponeras när ett block är lyft.
 - Nodfältets knappar bär blocktyp, ordningsnummer och textutdrag. E öppnar en
   riktig textarea. Roving tabindex, `aria-controls` och `aria-expanded`
   binder noden till Kantnoten, och varje canvasrelation har en textmotsvarighet

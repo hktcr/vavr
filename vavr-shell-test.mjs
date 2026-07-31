@@ -195,7 +195,10 @@ check(
   'ljudmotorn använder Web Audio med Safari-fallback'
 );
 check(html.includes("soundTheme: 'none'"), 'ljud är av som standard');
-check(html.includes('Soundscape.commit(block.kind)'), 'invävda block kan påverka ljudrummet');
+check(
+  html.includes('Soundscape.commit(block.kind, soundBlockProfile(block))'),
+  'invävda block skickar lokal styckesprofil till ljudrummet'
+);
 check(html.includes('Soundscape.updateText(soundTextProfile())'), 'ljudbilden kan följa hela textprofilen');
 check(html.includes('Typewriter.handleKey(key)'), 'skrivfältet skickar tangenter till skrivmaskinsmotorn');
 check(html.includes("elements.draft.addEventListener('beforeinput'"), 'iOS-inmatning kan ge tangentljud via beforeinput');
@@ -223,8 +226,10 @@ check(
   valsangEngine.includes('voiceOsc2') &&
   valsangEngine.includes('subOsc') &&
   valsangEngine.includes('playEchoPhrase') &&
-  valsangEngine.includes('songLFO'),
-  'Valsång bevarar dubbelröst, subröst, frasminne och långsam tonböjning'
+  valsangEngine.includes('songLFO') &&
+  valsangEngine.includes('voices = [0, 1, 2].map(createVoice)') &&
+  valsangEngine.includes('function commit('),
+  'Valsång bevarar frasminnet och lägger till en fast tre-rösters styckespool'
 );
 check(
   hardForkEngine.includes('const BPM = 125') &&
@@ -289,6 +294,13 @@ check(html.includes('node-edit-text'), 'vald nod kan rullas ut till direkt textr
 check(html.includes("document.startViewTransition(update)"), 'vybytet använder objektbevarande övergång när webbläsaren stöder den');
 check(html.includes('orderY - node.y'), 'nodfältet förankras mjukt i dokumentets läsordning');
 check(html.includes('data-writing-index'), 'synliga Skrivsömmar bär exakta infogningsindex');
+check(html.includes('function validMoveBoundaries'), 'Lyft och placera visar bara giltiga flyttsömmar');
+check(html.includes('function moveUnitToBoundary'), 'alla strukturflyttar använder en gemensam gränsfunktion');
+check(html.includes('data-move-boundary'), 'flyttsömmar bär en exakt målgräns');
+check(html.includes('Flytta i manuset'), 'nodvyn skiljer manusflytt från fri nodplacering');
+check(html.includes('edit-focus-card'), 'Lista och Noder delar ett tydligt bärnstensfärgat redigeringskort');
+check(html.includes("event.key === ' ' || event.key.toLowerCase() === 'm'"), 'tangentbordet kan lyfta ett fokuserat block');
+check(!html.includes('function reorderByDrop'), 'otydlig kort-till-kort-sortering har ersatts av flyttsömmar');
 check(html.includes('function guardActiveEdit'), 'en central redigeringsspärr skyddar osparad direktredigering');
 check(html.includes('editingBuffer'), 'pågående direktredigering har en bevarad arbetsbuffert');
 check(html.includes('document.blocks.findIndex(block => block.id === document.lastCommittedBlockId)'), 'återtagning hittar exakt senast invävda block');
@@ -458,6 +470,80 @@ if (documentFunctionSources.every(Boolean)) {
   );
 } else {
   check(false, 'dokumentanalysens och nodlayoutens funktioner kunde testas');
+}
+
+console.log('\nLyft och placera');
+
+const moveFunctionNames = [
+  'sectionRange',
+  'moveUnitRange',
+  'validMoveBoundaries',
+  'moveUnitToBoundary'
+];
+const moveFunctionSources = moveFunctionNames.map(functionSource);
+
+if (moveFunctionSources.every(Boolean)) {
+  const moveSandbox = {};
+  vm.runInNewContext(`
+    const state = {
+      blocks: [
+        { id: 'ha', kind: 'heading', level: 1, text: 'A' },
+        { id: 'pa', kind: 'paragraph', level: null, text: 'Stycke A' },
+        { id: 'hb', kind: 'heading', level: 1, text: 'B' },
+        { id: 'pb', kind: 'paragraph', level: null, text: 'Stycke B' },
+        { id: 'hc', kind: 'heading', level: 1, text: 'C' },
+        { id: 'pc', kind: 'paragraph', level: null, text: 'Stycke C' }
+      ]
+    };
+    const activeDocument = () => state;
+    const analysis = { owners: new Map([
+      ['ha', null], ['pa', 'ha'], ['hb', null], ['pb', 'hb'], ['hc', null], ['pc', 'hc']
+    ]) };
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const history = [];
+    const pushHistory = label => history.push(label);
+    const guardActiveEdit = () => true;
+    const saveState = () => {};
+    const recalculate = () => {};
+    const announce = () => {};
+    const toast = () => {};
+    const requestAnimationFrame = callback => callback();
+    const CSS = { escape: value => value };
+    const elements = { structureBoard: {} };
+    const REDUCED_MOTION = true;
+    const $ = () => ({ focus() {}, scrollIntoView() {} });
+    let liftedMove = { id: 'hb' };
+    ${moveFunctionSources.join('\n')}
+    globalThis.headingBoundaries = [...validMoveBoundaries('hb')].sort((a, b) => a - b);
+    globalThis.invalidHeadingMove = moveUnitToBoundary('hb', 4);
+    globalThis.validHeadingMove = moveUnitToBoundary('hb', 0);
+    globalThis.afterHeadingMove = state.blocks.map(block => block.id);
+    globalThis.paragraphBoundaries = [...validMoveBoundaries('pa')];
+    globalThis.validParagraphMove = moveUnitToBoundary('pa', state.blocks.length);
+    globalThis.afterParagraphMove = state.blocks.map(block => block.id);
+    globalThis.historyCount = history.length;
+  `, moveSandbox);
+
+  check(
+    JSON.stringify(moveSandbox.headingBoundaries) === JSON.stringify([0, 6]),
+    'en rubriksektion får bara flyttsömmar mellan syskon på samma nivå'
+  );
+  check(
+    moveSandbox.invalidHeadingMove === false && moveSandbox.validHeadingMove === true,
+    'en ogiltig rubrikgräns avvisas utan mutation'
+  );
+  check(
+    JSON.stringify(moveSandbox.afterHeadingMove.slice(0, 2)) === JSON.stringify(['hb', 'pb']),
+    'rubriken och hela dess sektion flyttas som en enhet'
+  );
+  check(
+    moveSandbox.validParagraphMove === true &&
+    moveSandbox.afterParagraphMove.at(-1) === 'pa' &&
+    moveSandbox.historyCount === 2,
+    'ett stycke kan byta sektion och varje genomförd flytt får exakt en historikhändelse'
+  );
+} else {
+  check(false, 'Lyft och placera-funktionerna kunde testas tillsammans');
 }
 
 console.log('\nSammanfattning');

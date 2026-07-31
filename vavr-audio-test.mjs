@@ -210,17 +210,73 @@ await engine.start('valsang', 24, {
   paragraphs: 6,
   documentTitle: 'Valarnas väg'
 });
+const valsangEngine = sandbox.window.ValsangEngine;
+const initialValsangState = valsangEngine.getState();
 if (
   FakeAudioContext.convolverCreations <= valsangConvolversBefore ||
-  FakeAudioContext.oscillatorCreations < valsangOscillatorsBefore + 5
+  FakeAudioContext.oscillatorCreations < valsangOscillatorsBefore + 12 ||
+  initialValsangState.voicePoolSize !== 3 ||
+  initialValsangState.voiceGeneration !== 0
 ) {
-  throw new Error('Valsång byggde inte originalets kontinuerliga röst, LFO:er och reverbrum.');
+  throw new Error('Valsång byggde inte sin fasta tre-rösterspool, LFO:er och reverbrum.');
 }
 engine.handleKey('a');
 engine.handleKey('s');
 engine.handleKey('.');
+const generationBeforeEnter = valsangEngine.getState().voiceGeneration;
+engine.handleKey('Enter');
+if (valsangEngine.getState().voiceGeneration !== generationBeforeEnter) {
+  throw new Error('Enter roterade Valsångens röst trots att inget block hade vävts in.');
+}
+const oscillatorsBeforeCommits = FakeAudioContext.oscillatorCreations;
+engine.commit('paragraph', {
+  text: 'Havet bär den första långa frasen vidare.',
+  vowelRatio: .44,
+  averageSentenceWords: 8,
+  similarityToPrevious: .72
+});
+let valsangState = valsangEngine.getState();
+if (
+  valsangState.voiceGeneration !== generationBeforeEnter + 1 ||
+  valsangState.foregroundVoice !== 1 ||
+  valsangState.lastCommitKind !== 'paragraph' ||
+  valsangState.lastFadeSeconds < 8 ||
+  valsangState.lastFadeSeconds > 14
+) {
+  throw new Error('Ett invävt stycke startade inte exakt en ny, långsamt övertonad Valsångsröst.');
+}
+engine.commit('heading', {
+  text: 'Djupare vatten',
+  level: 2,
+  vowelRatio: .48,
+  averageSentenceWords: 4,
+  similarityToPrevious: .28
+});
+valsangState = valsangEngine.getState();
+if (valsangState.lastCommitKind !== 'heading' || valsangState.foregroundVoice !== 2) {
+  throw new Error('En rubrik skapade inte en tydlig temaväxling i Valsången.');
+}
+for (let index = 0; index < 120; index++) {
+  engine.commit('paragraph', {
+    text: 'Stycke ' + index + ' återkommer med en gradvis förändrad kontur.',
+    vowelRatio: .39 + (index % 5) * .015,
+    averageSentenceWords: 9 + index % 11,
+    similarityToPrevious: (index % 10) / 10
+  });
+}
+valsangState = valsangEngine.getState();
+if (
+  valsangState.voicePoolSize !== 3 ||
+  valsangState.activeVoices > 3 ||
+  FakeAudioContext.oscillatorCreations !== oscillatorsBeforeCommits
+) {
+  throw new Error('Valsångens styckesväxling växte utanför den fasta tre-rösterspoolen.');
+}
 engine.stop(true);
-console.log('  ok   Valsång använder kontinuerlig dubbelröst, långsam tonböjning och reverbrum');
+if (valsangEngine.getState().voicePoolSize !== 0) {
+  throw new Error('Valsångens röstpool tömdes inte vid stopp.');
+}
+console.log('  ok   Valsång skiljer frasslut från blockcommit och korsfadar högst tre dokumentstyrda röster');
 
 const hardForkDelaysBefore = FakeAudioContext.delayCreations;
 const hardForkShapersBefore = FakeAudioContext.waveShaperCreations;
