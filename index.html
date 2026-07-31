@@ -245,6 +245,29 @@
       gap: 2px;
     }
 
+    #documents-button {
+      width: auto;
+      max-width: min(250px, 28vw);
+      grid-template-columns: 19px minmax(0, 1fr);
+      gap: 9px;
+      padding: 0 13px;
+      border-radius: 999px;
+    }
+
+    .documents-button-label {
+      overflow: hidden;
+      color: var(--paper-dim);
+      font-size: 12px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #documents-button:hover .documents-button-label,
+    #documents-button[aria-expanded="true"] .documents-button-label {
+      color: var(--cyan-bright);
+    }
+
     #sound-button[aria-pressed="true"] {
       border-color: rgba(89, 194, 255, .26);
       background: rgba(89, 194, 255, .08);
@@ -1507,6 +1530,418 @@
       transform: none;
     }
 
+    #document-hub {
+      position: fixed;
+      z-index: 70;
+      top: max(10px, env(safe-area-inset-top));
+      right: max(10px, env(safe-area-inset-right));
+      bottom: max(10px, env(safe-area-inset-bottom));
+      left: max(10px, env(safe-area-inset-left));
+      display: flex;
+      overflow: hidden;
+      flex-direction: column;
+      border: 1px solid rgba(179, 229, 255, .18);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(30, 78, 106, .18), transparent 34rem),
+        rgba(8, 11, 17, .985);
+      box-shadow: 0 34px 110px rgba(0, 0, 0, .78);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px) scale(.985);
+      transition: opacity .22s, transform .34s var(--ease);
+    }
+
+    #document-hub[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    .document-hub-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      padding: 22px 24px 17px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .document-hub-heading {
+      min-width: 0;
+    }
+
+    .document-hub-heading h2 {
+      margin: 7px 0 4px;
+      font: 500 clamp(25px, 3vw, 38px)/1.08 var(--serif);
+    }
+
+    .document-hub-heading p {
+      margin: 0;
+      color: var(--paper-dim);
+      font-size: 13px;
+    }
+
+    .document-hub-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #document-create-button {
+      min-height: 44px;
+      white-space: nowrap;
+    }
+
+    .document-hub-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 11px 24px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(3, 6, 10, .32);
+    }
+
+    #document-hub-summary {
+      overflow: hidden;
+      color: var(--paper-faint);
+      font: 10px/1.4 var(--mono);
+      letter-spacing: .07em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .document-view-toggle {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(3, 6, 10, .52);
+    }
+
+    .document-view-button {
+      min-height: 38px;
+      padding: 0 13px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--paper-dim);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .document-view-button[aria-pressed="true"] {
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    #document-create-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 8px;
+      padding: 14px 24px;
+      border-bottom: 1px solid rgba(197, 160, 89, .22);
+      background: rgba(197, 160, 89, .055);
+    }
+
+    #document-create-form[hidden] {
+      display: none;
+    }
+
+    #document-create-form label {
+      grid-column: 1 / -1;
+      color: var(--amber);
+      font: 10px/1 var(--mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    #new-document-title {
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid rgba(197, 160, 89, .34);
+      border-radius: 10px;
+      outline: 0;
+      background: rgba(3, 6, 10, .55);
+      color: var(--paper);
+      font: 17px/1.2 var(--serif);
+    }
+
+    .document-hub-body {
+      min-height: 0;
+      overflow: auto;
+      flex: 1 1 auto;
+      padding: 20px 24px 24px;
+    }
+
+    #document-list-view[hidden],
+    #document-graph-view[hidden] {
+      display: none;
+    }
+
+    #document-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+      gap: 10px;
+    }
+
+    .document-list-item {
+      display: grid;
+      min-width: 0;
+      min-height: 118px;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      gap: 13px;
+      align-items: start;
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(179, 229, 255, .025);
+      color: var(--paper);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color .18s, background .18s, transform .18s var(--ease);
+    }
+
+    .document-list-item:hover,
+    .document-list-item:focus-visible {
+      border-color: rgba(89, 194, 255, .42);
+      background: rgba(89, 194, 255, .055);
+      transform: translateY(-2px);
+    }
+
+    .document-list-item[aria-current="true"] {
+      border-color: rgba(197, 160, 89, .48);
+      background: rgba(197, 160, 89, .055);
+      box-shadow: inset 0 0 24px rgba(197, 160, 89, .035);
+    }
+
+    .document-glyph {
+      position: relative;
+      display: grid;
+      width: 44px;
+      height: 52px;
+      place-items: center;
+      border: 1px solid rgba(89, 194, 255, .38);
+      border-radius: 7px 12px 7px 7px;
+      background:
+        linear-gradient(145deg, rgba(179, 229, 255, .18), rgba(23, 78, 108, .12)),
+        rgba(3, 6, 10, .62);
+      box-shadow: 0 0 16px rgba(89, 194, 255, .12);
+      color: var(--cyan-bright);
+      font: 9px/1 var(--mono);
+      letter-spacing: .08em;
+    }
+
+    .document-glyph::after {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 13px;
+      height: 13px;
+      border-bottom: 1px solid rgba(89, 194, 255, .3);
+      border-left: 1px solid rgba(89, 194, 255, .3);
+      border-radius: 0 10px 0 5px;
+      background: rgba(89, 194, 255, .12);
+      content: "";
+    }
+
+    [aria-current="true"] > .document-glyph,
+    .document-node[aria-current="true"] .document-glyph {
+      border-color: rgba(197, 160, 89, .64);
+      box-shadow: 0 0 18px rgba(197, 160, 89, .16);
+      color: var(--amber);
+    }
+
+    .document-list-copy {
+      min-width: 0;
+    }
+
+    .document-list-copy strong {
+      display: block;
+      overflow: hidden;
+      color: var(--paper);
+      font: 500 19px/1.2 var(--serif);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .document-list-meta,
+    .document-list-preview {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .document-list-meta {
+      margin-top: 7px;
+      color: var(--cyan);
+      font: 9px/1.3 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .document-list-preview {
+      margin-top: 10px;
+      color: var(--paper-dim);
+      font: 13px/1.45 var(--serif);
+    }
+
+    .document-list-open {
+      align-self: center;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #document-graph-view {
+      display: grid;
+      min-height: 100%;
+      grid-template-rows: auto minmax(430px, 1fr);
+      gap: 10px;
+    }
+
+    #document-graph-status {
+      min-height: 22px;
+      margin: 0;
+      color: var(--paper-dim);
+      font: 11px/1.55 var(--mono);
+    }
+
+    #document-graph-stage {
+      position: relative;
+      min-height: 430px;
+      overflow: hidden;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(89, 194, 255, .075), transparent 28rem),
+        linear-gradient(rgba(179, 229, 255, .018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(179, 229, 255, .018) 1px, transparent 1px),
+        rgba(3, 6, 10, .36);
+      background-size: auto, 32px 32px, 32px 32px, auto;
+    }
+
+    #document-graph-svg,
+    #document-graph-nodes {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #document-graph-svg {
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .document-similarity-edge {
+      stroke: var(--cyan);
+      stroke-linecap: round;
+      transition: opacity .16s, stroke .16s;
+    }
+
+    .document-similarity-edge[data-dimmed="true"] {
+      opacity: .08 !important;
+    }
+
+    .document-similarity-edge[data-highlighted="true"] {
+      stroke: var(--cyan-bright);
+      opacity: .95 !important;
+    }
+
+    .document-node {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: grid;
+      width: clamp(132px, 17vw, 180px);
+      min-height: 94px;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 11px;
+      border: 1px solid rgba(89, 194, 255, .3);
+      border-radius: 15px;
+      background: rgba(11, 16, 24, .94);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .36), 0 0 20px rgba(89, 194, 255, .07);
+      color: var(--paper);
+      cursor: pointer;
+      text-align: left;
+      transform: translate3d(var(--doc-x), var(--doc-y), 0) translate(-50%, -50%);
+      transition: opacity .18s, filter .18s, border-color .18s, box-shadow .18s, transform .18s var(--ease);
+    }
+
+    .document-node:hover,
+    .document-node:focus-visible,
+    .document-node[data-highlighted="true"] {
+      z-index: 2;
+      border-color: rgba(179, 229, 255, .68);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, .48), 0 0 28px rgba(89, 194, 255, .18);
+      transform: translate3d(var(--doc-x), var(--doc-y), 0) translate(-50%, -50%) scale(1.035);
+    }
+
+    .document-node[aria-current="true"] {
+      border-color: rgba(197, 160, 89, .68);
+      box-shadow: 0 14px 38px rgba(0, 0, 0, .44), 0 0 24px rgba(197, 160, 89, .14);
+    }
+
+    .document-node[data-dimmed="true"] {
+      opacity: .24;
+      filter: saturate(.42);
+    }
+
+    .document-node[data-insufficient="true"] {
+      border-style: dashed;
+    }
+
+    .document-node .document-glyph {
+      width: 36px;
+      height: 43px;
+      border-radius: 6px 10px 6px 6px;
+    }
+
+    .document-node-copy {
+      min-width: 0;
+    }
+
+    .document-node-kicker {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--cyan);
+      font: 8px/1 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .document-node[aria-current="true"] .document-node-kicker {
+      color: var(--amber);
+    }
+
+    .document-node-title {
+      display: -webkit-box;
+      overflow: hidden;
+      color: var(--paper);
+      font: 500 15px/1.2 var(--serif);
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .document-node-meta {
+      display: block;
+      margin-top: 6px;
+      color: var(--paper-faint);
+      font: 8px/1.2 var(--mono);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
     #scrim {
       position: fixed;
       z-index: 65;
@@ -1985,6 +2420,16 @@
         display: none;
       }
 
+      #documents-button {
+        width: 44px;
+        padding: 0;
+        grid-template-columns: 19px;
+      }
+
+      .documents-button-label {
+        display: none;
+      }
+
       #mode-nav {
         justify-self: center;
       }
@@ -2167,6 +2612,85 @@
       .structure-grid {
         grid-template-columns: 1fr;
       }
+
+      .document-hub-head {
+        padding: 16px 14px 13px;
+      }
+
+      .document-hub-heading p {
+        display: none;
+      }
+
+      .document-hub-actions {
+        gap: 3px;
+      }
+
+      #document-create-button {
+        width: 44px;
+        padding: 0;
+      }
+
+      .document-create-label {
+        display: none;
+      }
+
+      .document-hub-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 14px;
+      }
+
+      #document-hub-summary {
+        white-space: normal;
+      }
+
+      .document-view-toggle,
+      .document-view-button {
+        width: 100%;
+      }
+
+      #document-create-form {
+        grid-template-columns: 1fr 1fr;
+        padding: 12px 14px;
+      }
+
+      #new-document-title {
+        grid-column: 1 / -1;
+      }
+
+      .document-hub-body {
+        padding: 14px;
+      }
+
+      #document-list {
+        grid-template-columns: 1fr;
+      }
+
+      .document-list-item {
+        grid-template-columns: 44px minmax(0, 1fr);
+      }
+
+      .document-list-open {
+        display: none;
+      }
+
+      #document-graph-view {
+        grid-template-rows: auto minmax(520px, 1fr);
+      }
+
+      .document-node {
+        width: 126px;
+        min-height: 84px;
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 7px;
+        padding: 9px;
+      }
+
+      .document-node .document-glyph {
+        width: 29px;
+        height: 36px;
+      }
     }
 
     @media (hover: none), (pointer: coarse) {
@@ -2222,6 +2746,10 @@
     </nav>
 
     <div class="top-actions">
+      <button id="documents-button" class="icon-button" type="button" title="Öppna dokument" aria-label="Öppna dokument" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12h6M9 15.5h6"/></svg>
+        <span id="active-document-label" class="documents-button-label">Namnlöst dokument</span>
+      </button>
       <button id="sound-button" class="icon-button" type="button" title="Ljudrum" aria-label="Öppna ljudrum" aria-pressed="false">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
           <path d="M5 14h3l4 3V7L8 10H5v4Z"/>
@@ -2352,6 +2880,49 @@
   </aside>
 
   <button id="scrim" type="button" aria-label="Stäng panel" data-open="false"></button>
+  <aside id="document-hub" aria-labelledby="document-hub-title" aria-modal="true" role="dialog" data-open="false" inert>
+    <header class="document-hub-head">
+      <div class="document-hub-heading">
+        <span class="panel-kicker">Dokumentyta</span>
+        <h2 id="document-hub-title">Mina dokument</h2>
+        <p>Öppna ett dokument i listan eller upptäck lexikala kopplingar i dokumentväven.</p>
+      </div>
+      <div class="document-hub-actions">
+        <button id="document-create-button" class="plain-button primary" type="button">
+          <span class="document-create-plus" aria-hidden="true">+</span>
+          <span class="document-create-label">Nytt dokument</span>
+        </button>
+        <button id="document-hub-close" class="icon-button" type="button" aria-label="Stäng dokumentytan">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="document-hub-toolbar">
+      <span id="document-hub-summary">1 dokument</span>
+      <div class="document-view-toggle" role="group" aria-label="Visning av dokument">
+        <button class="document-view-button" type="button" data-document-view="list" aria-pressed="true">Lista</button>
+        <button class="document-view-button" type="button" data-document-view="graph" aria-pressed="false">Noder</button>
+      </div>
+    </div>
+    <form id="document-create-form" hidden>
+      <label for="new-document-title">Namn på det nya dokumentet</label>
+      <input id="new-document-title" type="text" maxlength="160" autocomplete="off" placeholder="Till exempel: Anteckningar om livets uppkomst">
+      <button class="plain-button primary" type="submit">Skapa och skriv</button>
+      <button id="document-create-cancel" class="plain-button" type="button">Avbryt</button>
+    </form>
+    <div class="document-hub-body">
+      <section id="document-list-view" aria-label="Dokumentlista">
+        <div id="document-list"></div>
+      </section>
+      <section id="document-graph-view" aria-label="Dokumentväv" hidden>
+        <p id="document-graph-status" role="status" aria-live="polite"></p>
+        <div id="document-graph-stage">
+          <svg id="document-graph-svg" aria-hidden="true"></svg>
+          <div id="document-graph-nodes" aria-label="Dokumentnoder"></div>
+        </div>
+      </section>
+    </div>
+  </aside>
   <aside id="utility-panel" aria-label="Dokument och inställningar" data-open="false" inert>
     <header class="panel-head">
       <span class="panel-kicker">Dokument och inställningar</span>
@@ -3981,6 +4552,19 @@
       inspectorContent: $('#inspector-content'),
       utility: $('#utility-panel'),
       utilityButton: $('#utility-button'),
+      documentsButton: $('#documents-button'),
+      activeDocumentLabel: $('#active-document-label'),
+      documentHub: $('#document-hub'),
+      documentHubSummary: $('#document-hub-summary'),
+      documentListView: $('#document-list-view'),
+      documentList: $('#document-list'),
+      documentGraphView: $('#document-graph-view'),
+      documentGraphStatus: $('#document-graph-status'),
+      documentGraphStage: $('#document-graph-stage'),
+      documentGraphSvg: $('#document-graph-svg'),
+      documentGraphNodes: $('#document-graph-nodes'),
+      documentCreateForm: $('#document-create-form'),
+      newDocumentTitle: $('#new-document-title'),
       scrim: $('#scrim'),
       toast: $('#toast'),
       tooltip: $('#node-tooltip'),
@@ -4073,6 +4657,9 @@
     let announceTimer = null;
     let announceQueue = [];
     let utilityReturnFocus = null;
+    let documentHubReturnFocus = null;
+    let documentGraphAnalysis = null;
+    let documentGraphResizeFrame = null;
     let deferredInstallPrompt = null;
     let installKind = null;
     let installNudgeTimer = null;
@@ -4150,13 +4737,14 @@
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 7,
+        version: 8,
         activeId: document.id,
         documents: [document],
         settings: {
           widthIndex: 2,
           threshold: .12,
           maxEdges: 3,
+          documentHubView: 'list',
           focusMinutes: 25,
           breakMinutes: 5,
           showCountdown: true,
@@ -4199,6 +4787,7 @@
             widthIndex: 2,
             threshold: .12,
             maxEdges: 3,
+            documentHubView: 'list',
             focusMinutes: 25,
             breakMinutes: 5,
             showCountdown: true,
@@ -4211,6 +4800,7 @@
           stored.settings.focusMinutes = clamp(Math.round(Number(stored.settings.focusMinutes) || 25), 1, 180);
           stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
           stored.settings.widthIndex = normalizeWidthIndex(stored.settings.widthIndex);
+          stored.settings.documentHubView = stored.settings.documentHubView === 'graph' ? 'graph' : 'list';
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
           stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
             ? stored.settings.soundTheme
@@ -4233,7 +4823,7 @@
             0,
             100
           );
-          stored.version = 7;
+          stored.version = 8;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -4254,13 +4844,14 @@
             hiddenWords: document.doldaOrd || []
           }));
           return {
-            version: 7,
+            version: 8,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
               widthIndex: 2,
               threshold: .12,
               maxEdges: 3,
+              documentHubView: 'list',
               focusMinutes: 25,
               breakMinutes: 5,
               showCountdown: true,
@@ -4653,6 +5244,211 @@
         edges: [...sequenceEdges, ...hierarchyEdges, ...cohesionEdges],
         adjacency
       };
+    }
+
+    function documentContentText(document) {
+      return (document.blocks || []).map(block => block.text).filter(Boolean).join('\n\n');
+    }
+
+    function documentSimilarityThreshold() {
+      return clamp(Number(app.settings.threshold) || .12, .08, .28);
+    }
+
+    function selectDocumentEdges(candidates, maximum = 4) {
+      const chosen = new Map();
+      const degree = new Map();
+      const byDocument = new Map();
+      const ranked = candidates.slice().sort((a, b) => b.score - a.score);
+
+      for (const edge of ranked) {
+        if (!byDocument.has(edge.a)) byDocument.set(edge.a, []);
+        if (!byDocument.has(edge.b)) byDocument.set(edge.b, []);
+        byDocument.get(edge.a).push(edge);
+        byDocument.get(edge.b).push(edge);
+      }
+
+      const add = edge => {
+        const key = pairKey(edge.a, edge.b);
+        if (chosen.has(key)) return true;
+        const aDegree = degree.get(edge.a) || 0;
+        const bDegree = degree.get(edge.b) || 0;
+        if (aDegree >= maximum || bDegree >= maximum) return false;
+        chosen.set(key, edge);
+        degree.set(edge.a, aDegree + 1);
+        degree.set(edge.b, bDegree + 1);
+        return true;
+      };
+
+      for (const document of app.documents) {
+        const strongest = byDocument.get(document.id)?.[0];
+        if (strongest) add(strongest);
+      }
+      for (const edge of ranked) add(edge);
+      return [...chosen.values()];
+    }
+
+    function analyzeDocuments(documents = app.documents) {
+      const maps = new Map(documents.map(document => [
+        document.id,
+        tokenize(documentContentText(document), new Set(document.hiddenWords || []))
+      ]));
+      const idf = buildIdf([...maps.values()]);
+      const vectors = new Map(documents.map(document => [
+        document.id,
+        buildVector(maps.get(document.id), idf)
+      ]));
+      const threshold = documentSimilarityThreshold();
+      const nodes = documents.map(document => {
+        const text = documentContentText(document);
+        const words = wordCount(text);
+        const unique = maps.get(document.id).size;
+        return {
+          id: document.id,
+          title: document.title || 'Namnlöst dokument',
+          words,
+          blocks: (document.blocks || []).length,
+          unique,
+          updated: document.updated || document.created || null,
+          insufficient: words < 8 || unique < 6
+        };
+      });
+      const nodesById = new Map(nodes.map(node => [node.id, node]));
+      const scores = new Map();
+      const fullEdges = [];
+
+      for (let i = 0; i < documents.length; i++) {
+        for (let j = i + 1; j < documents.length; j++) {
+          const a = documents[i];
+          const b = documents[j];
+          const score = cosine(vectors.get(a.id), vectors.get(b.id));
+          scores.set(pairKey(a.id, b.id), score);
+          const aNode = nodesById.get(a.id);
+          const bNode = nodesById.get(b.id);
+          if (aNode.insufficient || bNode.insufficient || score < threshold) continue;
+          const shared = commonWords(maps.get(a.id), maps.get(b.id), idf, 6);
+          if (!shared.length) continue;
+          fullEdges.push({
+            a: a.id,
+            b: b.id,
+            score,
+            shared
+          });
+        }
+      }
+
+      const edges = selectDocumentEdges(fullEdges);
+      const adjacency = new Map(nodes.map(node => [node.id, new Set()]));
+      for (const edge of edges) {
+        adjacency.get(edge.a)?.add(edge.b);
+        adjacency.get(edge.b)?.add(edge.a);
+      }
+
+      return {
+        nodes,
+        nodesById,
+        maps,
+        idf,
+        scores,
+        threshold,
+        fullEdges,
+        edges,
+        adjacency
+      };
+    }
+
+    function stableUnit(value) {
+      let hash = 2166136261;
+      for (const character of String(value || '')) {
+        hash ^= character.codePointAt(0);
+        hash = Math.imul(hash, 16777619);
+      }
+      return ((hash >>> 0) % 10000) / 10000;
+    }
+
+    function layoutDocumentGraph(nodes, edges, width, height) {
+      const positions = new Map();
+      if (!nodes.length) return positions;
+      const safeWidth = Math.max(280, width);
+      const safeHeight = Math.max(420, height);
+      const nodeWidth = safeWidth < 560 ? 126 : 180;
+      const nodeHeight = safeWidth < 560 ? 84 : 94;
+      const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length * safeWidth / safeHeight)));
+      const rows = Math.max(1, Math.ceil(nodes.length / columns));
+      const state = nodes.map((node, index) => {
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        const jitter = stableUnit(node.id) - .5;
+        return {
+          id: node.id,
+          x: (column + .5) * safeWidth / columns + jitter * Math.min(34, safeWidth / columns * .18),
+          y: (row + .5) * safeHeight / rows + (stableUnit(node.title) - .5) * 24,
+          vx: 0,
+          vy: 0,
+          fx: 0,
+          fy: 0
+        };
+      });
+      const byId = new Map(state.map(item => [item.id, item]));
+      const marginX = nodeWidth / 2 + 14;
+      const marginY = nodeHeight / 2 + 14;
+
+      for (let step = 0; step < 150; step++) {
+        for (const item of state) {
+          item.fx = (safeWidth / 2 - item.x) * .0015;
+          item.fy = (safeHeight / 2 - item.y) * .0015;
+        }
+
+        for (let i = 0; i < state.length; i++) {
+          for (let j = i + 1; j < state.length; j++) {
+            const a = state[i];
+            const b = state[j];
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            if (Math.abs(dx) + Math.abs(dy) < .01) {
+              dx = (stableUnit(a.id + b.id) - .5) * 2 || 1;
+              dy = (stableUnit(b.id + a.id) - .5) * 2 || .5;
+            }
+            const distance = Math.max(1, Math.hypot(dx, dy));
+            const minimum = nodeWidth * 1.1;
+            const force = distance < minimum
+              ? (minimum - distance) * .055 + .8
+              : 4600 / (distance * distance);
+            const fx = dx / distance * force;
+            const fy = dy / distance * force;
+            a.fx -= fx;
+            a.fy -= fy;
+            b.fx += fx;
+            b.fy += fy;
+          }
+        }
+
+        for (const edge of edges) {
+          const a = byId.get(edge.a);
+          const b = byId.get(edge.b);
+          if (!a || !b) continue;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const distance = Math.max(1, Math.hypot(dx, dy));
+          const wanted = clamp(150 + (1 - edge.score) * 95, 150, 235);
+          const force = (distance - wanted) * (.006 + edge.score * .006);
+          const fx = dx / distance * force;
+          const fy = dy / distance * force;
+          a.fx += fx;
+          a.fy += fy;
+          b.fx -= fx;
+          b.fy -= fy;
+        }
+
+        for (const item of state) {
+          item.vx = (item.vx + item.fx) * .72;
+          item.vy = (item.vy + item.fy) * .72;
+          item.x = clamp(item.x + item.vx, marginX, safeWidth - marginX);
+          item.y = clamp(item.y + item.vy, marginY, safeHeight - marginY);
+        }
+      }
+
+      for (const item of state) positions.set(item.id, { x: item.x, y: item.y });
+      return positions;
     }
 
     function documentMetrics(document = activeDocument()) {
@@ -6790,12 +7586,203 @@
       wireStructureGrid(elements.sectionGrid);
     }
 
+    function orderedDocuments() {
+      return [
+        ...app.documents.filter(document => document.id === app.activeId),
+        ...app.documents.filter(document => document.id !== app.activeId)
+      ];
+    }
+
+    function documentPreview(document) {
+      const committed = documentContentText(document);
+      const draft = String(document.draft || '').trim();
+      return snippet(committed || draft || 'Tomt dokument. Öppna det för att börja skriva.', 118);
+    }
+
+    function renderDocumentList() {
+      elements.documentList.innerHTML = orderedDocuments().map(document => {
+        const metrics = documentMetrics(document);
+        const active = document.id === app.activeId;
+        return `<button class="document-list-item" type="button"
+          data-document-id="${escapeHtml(document.id)}"
+          aria-current="${String(active)}"
+          aria-label="${escapeHtml(document.title || 'Namnlöst dokument')}, ${active ? 'aktivt dokument, ' : ''}${formatNumber(metrics.words)} ord. Öppna dokumentet.">
+            <span class="document-glyph" aria-hidden="true">DOK</span>
+            <span class="document-list-copy">
+              <strong>${escapeHtml(document.title || 'Namnlöst dokument')}</strong>
+              <span class="document-list-meta">${active ? 'Aktivt · ' : ''}${formatNumber(metrics.words)} ord · ${(document.blocks || []).length} block</span>
+              <span class="document-list-preview">${escapeHtml(documentPreview(document))}</span>
+            </span>
+            <span class="document-list-open" aria-hidden="true">Öppna</span>
+          </button>`;
+      }).join('');
+      $$('.document-list-item', elements.documentList).forEach(button => {
+        button.addEventListener('click', () => openDocumentFromHub(button.dataset.documentId));
+      });
+    }
+
+    function resetDocumentGraphFocus() {
+      $$('.document-node', elements.documentGraphNodes).forEach(node => {
+        delete node.dataset.highlighted;
+        delete node.dataset.dimmed;
+      });
+      $$('.document-similarity-edge', elements.documentGraphSvg).forEach(edge => {
+        delete edge.dataset.highlighted;
+        delete edge.dataset.dimmed;
+      });
+      if (!documentGraphAnalysis) return;
+      const assessed = documentGraphAnalysis.nodes.filter(node => !node.insufficient).length;
+      if (documentGraphAnalysis.nodes.length < 2) {
+        elements.documentGraphStatus.textContent = 'Skapa ytterligare ett dokument för att kunna jämföra dokumentens invävda text.';
+      } else if (assessed < 2) {
+        elements.documentGraphStatus.textContent = 'Minst två dokument behöver mer invävd text innan en försiktig likhetsjämförelse kan göras.';
+      } else if (!documentGraphAnalysis.fullEdges.length) {
+        elements.documentGraphStatus.textContent =
+          'Inga lexikala kopplingar når tröskeln ' +
+          documentGraphAnalysis.threshold.toFixed(2).replace('.', ',') +
+          '. Utkast räknas inte.';
+      } else {
+        elements.documentGraphStatus.textContent =
+          documentGraphAnalysis.fullEdges.length +
+          (documentGraphAnalysis.fullEdges.length === 1 ? ' koppling' : ' kopplingar') +
+          ' över tröskeln ' +
+          documentGraphAnalysis.threshold.toFixed(2).replace('.', ',') +
+          '. Linjerna visar TF/IDF-baserad cosinuslikhet mellan invävda texter.';
+      }
+    }
+
+    function focusDocumentGraph(id) {
+      if (!documentGraphAnalysis?.nodesById.has(id)) return;
+      const connected = documentGraphAnalysis.adjacency.get(id) || new Set();
+      $$('.document-node', elements.documentGraphNodes).forEach(node => {
+        const same = node.dataset.documentId === id;
+        const neighbor = connected.has(node.dataset.documentId);
+        node.dataset.highlighted = String(same);
+        node.dataset.dimmed = String(!same && !neighbor);
+      });
+      $$('.document-similarity-edge', elements.documentGraphSvg).forEach(edge => {
+        const touches = edge.dataset.a === id || edge.dataset.b === id;
+        edge.dataset.highlighted = String(touches);
+        edge.dataset.dimmed = String(!touches);
+      });
+
+      const node = documentGraphAnalysis.nodesById.get(id);
+      if (node.insufficient) {
+        elements.documentGraphStatus.textContent =
+          node.title + ': för lite invävd text för en tillförlitlig lexikal jämförelse.';
+        return;
+      }
+      const strongest = documentGraphAnalysis.fullEdges
+        .filter(edge => edge.a === id || edge.b === id)
+        .sort((a, b) => b.score - a.score)[0];
+      if (!strongest) {
+        elements.documentGraphStatus.textContent =
+          node.title + ': ingen koppling når den valda likhetströskeln.';
+        return;
+      }
+      const otherId = strongest.a === id ? strongest.b : strongest.a;
+      const other = documentGraphAnalysis.nodesById.get(otherId);
+      elements.documentGraphStatus.textContent =
+        node.title + ' ↔ ' + other.title +
+        ': cosinuslikhet ' + Math.round(strongest.score * 100) + ' %, gemensamma nyckelord: ' +
+        strongest.shared.join(', ') + '.';
+    }
+
+    function renderDocumentGraph() {
+      if (elements.documentGraphView.hidden) return;
+      documentGraphAnalysis = analyzeDocuments();
+      const count = documentGraphAnalysis.nodes.length;
+      const stageWidth = Math.max(280, elements.documentGraphStage.clientWidth || elements.documentGraphStage.getBoundingClientRect().width);
+      const columns = stageWidth < 560 ? 2 : Math.max(2, Math.min(4, Math.ceil(Math.sqrt(Math.max(1, count) * 1.55))));
+      const rows = Math.max(1, Math.ceil(count / columns));
+      const stageHeight = clamp(430 + Math.max(0, rows - 2) * (stageWidth < 560 ? 145 : 118), 430, 980);
+      elements.documentGraphStage.style.height = stageHeight + 'px';
+      const positions = layoutDocumentGraph(
+        documentGraphAnalysis.nodes,
+        documentGraphAnalysis.edges,
+        stageWidth,
+        stageHeight
+      );
+      elements.documentGraphSvg.setAttribute('viewBox', `0 0 ${stageWidth} ${stageHeight}`);
+      elements.documentGraphSvg.innerHTML = documentGraphAnalysis.edges.map(edge => {
+        const a = positions.get(edge.a);
+        const b = positions.get(edge.b);
+        const normalized = clamp((edge.score - documentGraphAnalysis.threshold) / Math.max(.01, 1 - documentGraphAnalysis.threshold), 0, 1);
+        const opacity = (.28 + Math.sqrt(normalized) * .58).toFixed(3);
+        const width = (1.2 + Math.sqrt(normalized) * 3.4).toFixed(2);
+        return `<line class="document-similarity-edge"
+          data-a="${escapeHtml(edge.a)}" data-b="${escapeHtml(edge.b)}"
+          x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}"
+          x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"
+          style="opacity:${opacity};stroke-width:${width}"></line>`;
+      }).join('');
+      elements.documentGraphNodes.innerHTML = documentGraphAnalysis.nodes.map(node => {
+        const position = positions.get(node.id);
+        const active = node.id === app.activeId;
+        const connections = documentGraphAnalysis.adjacency.get(node.id)?.size || 0;
+        return `<button class="document-node" type="button"
+          data-document-id="${escapeHtml(node.id)}"
+          data-insufficient="${String(node.insufficient)}"
+          aria-current="${String(active)}"
+          aria-label="${escapeHtml(node.title)}, ${active ? 'aktivt dokument, ' : ''}${formatNumber(node.words)} ord, ${connections} ${connections === 1 ? 'synlig koppling' : 'synliga kopplingar'}. Öppna dokumentet."
+          style="--doc-x:${position.x.toFixed(1)}px;--doc-y:${position.y.toFixed(1)}px">
+            <span class="document-glyph" aria-hidden="true">DOK</span>
+            <span class="document-node-copy">
+              <span class="document-node-kicker">${active ? 'Aktivt dokument' : 'Dokument'}</span>
+              <span class="document-node-title">${escapeHtml(node.title)}</span>
+              <span class="document-node-meta">${formatNumber(node.words)} ord · ${node.blocks} block</span>
+            </span>
+          </button>`;
+      }).join('');
+
+      $$('.document-node', elements.documentGraphNodes).forEach(node => {
+        const id = node.dataset.documentId;
+        node.addEventListener('pointerenter', () => focusDocumentGraph(id));
+        node.addEventListener('pointerleave', () => {
+          if (document.activeElement !== node) resetDocumentGraphFocus();
+        });
+        node.addEventListener('focus', () => focusDocumentGraph(id));
+        node.addEventListener('blur', () => {
+          requestAnimationFrame(() => {
+            if (!elements.documentGraphNodes.contains(document.activeElement)) resetDocumentGraphFocus();
+          });
+        });
+        node.addEventListener('click', () => openDocumentFromHub(id));
+      });
+      resetDocumentGraphFocus();
+    }
+
+    function setDocumentHubView(nextView, persist = true) {
+      const mode = nextView === 'graph' ? 'graph' : 'list';
+      app.settings.documentHubView = mode;
+      $$('[data-document-view]', elements.documentHub).forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.documentView === mode));
+      });
+      elements.documentListView.hidden = mode !== 'list';
+      elements.documentGraphView.hidden = mode !== 'graph';
+      if (persist) saveState('Dokumentvyn sparad');
+      if (mode === 'graph') requestAnimationFrame(renderDocumentGraph);
+      else renderDocumentList();
+    }
+
+    function renderDocumentHub() {
+      const totalWords = app.documents.reduce((sum, document) => sum + documentMetrics(document).words, 0);
+      elements.documentHubSummary.textContent =
+        app.documents.length + (app.documents.length === 1 ? ' dokument' : ' dokument') +
+        ' · ' + formatNumber(totalWords) + ' ord totalt';
+      renderDocumentList();
+      setDocumentHubView(app.settings.documentHubView, false);
+    }
+
     function renderDocumentControls() {
       elements.documentSelect.innerHTML = app.documents.map(document =>
         `<option value="${escapeHtml(document.id)}">${escapeHtml(document.title)}</option>`
       ).join('');
       elements.documentSelect.value = app.activeId;
       elements.documentTitle.value = activeDocument().title;
+      elements.activeDocumentLabel.textContent = activeDocument().title;
+      elements.documentsButton.title = 'Dokument: ' + activeDocument().title;
+      elements.documentsButton.setAttribute('aria-label', 'Öppna dokument. Aktivt dokument: ' + activeDocument().title);
     }
 
     function renderStats() {
@@ -6875,17 +7862,95 @@
       document.documentElement.style.setProperty('--composer-width', width + 'px');
     }
 
+    function setWorkspaceInert(inert) {
+      const method = inert ? 'setAttribute' : 'removeAttribute';
+      $('main')[method]('inert', '');
+      $('#topbar')[method]('inert', '');
+      elements.nodeLayer[method]('inert', '');
+      if (inert) elements.inspector.setAttribute('inert', '');
+      else if (elements.inspector.dataset.open === 'true') elements.inspector.removeAttribute('inert');
+    }
+
+    function showDocumentCreate() {
+      elements.documentCreateForm.hidden = false;
+      elements.newDocumentTitle.value = '';
+      requestAnimationFrame(() => elements.newDocumentTitle.focus());
+    }
+
+    function hideDocumentCreate() {
+      elements.documentCreateForm.hidden = true;
+      elements.newDocumentTitle.value = '';
+    }
+
+    function openDocumentHub(showCreate = false) {
+      const fromUtility = elements.utility.dataset.open === 'true';
+      if (fromUtility) closeUtility(false);
+      activeDocument().draft = elements.draft.value;
+      saveState();
+      renderDocumentHub();
+      documentHubReturnFocus = fromUtility ? elements.documentsButton : document.activeElement;
+      setWorkspaceInert(true);
+      elements.documentHub.dataset.open = 'true';
+      elements.documentHub.removeAttribute('inert');
+      elements.scrim.dataset.open = 'true';
+      elements.documentsButton.setAttribute('aria-expanded', 'true');
+      if (showCreate) {
+        showDocumentCreate();
+      } else {
+        hideDocumentCreate();
+        requestAnimationFrame(() => {
+          const current = $('[aria-current="true"]', elements.documentListView);
+          const graphCurrent = $('[aria-current="true"]', elements.documentGraphView);
+          (elements.documentListView.hidden ? graphCurrent : current)?.focus();
+        });
+      }
+      announce('Dokumentytan öppnades');
+    }
+
+    function closeDocumentHub(restoreFocus = true) {
+      const wasOpen = elements.documentHub.dataset.open === 'true';
+      elements.documentHub.dataset.open = 'false';
+      elements.documentHub.setAttribute('inert', '');
+      elements.scrim.dataset.open = 'false';
+      elements.documentsButton.setAttribute('aria-expanded', 'false');
+      hideDocumentCreate();
+      documentGraphAnalysis = null;
+      setWorkspaceInert(false);
+      if (wasOpen && restoreFocus) requestAnimationFrame(() => documentHubReturnFocus?.focus?.());
+    }
+
+    function openDocumentFromHub(id) {
+      if (!app.documents.some(document => document.id === id)) return;
+      changeActiveDocument(id);
+      closeDocumentHub(false);
+      requestAnimationFrame(() => {
+        if (view === 'write') elements.draft.focus();
+        else if (view === 'graph') {
+          [...nodeStates.values()].find(state => state.element.tabIndex === 0)?.element.focus();
+        } else {
+          ($('.block-card', elements.structureBoard) || $('#structure-add'))?.focus();
+        }
+      });
+    }
+
+    function createDocumentFromHub(title) {
+      const document = createDocument(String(title || '').trim() || 'Nytt dokument');
+      app.documents.push(document);
+      changeActiveDocument(document.id);
+      closeDocumentHub(false);
+      switchView('write');
+      announce('Dokumentet ' + document.title + ' skapades och öppnades');
+    }
+
     function openUtility(focusTarget = elements.documentSelect) {
+      if (elements.documentHub.dataset.open === 'true') closeDocumentHub(false);
       renderDocumentControls();
       renderGoal();
       renderTimer();
       renderSound();
       configureInstallUI();
       utilityReturnFocus = document.activeElement;
-      $('main').setAttribute('inert', '');
-      $('#topbar').setAttribute('inert', '');
-      elements.nodeLayer.setAttribute('inert', '');
-      elements.inspector.setAttribute('inert', '');
+      setWorkspaceInert(true);
       elements.utility.dataset.open = 'true';
       elements.utility.removeAttribute('inert');
       elements.scrim.dataset.open = 'true';
@@ -6893,17 +7958,14 @@
       requestAnimationFrame(() => focusTarget?.focus?.());
     }
 
-    function closeUtility() {
+    function closeUtility(restoreFocus = true) {
       const wasOpen = elements.utility.dataset.open === 'true';
       elements.utility.dataset.open = 'false';
       elements.utility.setAttribute('inert', '');
       elements.scrim.dataset.open = 'false';
       elements.utilityButton.setAttribute('aria-expanded', 'false');
-      $('main').removeAttribute('inert');
-      $('#topbar').removeAttribute('inert');
-      elements.nodeLayer.removeAttribute('inert');
-      if (elements.inspector.dataset.open === 'true') elements.inspector.removeAttribute('inert');
-      if (wasOpen) requestAnimationFrame(() => utilityReturnFocus?.focus?.());
+      setWorkspaceInert(false);
+      if (wasOpen && restoreFocus) requestAnimationFrame(() => utilityReturnFocus?.focus?.());
     }
 
     function toast(message) {
@@ -7001,6 +8063,7 @@
       settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
       settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
       settings.widthIndex = normalizeWidthIndex(settings.widthIndex);
+      settings.documentHubView = settings.documentHubView === 'graph' ? 'graph' : 'list';
       settings.showCountdown = settings.showCountdown !== false;
       settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
       settings.soundVolume = clamp(
@@ -7024,7 +8087,7 @@
       app = {
         ...defaults,
         ...source,
-        version: 7,
+        version: 8,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
@@ -7256,9 +8319,25 @@
         }
       });
       $('#inspector-close').addEventListener('click', closeInspector);
+      elements.documentsButton.addEventListener('click', () => {
+        elements.documentHub.dataset.open === 'true' ? closeDocumentHub() : openDocumentHub();
+      });
+      $('#document-hub-close').addEventListener('click', () => closeDocumentHub());
+      $('#document-create-button').addEventListener('click', showDocumentCreate);
+      $('#document-create-cancel').addEventListener('click', hideDocumentCreate);
+      elements.documentCreateForm.addEventListener('submit', event => {
+        event.preventDefault();
+        createDocumentFromHub(elements.newDocumentTitle.value);
+      });
+      $$('[data-document-view]', elements.documentHub).forEach(button => {
+        button.addEventListener('click', () => setDocumentHubView(button.dataset.documentView));
+      });
       elements.utilityButton.addEventListener('click', () => elements.utility.dataset.open === 'true' ? closeUtility() : openUtility());
       $('#utility-close').addEventListener('click', closeUtility);
-      elements.scrim.addEventListener('click', closeUtility);
+      elements.scrim.addEventListener('click', () => {
+        if (elements.documentHub.dataset.open === 'true') closeDocumentHub();
+        else closeUtility();
+      });
       elements.soundButton.addEventListener('click', toggleAllSound);
       elements.goalCompact.addEventListener('click', () => openUtility(elements.goalEnabled));
       elements.timerCompact.addEventListener('click', () => {
@@ -7412,6 +8491,11 @@
       window.addEventListener('pointerup', endNodeDrag);
       window.addEventListener('pointercancel', endNodeDrag);
       window.addEventListener('resize', scheduleResize);
+      window.addEventListener('resize', () => {
+        if (elements.documentHub.dataset.open !== 'true' || elements.documentGraphView.hidden) return;
+        cancelAnimationFrame(documentGraphResizeFrame);
+        documentGraphResizeFrame = requestAnimationFrame(renderDocumentGraph);
+      });
       window.visualViewport?.addEventListener('resize', scheduleResize);
       window.addEventListener('pagehide', () => {
         Soundscape.stop(true);
@@ -7460,9 +8544,16 @@
       window.addEventListener('keydown', event => {
         const command = event.ctrlKey || event.metaKey;
         const editingText = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
-        if (elements.utility.dataset.open === 'true' && event.key === 'Tab') {
-          const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])', elements.utility)
-            .filter(element => !element.hasAttribute('inert'));
+        const openDialog = elements.documentHub.dataset.open === 'true'
+          ? elements.documentHub
+          : (elements.utility.dataset.open === 'true' ? elements.utility : null);
+        if (openDialog && event.key === 'Tab') {
+          const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])', openDialog)
+            .filter(element =>
+              !element.hasAttribute('inert') &&
+              !element.closest('[hidden]') &&
+              element.getClientRects().length
+            );
           if (focusable.length) {
             const first = focusable[0];
             const last = focusable[focusable.length - 1];
@@ -7476,6 +8567,12 @@
           }
           return;
         }
+        if (openDialog && event.key === 'Escape') {
+          event.preventDefault();
+          openDialog === elements.documentHub ? closeDocumentHub() : closeUtility();
+          return;
+        }
+        if (openDialog) return;
         if (command && !event.shiftKey && event.key === '1') {
           event.preventDefault();
           switchView('write');
@@ -7512,6 +8609,8 @@
       elements.documentSelect.addEventListener('change', event => changeActiveDocument(event.target.value));
       elements.documentTitle.addEventListener('input', event => {
         activeDocument().title = event.target.value || 'Namnlöst dokument';
+        elements.activeDocumentLabel.textContent = activeDocument().title;
+        elements.documentsButton.setAttribute('aria-label', 'Öppna dokument. Aktivt dokument: ' + activeDocument().title);
         elements.structureTitle.textContent = activeDocument().title;
         clearTimeout(titleSaveTimer);
         titleSaveTimer = setTimeout(() => {
@@ -7521,11 +8620,7 @@
       });
 
       $('#new-document').addEventListener('click', () => {
-        const document = createDocument('Nytt dokument');
-        app.documents.push(document);
-        changeActiveDocument(document.id);
-        closeUtility();
-        switchView('write');
+        openDocumentHub(true);
       });
 
       $('#delete-document').addEventListener('click', () => {

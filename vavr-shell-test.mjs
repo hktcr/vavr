@@ -319,6 +319,147 @@ check(
   'grova pekdon får responsiv bredd och 44 pixlars slider'
 );
 
+console.log('\nDokumentytan');
+
+for (const id of [
+  'documents-button',
+  'active-document-label',
+  'document-hub',
+  'document-create-form',
+  'document-list',
+  'document-graph-view',
+  'document-graph-stage',
+  'document-graph-svg',
+  'document-graph-nodes'
+]) {
+  check(html.includes(`id="${id}"`), '#' + id + ' finns');
+}
+
+check(html.includes('function openDocumentHub'), 'dokumentytan kan öppnas direkt från toppbaren');
+check(html.includes('function createDocumentFromHub'), 'nytt dokument skapas och öppnas i ett sammanhållet flöde');
+check(html.includes('function openDocumentFromHub'), 'listkort och dokumentnoder öppnar valt dokument');
+check(html.includes("documentHubView: 'list'"), 'listan är dokumentytans lugna standardvy');
+check(html.includes("stored.settings.documentHubView === 'graph' ? 'graph' : 'list'"), 'vald dokumentvy normaliseras vid laddning');
+check(html.includes("settings.documentHubView === 'graph' ? 'graph' : 'list'"), 'vald dokumentvy normaliseras vid återställning');
+check(html.includes("documentContentText(document), new Set(document.hiddenWords || [])"), 'dokumentjämförelsen respekterar dolda ord');
+check(html.includes("documentContentText(document)") && html.includes('Utkast räknas inte'), 'likhetsanalysen använder invävd text och förklarar att utkast inte räknas');
+check(html.includes('data-document-id="${escapeHtml(node.id)}"'), 'varje dokumentnod bär ett entydigt dokument-id');
+check(html.includes("node.addEventListener('click', () => openDocumentFromHub(id))"), 'klick på en dokumentnod öppnar dokumentet');
+check(html.includes("active ? 'Aktivt dokument' : 'Dokument'"), 'dokumentnoder märks tydligt och aktiv nod skiljs ut');
+
+const functionSource = name => inlineScript?.match(
+  new RegExp(`function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?^    \\}`, 'm')
+)?.[0];
+const documentFunctionNames = [
+  'documentContentText',
+  'documentSimilarityThreshold',
+  'selectDocumentEdges',
+  'analyzeDocuments',
+  'stableUnit',
+  'layoutDocumentGraph'
+];
+const documentFunctionSources = documentFunctionNames.map(functionSource);
+
+if (documentFunctionSources.every(Boolean)) {
+  const documentSandbox = {};
+  vm.runInNewContext(`
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const pairKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+    const wordCount = text => (String(text || '').match(/[a-zåäöéüæø]+/gi) || []).length;
+    function tokenize(text, hiddenWords = new Set()) {
+      const map = new Map();
+      for (const surface of String(text || '').toLowerCase().match(/[a-zåäöéüæø]+/g) || []) {
+        if (hiddenWords.has(surface)) continue;
+        let item = map.get(surface);
+        if (!item) {
+          item = { tf: 0, forms: new Map() };
+          map.set(surface, item);
+        }
+        item.tf += 1;
+        item.forms.set(surface, (item.forms.get(surface) || 0) + 1);
+      }
+      return map;
+    }
+    function buildIdf(maps) {
+      const df = new Map();
+      maps.forEach(map => map.forEach((_, key) => df.set(key, (df.get(key) || 0) + 1)));
+      return new Map([...df].map(([key, count]) => [key, Math.log(1 + maps.length / count)]));
+    }
+    function buildVector(map, idf) {
+      const values = new Map();
+      let squared = 0;
+      map.forEach((item, key) => {
+        const weight = (1 + Math.log(item.tf)) * (idf.get(key) || 1);
+        values.set(key, weight);
+        squared += weight * weight;
+      });
+      return { values, norm: Math.sqrt(squared) };
+    }
+    function cosine(a, b) {
+      if (!a.norm || !b.norm) return 0;
+      let dot = 0;
+      a.values.forEach((weight, key) => { if (b.values.has(key)) dot += weight * b.values.get(key); });
+      return dot / (a.norm * b.norm);
+    }
+    function commonWords(a, b, idf, limit = 5) {
+      return [...a.keys()]
+        .filter(key => b.has(key))
+        .sort((x, y) => (idf.get(y) || 0) - (idf.get(x) || 0))
+        .slice(0, limit);
+    }
+    let app = {
+      activeId: 'a',
+      settings: { threshold: .12 },
+      documents: [
+        { id: 'a', title: 'Livets uppkomst', blocks: [{ text: 'kemisk evolution molekyler vatten energi ursprung liv reaktioner katalys' }], draft: '', hiddenWords: [] },
+        { id: 'b', title: 'RNA-världen', blocks: [{ text: 'kemisk evolution molekyler vatten energi tidigt liv reaktioner RNA' }], draft: '', hiddenWords: [] },
+        { id: 'c', title: 'Skrivande', blocks: [{ text: 'skrivverktyg struktur fokus redigering rubriker nätverk författare text' }], draft: '', hiddenWords: [] },
+        { id: 'd', title: 'Tomt utkast', blocks: [], draft: 'kemisk evolution molekyler vatten energi tidigt liv reaktioner RNA', hiddenWords: [] }
+      ]
+    };
+    ${documentFunctionSources.join('\n')}
+    globalThis.documentAnalysis = analyzeDocuments(app.documents);
+    globalThis.documentLayout = layoutDocumentGraph(
+      globalThis.documentAnalysis.nodes,
+      globalThis.documentAnalysis.edges,
+      900,
+      500
+    );
+    globalThis.mobileDocumentLayout = layoutDocumentGraph(
+      globalThis.documentAnalysis.nodes,
+      globalThis.documentAnalysis.edges,
+      390,
+      620
+    );
+    app.settings.threshold = .01;
+    globalThis.minimumThreshold = documentSimilarityThreshold();
+  `, documentSandbox);
+
+  const result = documentSandbox.documentAnalysis;
+  const positions = [...documentSandbox.documentLayout.values()];
+  const mobilePositions = [...documentSandbox.mobileDocumentLayout.values()];
+  check(result.nodes.length === 4, 'dokumentanalysen skapar en nod per dokument');
+  check(
+    result.fullEdges.some(edge => [edge.a, edge.b].sort().join('|') === 'a|b') &&
+    result.fullEdges.every(edge => !edge.a.includes('c') && !edge.b.includes('c')),
+    'lexikalt närliggande dokument kopplas utan falsk koppling till det främmande dokumentet'
+  );
+  check(result.nodes.find(node => node.id === 'd')?.insufficient === true, 'tomt dokument med endast utkast märks som otillräckligt');
+  check(documentSandbox.minimumThreshold === .08, 'dokumentjämförelsen har en försiktig minimitröskel');
+  check(
+    positions.length === 4 &&
+    positions.every(position => position.x >= 99 && position.x <= 801 && position.y >= 61 && position.y <= 439),
+    'dokumentnoderna läggs inom grafytans synliga gränser'
+  );
+  check(
+    mobilePositions.length === 4 &&
+    mobilePositions.every(position => position.x >= 77 && position.x <= 313 && position.y >= 56 && position.y <= 564),
+    'dokumentnoderna klampas inom en smal mobil grafyta'
+  );
+} else {
+  check(false, 'dokumentanalysens och nodlayoutens funktioner kunde testas');
+}
+
 console.log('\nSammanfattning');
 console.log(`  ${passed} godkända, ${failed} fel av ${passed + failed} kontroller\n`);
 if (failed) process.exit(1);

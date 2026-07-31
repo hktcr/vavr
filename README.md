@@ -3,6 +3,24 @@
 VävR är ett lokalt skrivverktyg som gör textens struktur och lexikala
 återkoppling synlig. Varje committat stycke blir en nod i en levande väv.
 
+## Dokumentytan
+
+Den aktiva dokumenttiteln ligger som en egen knapp i toppbaren. Knappen öppnar
+en full dokumentyta där det går att skapa ett nytt dokument och växla mellan
+alla lokalt sparade dokument utan att först öppna inställningarna.
+
+Dokumentytan har två lägen:
+
+- **Lista** visar aktivt dokument först och ger varje dokument ett tydligt
+  kort med titel, ordmängd, blockmängd och en kort textförhandsvisning.
+- **Noder** visar varje dokument som en namngiven dokumentnod. Aktivt dokument
+  har mässingsmarkering. Ett klick på vilken nod som helst öppnar dokumentet.
+  Linjer mellan noder visar uppmätt lexikal likhet mellan dokumentens invävda
+  text.
+
+Ett nytt dokument får sitt namn direkt i dokumentytan och öppnas sedan i
+Skriv. Den senast valda list- eller nodvyn sparas lokalt.
+
 ## Tre arbetsrum
 
 1. **Skriv** visar endast det block som formuleras nu. Enter väver in blocket,
@@ -85,6 +103,16 @@ webbappen inte kan ta bort.
 Kohesionen beräknas med svensk tokenisering, stoppord, lätt suffixtrunkering,
 TF/IDF och cosinuslikhet. Rubriker påverkar inte styckenas IDF. Små dokument
 stabiliseras genom att IDF-vikterna krymps mot neutral vikt.
+
+Dokumentväven återanvänder samma analysfamilj på en annan nivå. Varje dokument
+representeras av all invävd blocktext, inklusive rubriker, medan dokumenttitel
+och pågående utkast inte räknas. TF/IDF beräknas över de sparade dokumenten och
+varje dokumentpar jämförs med cosinuslikhet. Ett dokument behöver minst åtta
+ord och sex analyserbara unika ord för att jämföras. Sambandströskeln i
+inställningarna används, men dokumentjämförelsen tillåts aldrig gå under 0,08.
+Som mest fyra synliga kopplingar per dokument ritas för att nätverket ska vara
+läsbart. När en dokumentnod får fokus visas den starkaste kopplingen och de
+gemensamma nyckelorden i klartext.
 
 Analysen och ritningen är åtskilda. Varningsstatus bygger på den fullständiga
 kohesionsmatrisen, medan Väven bara ritar ett begränsat antal trådar per nod.

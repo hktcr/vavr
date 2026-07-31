@@ -20,7 +20,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 
 | Fil | Roll |
 |---|---|
-| `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
+| `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, dokumentyta, dokumentlikhet, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
 | `valsang-engine.js` | SkrivR:s kontinuerliga Valsångsmotor, anpassad till VävR:s ljudkontext och utökad med långsam organisk tonböjning |
 | `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills och ett nytt omedelbart tangentanslag |
 | `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
@@ -30,6 +30,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
+| `vavr-shell-test.mjs` | 140 kontroller av appskal, dokumentyta, dokumentlikhet, nodlayout, PWA, skrivstöd, Väven och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
@@ -88,6 +89,7 @@ Ljudinställningarna är också appövergripande:
 
 ```js
 settings = {
+  documentHubView: 'list' | 'graph',
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
     'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
@@ -105,7 +107,8 @@ status och startar därför aldrig automatiskt efter omladdning.
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
-`vavr-weaver-v5`. Äldre VävR-data kan migreras vid inläsning.
+`vavr-weaver-v5`. Den interna tillståndsversionen är 8. Äldre VävR-data kan
+migreras vid inläsning.
 
 Markdown exporterar det aktiva dokumentets text. En VävR-säkerhetskopia
 exporterar alla dokument, mål, inställningar och timerstatus som JSON.
@@ -113,6 +116,46 @@ exporterar alla dokument, mål, inställningar och timerstatus som JSON.
 nuvarande tillstånd.
 
 ## Arbetslägen
+
+### Dokumentytan
+
+Dokumentytan är ett modalt arbetslager ovanpå de tre innehållslägena. En
+dedikerad knapp i toppbaren visar den aktiva dokumenttiteln och öppnar lagret.
+Öppning sparar det aktuella utkastet innan dokumentlistan renderas.
+
+Listvyn härleds direkt från `app.documents`. Aktivt dokument ligger först och
+varje kort visar titel, ordmängd, blockmängd och en textförhandsvisning. Ett
+klick anropar `changeActiveDocument()`, stänger lagret och återställer fokus i
+det arbetsläge som redan var öppet.
+
+Nytt dokument är ett sammanhållet formulärflöde:
+
+1. användaren öppnar namnformuläret
+2. `createDocument()` skapar den fullständiga kanoniska modellen
+3. dokumentet läggs till i `app.documents`
+4. `changeActiveDocument()` öppnar det
+5. VävR växlar till Skriv och placerar fokus i skrivfältet
+
+Nodvyn använder dokumentformade DOM-knappar ovanpå ett SVG-lager med
+kopplingslinjer. Aktivt dokument märks med text och mässingsfärg. Tomma eller
+för korta dokument får streckad kant. Klick på en nod öppnar dokumentet.
+
+`analyzeDocuments()` sammanfogar varje dokuments invävda blocktext och
+återanvänder `tokenize()`, `buildIdf()`, `buildVector()`, `cosine()` och
+`commonWords()`. Dokumenttiteln och `draft` ingår inte. Rubriker ingår eftersom
+de är invävda block och bär dokumentets explicita ämnesstruktur.
+
+Jämförelsen kräver minst åtta ord och sex analyserbara unika ord per dokument.
+Tröskeln hämtas från `settings.threshold` och klampas till intervallet 0,08
+till 0,28. Kvalificerade dokumentpar lagras i `fullEdges`. Högst fyra linjer
+per dokument väljs till `edges` för ritning. Den fullständiga mängden används
+för status och starkaste koppling, medan den ritade mängden används för
+fokusering och visuell nedtoning.
+
+`layoutDocumentGraph()` är deterministisk. Den börjar i ett responsivt grid
+och kör därefter 150 fysiksteg med repulsion, likhetsfjädrar, centrering,
+dämpning och viewportklampning. Därmed ligger dokumentknapparna kvar inom
+grafytan även när dess storlek ändras.
 
 ### Skriv
 
@@ -275,6 +318,12 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 ## Tillgänglighet
 
 - Canvasen är dold för hjälpmedel och varje grafnod har textalternativ.
+- Dokumentytan är en modal dialog med fokusfälla, Escape-stängning och
+  återställt fokus.
+- Dokumentlistans kort och dokumentvävens noder är riktiga knappar. Varje nod
+  läser upp titel, aktiv status, ordmängd och antal synliga kopplingar.
+- Dokumentlikhet förklaras också med text. Färg och linjebredd är inte den
+  enda informationsbäraren.
 - Interaktiva mål är minst 44 gånger 44 pixlar.
 - Status förmedlas med text och inte enbart med färg.
 - Timerdisplayen använder `role="timer"` och läser inte upp varje sekund.
