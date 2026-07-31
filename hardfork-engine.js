@@ -1,7 +1,7 @@
-export const HardForkEngine = (function() {
+window.HardForkEngine = (function() {
     let ctx = null;
     let masterGain = null;
-    let globalVolume = 0.6;
+    let globalVolume = 0.72;
     let effectDepth = 1.0;
 
     // Constants
@@ -70,6 +70,16 @@ export const HardForkEngine = (function() {
         }
     }
     let prng = Math.random;
+    let contextStats = {
+        words: 0,
+        paragraphs: 0,
+        headings: 0,
+        lastHeadingLevel: 0,
+        harmonicShiftCount: 0,
+        vowelRatio: 0.38,
+        g: 1,
+        documentTitle: ''
+    };
 
     function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
     function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
@@ -80,10 +90,27 @@ export const HardForkEngine = (function() {
     }
 
     function getStats() {
-        if (window.TextContext && typeof window.TextContext.getStats === 'function') {
-            return window.TextContext.getStats();
-        }
-        return { paragraphs: 0, vowelRatio: 0.38, g: 1.0 };
+        return contextStats;
+    }
+
+    function setContext(profile = {}) {
+        const words = Math.max(0, Number(profile.words) || 0);
+        const averageWordLength = clamp(Number(profile.averageWordLength) || 5, 2, 12);
+        const N = Math.max(0, Number(profile.characters) || words * averageWordLength);
+        contextStats = {
+            ...contextStats,
+            words,
+            wordCount: words,
+            paragraphs: Math.max(0, Number(profile.paragraphs) || 0),
+            headings: Math.max(0, Number(profile.headings) || 0),
+            lastHeadingLevel: Math.max(0, Number(profile.headingDepth) || 0),
+            harmonicShiftCount: Math.max(0, Number(profile.harmonicShiftCount) || 0),
+            vowelRatio: clamp(Number(profile.vowelRatio) || 0.38, 0.2, 0.65),
+            g: 40 / (40 + N),
+            cohesion: clamp(Number(profile.cohesion) || 0, 0, 1),
+            connectedness: clamp(Number(profile.connectedness) || 0, 0, 1),
+            documentTitle: String(profile.documentTitle || '')
+        };
     }
 
     function createNoiseBuffer() {
@@ -105,7 +132,7 @@ export const HardForkEngine = (function() {
         return curve;
     }
 
-    function init(audioContext) {
+    function init(audioContext, destination) {
         ctx = audioContext || ctx || new (window.AudioContext || window.webkitAudioContext)();
         if (masterGain) return; // Already initialized
 
@@ -157,7 +184,7 @@ export const HardForkEngine = (function() {
         sendGain.connect(delayR); delayR.connect(delayFilterR); delayFilterR.connect(delayPanR); delayPanR.connect(masterGain); delayFilterR.connect(delayFB_L);
         delayFB_R.connect(delayR); delayFB_L.connect(delayL);
 
-        masterGain.connect(ctx.destination);
+        masterGain.connect(destination || ctx.destination);
         ctx.synthBus = synthBus;
 
         heatInterval = setInterval(() => {
@@ -173,7 +200,9 @@ export const HardForkEngine = (function() {
         }, 100);
 
         schedulerInterval = setInterval(schedule, 25);
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
     }
 
     function setVolume(val) {
@@ -199,17 +228,28 @@ export const HardForkEngine = (function() {
         M_pending = null;
         sentenceMelody = [];
         melodyBuffer = [];
+        isTyping = false;
         isOutro = false;
+        isFillBar = false;
+        fillScheduledForNextBar = false;
+        currentSentenceLen = 0;
+        lastCharIndex = -1;
+        currentMelDegree = 4;
         pendingFillVariant = 'normal';
         activeFillVariant = 'normal';
         typeHeat = 0;
         lastHeadingCount = 0;
+        step16 = 0;
+        barNumber = 0;
+        nextNoteTime = 0;
     }
 
     function destroy() {
         if (heatInterval) clearInterval(heatInterval);
         if (schedulerInterval) clearInterval(schedulerInterval);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }
         if (masterGain) {
             const oldGain = masterGain;
             oldGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
@@ -217,6 +257,9 @@ export const HardForkEngine = (function() {
             masterGain = null;
         }
         resetMemory();
+        noiseBuffer = null;
+        heatInterval = null;
+        schedulerInterval = null;
         ctx = null;
     }
 
@@ -395,13 +438,9 @@ export const HardForkEngine = (function() {
             
             // 1. Skapa en unik "fingeravtrycks-seed" baserad på dokumentets titel
             let docSeed = 0;
-            if (typeof window.getActiveDoc === 'function') {
-                const doc = window.getActiveDoc();
-                if (doc && doc.title) {
-                    for(let i = 0; i < doc.title.length; i++) {
-                        docSeed += doc.title.charCodeAt(i) * Math.pow(7, i % 5);
-                    }
-                }
+            const title = String(stats.documentTitle || '');
+            for(let i = 0; i < title.length; i++) {
+                docSeed += title.charCodeAt(i) * Math.pow(7, i % 5);
             }
             
             // 2. Låt groovet utvecklas beroende på ordmängd (ändrar mönster var 30:e ord)
@@ -531,6 +570,9 @@ export const HardForkEngine = (function() {
         if (!ctx) init();
         if (!ctx) return;
         if (ctx.state === 'suspended') ctx.resume();
+        if (stats) setContext(stats);
+        if (key === 'Backspace' || key === 'Delete') key = '\b';
+        if (key === 'Enter') key = '\n';
         
         const lowKey = key.toLowerCase();
         
@@ -547,6 +589,7 @@ export const HardForkEngine = (function() {
         const quantTime = nextNoteTime;
         
         if (key === '\b' || key === 'Delete') {
+            playPluck(now, Math.max(0, currentMelDegree - 2), 0.32, 0.08, 0.34);
             if (now - lastGlitchTime > 0.4) {
                 lastGlitchTime = now;
                 const r = Math.random();
@@ -561,6 +604,7 @@ export const HardForkEngine = (function() {
                 }
             }
         } else if (key === '\n') {
+            playPluck(now, 0, 0.42, 0.1, 0.42);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             
@@ -576,6 +620,7 @@ export const HardForkEngine = (function() {
                 sweepUntilTime = now + SIXTEENTH_DUR * 16;
             }
         } else if (key === '#') {
+            playPluck(now, currentMelDegree + 5, 0.45, 0.09, 0.46);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             const s = getStats();
@@ -611,11 +656,13 @@ export const HardForkEngine = (function() {
             }
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('char', 14);
         } else if (key === ' ') {
+            playPluck(now, 0, 0.34, 0.075, 0.32);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             addTrace(40, now);
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('space', 0);
         } else if (/[.,;:!?]/.test(key)) {
+            playPluck(now, currentMelDegree + (key === '?' ? 2 : 0), 0.4, 0.085, 0.4);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             addTrace(90, now);
@@ -674,6 +721,9 @@ export const HardForkEngine = (function() {
             let octaveOffset = 0;
             if ((step16 === 6 || step16 === 14) && prng() < typeHeat * 0.5) octaveOffset = 12; // A2
             
+            // Direktansatsen tar bort upplevd tangentfördröjning. Det starkare
+            // huvudplucket ligger kvar på sextondelsnätet och bevarar groovet.
+            playPluck(now, currentMelDegree + octaveOffset/12*5, 0.38, 0.075, 0.4);
             playPluck(quantTime, currentMelDegree + octaveOffset/12*5, 1.0);
             
             if (typeHeat > 0.5) {
@@ -708,5 +758,16 @@ export const HardForkEngine = (function() {
     let onSentenceCallback = null;
     function onSentence(cb) { onSentenceCallback = cb; }
 
-    return { init, setVolume, setDepth, destroy, handleKey, handleChar, getState, onSentence, resetMemory };
+    return {
+        init,
+        setVolume,
+        setDepth,
+        setContext,
+        destroy,
+        handleKey,
+        handleChar,
+        getState,
+        onSentence,
+        resetMemory
+    };
 })();

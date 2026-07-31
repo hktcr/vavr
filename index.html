@@ -2613,6 +2613,8 @@
     </div>
   </aside>
 
+  <script src="./valsang-engine.js"></script>
+  <script src="./hardfork-engine.js"></script>
   <script>
   (() => {
     'use strict';
@@ -2716,13 +2718,13 @@
         name: 'Valsång',
         adaptive: true,
         dynamic: true,
-        description: 'En sjungande, textformad röstvärld. Bokstäver styr melodins rörelse, skrivtempo formar andningen och meningar lämnar klingande ekon.'
+        description: 'SkrivR:s sjungande dubbelröst, vidareutvecklad för VävR. Bokstäver formar glidande valfraser, konsonanter blir andning och meningar återkommer som långa ekon.'
       },
       hardfork: {
         name: 'Hard Fork',
         adaptive: true,
         dynamic: true,
-        description: 'En ombyggd rytmisk skrivmaskin där varje tecken svarar direkt och textens tempo, skiljetecken, rubriker och samband bygger ett föränderligt groove.'
+        description: 'SkrivR:s generativa 125 BPM-produktion, vidareutvecklad för VävR. Direkt tangentansats kombineras med bas, trummor, swing, ostinato, fills och textminne.'
       }
     };
 
@@ -3271,49 +3273,24 @@
         }
 
         if (theme === 'valsang') {
-          const air = addNoise(active, { color: 'brown', gain: .032, highpass: 110, lowpass: 2600, rate: .88 });
-          const pad = addPad(active, [55, 82.41, 110], { gain: .044, lowpass: 1450, detune: 4 });
-          addLfo(active, pad.filter.frequency, .035, 260);
-          addLfo(active, air.level.gain, .055, .007);
-          active.activityFilter = pad.filter;
-          active.baseFilter = 1450;
-          active.adaptive = { kind: theme, air, pad };
-          active.dynamic = {
-            kind: theme,
-            air,
-            pad,
-            root: 98,
-            degree: 4,
-            lastLetter: -1,
-            lastKeyAt: Date.now(),
-            tempo: 420,
-            phrase: [],
-            openScale: false
-          };
+          const engine = window.ValsangEngine;
+          if (!engine) throw new Error('Valsångsmotorn kunde inte laddas');
+          engine.init(active.context, active.master);
+          engine.setVolume(.78);
+          active.externalEngine = engine;
+          active.adaptive = { kind: theme };
+          active.dynamic = { kind: theme };
           return;
         }
 
         if (theme === 'hardfork') {
-          const air = addNoise(active, { color: 'brown', gain: .018, highpass: 150, lowpass: 1800, rate: .72 });
-          const pad = addPad(active, [49, 73.42, 98], { gain: .022, lowpass: 980, detune: 7 });
-          addLfo(active, pad.filter.frequency, .07, 220);
-          active.activityFilter = pad.filter;
-          active.baseFilter = 980;
-          active.adaptive = { kind: theme, air, pad };
-          active.dynamic = {
-            kind: theme,
-            air,
-            pad,
-            root: 55,
-            degree: 4,
-            lastLetter: -1,
-            lastKeyAt: 0,
-            heat: 0,
-            step: 0,
-            pulseMs: 120,
-            pulsing: false,
-            memory: [0, 2, 4, 2, 0, 3, 4, 6]
-          };
+          const engine = window.HardForkEngine;
+          if (!engine) throw new Error('Hard Fork-motorn kunde inte laddas');
+          engine.init(active.context, active.master);
+          engine.setVolume(.72);
+          active.externalEngine = engine;
+          active.adaptive = { kind: theme };
+          active.dynamic = { kind: theme };
           return;
         }
 
@@ -3349,44 +3326,17 @@
         const headings = Math.max(0, Number(profile.headings) || 0);
         const paragraphs = Math.max(0, Number(profile.paragraphs) || 0);
         const headingDepth = clamp(Number(profile.headingDepth) || 0, 0, 3);
-        const { air, pad, kind } = active.adaptive;
+        const { kind } = active.adaptive;
 
-        if (kind === 'valsang') {
-          const dynamic = active.dynamic;
-          dynamic.openScale = vowelRatio > .43;
-          dynamic.root = clamp(88 + averageWord * 1.8 + (vowelRatio - .38) * 42, 92, 112);
-          const scale = dynamic.openScale ? dynamicScales.open : dynamicScales.minor;
-          const center = clamp(Math.round(2 + averageWord * .55 + sentenceLength / 18), 3, 9);
-          pad.oscillators.forEach((oscillator, index) => {
-            moveParameter(
-              oscillator.frequency,
-              degreeFrequency(dynamic.root / 2, center + [0, 2, 4][index], scale),
-              1.25
-            );
-          });
-          const brightness = clamp(980 + vowelRatio * 1350 + connectedness * 460, 1150, 2600);
-          moveParameter(pad.filter.frequency, brightness, 1.2);
-          moveParameter(air.level.gain, clamp(.024 + sentenceLength / 2600, .026, .048), 1.4);
-          active.baseFilter = brightness;
+        if (active.externalEngine) {
+          active.externalEngine.setContext(profile);
+          active.externalEngine.setDepth(kind === 'valsang'
+            ? clamp(.82 + connectedness * .22 + vowelRatio * .08, .82, 1.12)
+            : clamp(.76 + cohesion * .24 + Math.min(.16, headings * .02), .76, 1.12));
           return;
         }
 
-        if (kind === 'hardfork') {
-          const dynamic = active.dynamic;
-          const roots = [49, 55, 61.74, 65.41];
-          dynamic.root = roots[Math.round(headingDepth)];
-          dynamic.pulseMs = clamp(142 - sentenceLength * 1.25 - cohesion * 22, 92, 136);
-          const tension = clamp(.08 + (1 - connectedness) * .3, .08, .38);
-          const ratios = [1, 1.5 - tension * .18, 2 + tension * .25];
-          pad.oscillators.forEach((oscillator, index) => {
-            moveParameter(oscillator.frequency, dynamic.root * ratios[index], 1.1);
-          });
-          const brightness = clamp(760 + averageWord * 95 + cohesion * 1150 + headings * 24, 920, 3100);
-          moveParameter(pad.filter.frequency, brightness, .8);
-          moveParameter(air.level.gain, clamp(.012 + (1 - cohesion) * .018, .012, .03), 1);
-          active.baseFilter = brightness;
-          return;
-        }
+        const { air, pad } = active.adaptive;
 
         if (kind === 'ordfalt') {
           const brightness = clamp(440 + averageWord * 105 + vowelRatio * 960 + sentenceLength * 8, 620, 2800);
@@ -3434,6 +3384,10 @@
       }
 
       function dispose(active, immediate = false) {
+        if (active.externalEngine) {
+          try { active.externalEngine.destroy(); } catch (error) { /* ljudkontexten stängs nedan */ }
+          active.externalEngine = null;
+        }
         const now = active.context.currentTime;
         active.master.gain.cancelScheduledValues(now);
         active.master.gain.setTargetAtTime(0, now, immediate ? .006 : .055);
@@ -3555,6 +3509,10 @@
         const active = session;
         if (!active || !reactive || typeof key !== 'string') return;
         ensureRunning(active);
+        if (active.externalEngine) {
+          active.externalEngine.handleChar(key);
+          return;
+        }
         if (active.dynamic?.kind === 'valsang') {
           liftForTyping(active);
           handleValsangKey(active, key);
@@ -3595,6 +3553,7 @@
         const active = session;
         if (!active || !reactive) return;
         ensureRunning(active);
+        if (active.externalEngine) return;
         if (active.dynamic?.kind === 'valsang') {
           const scale = active.dynamic.openScale ? dynamicScales.open : dynamicScales.minor;
           const degrees = kind === 'heading' ? [0, 4, 7] : [0, 2, 4];
@@ -4909,17 +4868,32 @@
 
     function soundTextProfile() {
       const document = activeDocument();
-      const draft = parseDraft(elements.draft.value || '').text;
+      const draftBlock = parseDraft(elements.draft.value || '');
+      const draft = draftBlock.text;
       const text = [...document.blocks.map(block => block.text), draft].filter(Boolean).join(' ');
       const words = text.match(/[\p{L}\p{N}]+/gu) || [];
       const letters = text.toLowerCase().match(/[a-zåäö]/g) || [];
       const vowels = letters.filter(letter => 'aeiouyåäö'.includes(letter)).length;
+      const alphabet = 'abcdefghijklmnopqrstuvwxyzåäö';
+      const meanAlpha = letters.length
+        ? letters.reduce((sum, letter) => sum + alphabet.indexOf(letter), 0) / letters.length
+        : 14;
       const sentenceWordCounts = text
         .split(/[.!?]+/)
         .map(sentence => wordCount(sentence))
         .filter(Boolean);
-      const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length;
-      const headings = document.blocks.filter(block => block.kind === 'heading');
+      const draftExists = Boolean(draftBlock.text);
+      const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length
+        + (draftExists && draftBlock.kind === 'paragraph' ? 1 : 0);
+      const committedHeadings = document.blocks.filter(block => block.kind === 'heading');
+      const headingLevels = [
+        ...committedHeadings.map(block => block.level || 1),
+        ...(draftExists && draftBlock.kind === 'heading' ? [draftBlock.level || 1] : [])
+      ];
+      const harmonicShiftCount = headingLevels.reduce(
+        (count, level, index) => count + (index > 0 && level !== headingLevels[index - 1] ? 1 : 0),
+        0
+      );
       const cohesionScores = analysis?.fullCohesion?.map(edge => edge.score) || [];
       const connectedParagraphs = analysis?.nodes
         ?.filter(node => node.kind === 'paragraph' && node.qualifiedDegree > 0)
@@ -4927,6 +4901,8 @@
 
       return {
         words: words.length,
+        characters: characterCount(text),
+        meanAlpha,
         averageWordLength: words.length
           ? words.reduce((sum, word) => sum + characterCount(word), 0) / words.length
           : 5,
@@ -4935,8 +4911,10 @@
           ? sentenceWordCounts.reduce((sum, count) => sum + count, 0) / sentenceWordCounts.length
           : 12,
         paragraphs,
-        headings: headings.length,
-        headingDepth: headings[headings.length - 1]?.level || 0,
+        headings: headingLevels.length,
+        headingDepth: headingLevels[headingLevels.length - 1] || 0,
+        harmonicShiftCount,
+        documentTitle: document.title || '',
         cohesion: cohesionScores.length
           ? clamp(cohesionScores.reduce((sum, score) => sum + score, 0) / cohesionScores.length * 1.6, 0, 1)
           : 0,

@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync('index.html', 'utf8');
+const valsangSource = readFileSync('valsang-engine.js', 'utf8');
+const hardForkSource = readFileSync('hardfork-engine.js', 'utf8');
 const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '';
 const soundStart = inlineScript.indexOf('const SOUND_THEMES =');
 const soundEnd = inlineScript.indexOf('    const elements =', soundStart);
@@ -31,6 +33,7 @@ class FakeNode {
     this.gain = new FakeParam();
     this.frequency = new FakeParam();
     this.detune = new FakeParam();
+    this.delayTime = new FakeParam();
     this.Q = new FakeParam();
     this.playbackRate = new FakeParam(1);
     this.pan = new FakeParam();
@@ -45,7 +48,7 @@ class FakeNode {
   connect(target) { return target; }
   disconnect() {}
   addEventListener(name, callback) { this.listeners[name] = callback; }
-  start() {}
+  start(time) { FakeAudioContext.startTimes.push(time); }
   stop() { this.listeners.ended?.(); }
 }
 
@@ -54,6 +57,10 @@ class FakeAudioContext {
   static pendingResumes = [];
   static bufferCreations = 0;
   static waveShaperCreations = 0;
+  static oscillatorCreations = 0;
+  static convolverCreations = 0;
+  static delayCreations = 0;
+  static startTimes = [];
   static instances = [];
 
   constructor() {
@@ -73,8 +80,19 @@ class FakeAudioContext {
 
   createBufferSource() { return new FakeNode(); }
   createBiquadFilter() { return new FakeNode(); }
+  createConvolver() {
+    FakeAudioContext.convolverCreations += 1;
+    return new FakeNode();
+  }
+  createDelay() {
+    FakeAudioContext.delayCreations += 1;
+    return new FakeNode();
+  }
   createGain() { return new FakeNode(); }
-  createOscillator() { return new FakeNode(); }
+  createOscillator() {
+    FakeAudioContext.oscillatorCreations += 1;
+    return new FakeNode();
+  }
   createStereoPanner() { return new FakeNode(); }
   createDynamicsCompressor() { return new FakeNode(); }
   createWaveShaper() {
@@ -105,17 +123,27 @@ class FakeAudioContext {
 
 const sandbox = {
   window: { AudioContext: FakeAudioContext },
+  document: {
+    hidden: false,
+    addEventListener() {},
+    removeEventListener() {}
+  },
   Math,
   Date,
+  performance: { now: () => Date.now() },
   Promise,
   Set,
   Float32Array,
+  setInterval,
+  clearInterval,
   setTimeout,
   clearTimeout,
   clamp: (value, min, max) => Math.max(min, Math.min(max, value))
 };
 
 vm.createContext(sandbox);
+vm.runInContext(valsangSource, sandbox);
+vm.runInContext(hardForkSource, sandbox);
 vm.runInContext(soundSource, sandbox);
 
 const engine = sandbox.testSoundscape;
@@ -171,6 +199,59 @@ for (const theme of themes) {
   passed += 1;
   console.log('  ok   ' + theme + ' startar, reagerar och stängs');
 }
+
+const valsangConvolversBefore = FakeAudioContext.convolverCreations;
+const valsangOscillatorsBefore = FakeAudioContext.oscillatorCreations;
+await engine.start('valsang', 24, {
+  words: 280,
+  characters: 1640,
+  averageWordLength: 5.4,
+  vowelRatio: .43,
+  paragraphs: 6,
+  documentTitle: 'Valarnas väg'
+});
+if (
+  FakeAudioContext.convolverCreations <= valsangConvolversBefore ||
+  FakeAudioContext.oscillatorCreations < valsangOscillatorsBefore + 5
+) {
+  throw new Error('Valsång byggde inte originalets kontinuerliga röst, LFO:er och reverbrum.');
+}
+engine.handleKey('a');
+engine.handleKey('s');
+engine.handleKey('.');
+engine.stop(true);
+console.log('  ok   Valsång använder kontinuerlig dubbelröst, långsam tonböjning och reverbrum');
+
+const hardForkDelaysBefore = FakeAudioContext.delayCreations;
+const hardForkShapersBefore = FakeAudioContext.waveShaperCreations;
+await engine.start('hardfork', 24, {
+  words: 420,
+  characters: 2410,
+  averageWordLength: 5.7,
+  vowelRatio: .39,
+  paragraphs: 8,
+  headings: 3,
+  headingDepth: 2,
+  documentTitle: 'Grenverk'
+});
+const hardForkContext = FakeAudioContext.instances.at(-1);
+hardForkContext.currentTime = 10;
+FakeAudioContext.startTimes = [];
+engine.handleKey('a');
+const immediateStarts = FakeAudioContext.startTimes.filter(time => time === 10).length;
+const griddedStarts = FakeAudioContext.startTimes.filter(time => Number(time) > 10).length;
+if (
+  FakeAudioContext.delayCreations < hardForkDelaysBefore + 2 ||
+  FakeAudioContext.waveShaperCreations <= hardForkShapersBefore ||
+  !immediateStarts ||
+  !griddedStarts
+) {
+  throw new Error('Hard Fork saknar produktionskedja, direktansats eller rytmiskt sextondelslager.');
+}
+engine.handleKey(' ');
+engine.handleKey('.');
+engine.stop(true);
+console.log('  ok   Hard Fork kombinerar direkt tangentansats med sequencer, distortion och stereodelay');
 
 const typewriter = sandbox.testTypewriter;
 const typewriterThemes = ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad'];

@@ -21,6 +21,8 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | Fil | Roll |
 |---|---|
 | `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
+| `valsang-engine.js` | SkrivR:s kontinuerliga Valsångsmotor, anpassad till VävR:s ljudkontext och utökad med långsam organisk tonböjning |
+| `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills och ett nytt omedelbart tangentanslag |
 | `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
 | `sw.js` | Versionsstyrd appskal-cache, offlinefallback och användarstyrd uppdatering |
 | `icons/` | Vanlig, maskable och Apple-anpassad VävR-ikon |
@@ -28,7 +30,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
+| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
@@ -131,10 +133,12 @@ kontrollen.
 
 ### Ljudrum
 
-`Soundscape` i `index.html` bygger ljudlandskapen med Web Audio API. Varje tema
-består av lokalt genererade brusbufferter, oscillatorer, filter och långsamma
-modulationer. En gemensam kompressor och en försiktigt skalad mastervolym
-minskar risken för plötsliga nivåsprång.
+`Soundscape` i `index.html` bygger de sju enklare ljudlandskapen med Web Audio
+API och fungerar som livscykel- och volymadapter för de två fullständiga
+SkrivR-motorerna i `valsang-engine.js` och `hardfork-engine.js`. Skripten är
+lokala, ingår i service workerns appskal och kräver inga nätverksanrop. En
+gemensam kompressor och en försiktigt skalad mastervolym minskar risken för
+plötsliga nivåsprång.
 
 Gläntan och Nattljus använder glesa tonala glimtar. Regnväv använder ett
 filtrerat brusfält och små dropptransienter. Djupström är avsiktligt utan
@@ -150,14 +154,31 @@ rubriknivå, styckeantal och ordmängd. Dessa värden styr långsamma
 filterförändringar, brusnivåer och oscillatorfrekvenser. De innebär ingen
 tolkning av textens betydelse eller kvalitet.
 
-Valsång och Hard Fork har dessutom en dynamisk tillståndsmotor. Valsång
-mappar bokstavsrörelse till skalsteg, låter vokaler få längre anslag och
-bygger en kort fras som skiljetecken kan återkalla. Textprofilens vokalandel,
-ordlängd och meningslängd ändrar skala, grundton och andning. Hard Fork ger
-först ett okvantiserat teckensvar och driver därefter ett separat 16-stegs
-pulslager. Minnet, intensiteten och pulslängden formas av skrivaktivitet,
-rubrikdjup, meningslängd och lexikal återkoppling. Den omedelbara
-bekräftelsen väntar alltså aldrig på nästa rytmiska steg.
+Valsång är en portning av den fullständiga SkrivR-motorn, inte en förenklad
+återskapning. Två kontinuerliga sinusoscillatorer, en suboscillator, ett
+formantfilter, tempoformad vibrato, en mycket långsam tonböjning och ett
+6,5 sekunder långt syntetiskt reverbrum bildar rösten. Bokstavsrörelse mappas
+deterministiskt till pentatoniska skalsteg. Vokaler får längre andning medan
+klusiler, frikativor och resonanta konsonanter får olika brus- och
+tontransienter. Meningsslut spelar tillbaka ett sammandrag av meningens
+tonföljd en oktav högre. Vokalandel, textlängd, alfabetiskt tyngdcentrum och
+styckeantal ändrar skalfärg, gravitation och tonart.
+
+Hard Fork är på motsvarande sätt SkrivR:s fullständiga 125 BPM-motor.
+En lookahead-scheduler driver ett swingande sextondelsnät med kick, bas,
+hi-hat, snare, ostinato, sidechain-liknande duckning, waveshaping och
+korskopplad stereodelay. Skrivintensitet bygger lagren. Meningsmelodin
+komprimeras till ett åttastegsminne, skiljetecken bestämmer filltyp och
+rubriknivåer kan ge filtersvep och harmoniska skiften. VävR-förfiningen lägger
+ett kort okvantiserat pluck vid själva tangentgesten, medan det starkare
+musikaliska svaret ligger kvar på rytmnätet. Därmed bevaras Hard Fork-känslan
+utan den upplevda tangentfördröjningen.
+
+Den lokala textprofilen innehåller också teckenmängd, alfabetiskt
+tyngdcentrum, rubrikskiften och dokumenttitel. Titeln och textens tillväxt
+ger Hard Fork ett deterministiskt musikaliskt fingeravtryck. Vid stopp
+återställs sequencer, fill, skrivstatus och vilomodulation så att en ny
+session aldrig ärver ett gammalt rytmläge.
 
 `Typewriter` är en separat Web Audio-motor för direkt tangentfeedback.
 Mekanisk, Reseskrivare, Elektrisk och Dämpad använder olika kombinationer av

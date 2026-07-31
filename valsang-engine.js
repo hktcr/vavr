@@ -6,12 +6,13 @@
  * och rum formas av vad och hur man skriver enligt Kontextprincipen.
  */
 
-export const ValsangEngine = (() => {
+window.ValsangEngine = (() => {
     let ctx = null;
     let masterGain, dryGain, wetGain, compressor, convolver;
     let voiceOsc1, voiceOsc2, subOsc, voiceGain;
-    let voiceFilter;
+    let voiceFilter, formantFilter;
     let vibratoLFO, vibratoGain;
+    let songLFO, songGain;
 
     let noiseBuffer = null;
     let irBuffer = null;
@@ -40,6 +41,13 @@ export const ValsangEngine = (() => {
     
     let onTraceCallback = null;
     let isDurScale = false;
+    let contextStats = {
+        N: 0,
+        g: 1,
+        meanAlpha: 14,
+        vowelRatio: 0.38,
+        paragraphs: 0
+    };
 
     // Helper functions
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
@@ -80,7 +88,30 @@ export const ValsangEngine = (() => {
         return impulse;
     };
 
-    function init(audioContext) {
+    function getStats() {
+        return contextStats;
+    }
+
+    function setContext(profile = {}) {
+        const words = Math.max(0, Number(profile.words) || 0);
+        const averageWordLength = clamp(Number(profile.averageWordLength) || 5, 2, 12);
+        const N = Math.max(0, Number(profile.characters) || words * averageWordLength);
+        contextStats = {
+            ...contextStats,
+            N,
+            g: 40 / (40 + N),
+            meanAlpha: clamp(Number(profile.meanAlpha) || 14, 0, 28),
+            vowelRatio: clamp(Number(profile.vowelRatio) || 0.38, 0.2, 0.65),
+            paragraphs: Math.max(0, Number(profile.paragraphs) || 0),
+            words,
+            headings: Math.max(0, Number(profile.headings) || 0),
+            lastHeadingLevel: Math.max(0, Number(profile.headingDepth) || 0),
+            harmonicShiftCount: Math.max(0, Number(profile.harmonicShiftCount) || 0),
+            connectedness: clamp(Number(profile.connectedness) || 0, 0, 1)
+        };
+    }
+
+    function init(audioContext, destination) {
         if (ctx) return;
         ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
         
@@ -88,10 +119,10 @@ export const ValsangEngine = (() => {
         compressor = ctx.createDynamicsCompressor();
         compressor.threshold.value = -20;
         compressor.ratio.value = 6;
-        compressor.connect(ctx.destination);
+        compressor.connect(destination || ctx.destination);
         
         masterGain = ctx.createGain();
-        masterGain.gain.value = Math.pow(0.55, 1.6) * 0.9;
+        masterGain.gain.value = Math.pow(0.78, 1.6) * 0.9;
         masterGain.connect(compressor);
         
         dryGain = ctx.createGain();
@@ -132,10 +163,17 @@ export const ValsangEngine = (() => {
         voiceFilter.type = 'lowpass';
         voiceFilter.frequency.value = 1600;
         voiceFilter.Q.value = 0.4;
+
+        formantFilter = ctx.createBiquadFilter();
+        formantFilter.type = 'peaking';
+        formantFilter.frequency.value = 620;
+        formantFilter.Q.value = 1.15;
+        formantFilter.gain.value = 5.5;
         
         voiceGain.connect(voiceFilter);
-        voiceFilter.connect(dryGain);
-        voiceFilter.connect(wetGain);
+        voiceFilter.connect(formantFilter);
+        formantFilter.connect(dryGain);
+        formantFilter.connect(wetGain);
         
         // Vibrato
         vibratoLFO = ctx.createOscillator();
@@ -148,12 +186,24 @@ export const ValsangEngine = (() => {
         vibratoLFO.connect(vibratoGain);
         vibratoGain.connect(voiceOsc1.detune);
         vibratoGain.connect(voiceOsc2.detune);
+
+        // En mycket långsam, organisk tonböjning ger den bärande rösten
+        // samma sjungande rörelse även mellan de tydligare vibratopulserna.
+        songLFO = ctx.createOscillator();
+        songLFO.type = 'sine';
+        songLFO.frequency.value = 0.075;
+        songGain = ctx.createGain();
+        songGain.gain.value = 12;
+        songLFO.connect(songGain);
+        songGain.connect(voiceOsc1.detune);
+        songGain.connect(voiceOsc2.detune);
         
         // Start constant nodes
         voiceOsc1.start();
         voiceOsc2.start();
         subOsc.start();
         vibratoLFO.start();
+        songLFO.start();
         
         noiseBuffer = createNoiseBuffer();
         
@@ -171,9 +221,15 @@ export const ValsangEngine = (() => {
         if (!ctx) return;
         clearTimeout(idleTimer);
         try {
-            voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop();
+            voiceOsc1.stop(); voiceOsc2.stop(); subOsc.stop(); vibratoLFO.stop(); songLFO.stop();
             if (idleLFO) idleLFO.stop();
         } catch(e) {}
+        idleTimer = null;
+        idleLFO = null;
+        idleGain = null;
+        sentenceBuffer = [];
+        prevAlphaIdx = null;
+        isIdle = true;
         ctx = null;
     }
 
@@ -307,7 +363,7 @@ export const ValsangEngine = (() => {
             idleGain.gain.setTargetAtTime(45, ctx.currentTime, 2.0); // ±45 cent
 
             // Glid till centerDegree vid vila
-            const stats = window.TextContext ? window.TextContext.getStats() : { meanAlpha: 14 };
+            const stats = getStats();
             const centerDegree = 2 + (stats.meanAlpha / 28) * 8;
             const targetFreq = midiToFreq(degreeToMidi(Math.round(centerDegree), rootMidi));
             voiceOsc1.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 4.0);
@@ -336,7 +392,7 @@ export const ValsangEngine = (() => {
         const releaseTC = lerp(0.35, 2.2, x);
         
         // Kontext från TextContext
-        const stats = window.TextContext ? window.TextContext.getStats() : { g: 1, meanAlpha: 14, vowelRatio: 0.38, paragraphs: 0 };
+        const stats = getStats();
         const N = stats.N || 0;
         const g = stats.g;
 
@@ -524,6 +580,7 @@ export const ValsangEngine = (() => {
         handleChar,
         setVolume,
         setDepth,
+        setContext,
         mute: (m) => setVolume(m ? 0 : 0.6), // Standardvolym 0.6, justeras av slider
         onTrace: (cb) => { onTraceCallback = cb; },
         getState

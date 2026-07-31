@@ -51,10 +51,13 @@ Två dynamiska kompositioner svarar både på varje tecken och på textens
 sammanlagda form:
 
 - **Valsång** formar melodisk riktning av bokstavsföljder, låter vokaler
-  andas längre och bygger fraser av skrivtempo, ordform och meningar.
-- **Hard Fork** ger ett omedelbart elektroniskt teckensvar och låter
-  skrivtempo, skiljetecken, rubrikdjup och textens samband bygga ett groove
-  som växer och klingar av med aktiviteten.
+  andas längre och bygger fraser av skrivtempo, ordform och meningar. Temat
+  bevarar SkrivR-originalets kontinuerliga dubbelröst, subröst,
+  konsonantklanger, långsamma valglid och reverbererande meningsekon.
+- **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
+  bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
+  Ett nytt direktanslag hörs vid själva tangenten, medan det fylligare lagret
+  fortfarande placeras på sequencerns rytmnät.
 
 Ett separat skrivmaskinslager kan kombineras med vilket ljudlandskap som
 helst. Det har fyra karaktärer: Mekanisk, Reseskrivare, Elektrisk och Dämpad.
@@ -70,7 +73,8 @@ Ljud startar endast efter ett uttryckligt temaval eller tryck på startknappen.
 Volymreglagen har ett utökat intervall upp till en betydligt högre grundnivå.
 Tema, volym och valfri skrivrespons sparas, men uppspelning återupptas aldrig
 automatiskt efter omladdning. Alla ljud syntetiseras med Web Audio API utan
-ljudfiler eller nätverksanrop och fungerar därför även offline. Start, stopp
+ljudfiler eller nätverksanrop och fungerar därför även offline. De två
+SkrivR-motorerna ligger som lokala, cachade skript i appskalet. Start, stopp
 och snabba temabyten är avbrytbara, så att ett äldre startförsök inte kan slå på
 ljudet igen efter ett stopp. Bluetooth, AirPlay och vissa externa
 ljudgränssnitt kan fortfarande lägga till egen överföringsfördröjning som

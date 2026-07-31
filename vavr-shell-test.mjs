@@ -4,6 +4,8 @@ import vm from 'node:vm';
 const html = readFileSync('index.html', 'utf8');
 const manifest = JSON.parse(readFileSync('manifest.webmanifest', 'utf8'));
 const worker = readFileSync('sw.js', 'utf8');
+const valsangEngine = readFileSync('valsang-engine.js', 'utf8');
+const hardForkEngine = readFileSync('hardfork-engine.js', 'utf8');
 let passed = 0;
 let failed = 0;
 
@@ -31,7 +33,11 @@ console.log('\nPWA-skal');
 
 check(/<link rel="manifest" href="\.\/manifest\.webmanifest">/.test(html), 'manifestet är länkat');
 check(/<link rel="apple-touch-icon" href="\.\/icons\/vavr-180\.png"/.test(html), 'Apple-ikonen är länkad');
-check(!/<script[^>]+src=/.test(html), 'inga externa skript används');
+const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
+check(
+  JSON.stringify(scriptSources) === JSON.stringify(['./valsang-engine.js', './hardfork-engine.js']),
+  'endast de två lokala SkrivR-motorerna laddas'
+);
 check(!/@import\s|<link[^>]+rel="stylesheet"/.test(html), 'inga externa stilmallar används');
 
 const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
@@ -48,6 +54,18 @@ try {
   check(true, 'service workern har giltig syntax');
 } catch (error) {
   check(false, 'service workern har giltig syntax', error.message);
+}
+
+for (const [name, source] of [
+  ['Valsångsmotorn', valsangEngine],
+  ['Hard Fork-motorn', hardForkEngine]
+]) {
+  try {
+    new vm.Script(source);
+    check(true, name + ' har giltig syntax');
+  } catch (error) {
+    check(false, name + ' har giltig syntax', error.message);
+  }
 }
 
 check(manifest.id === './', 'manifestets id är scope-relativt');
@@ -72,6 +90,8 @@ check(appleSize?.width === 180 && appleSize?.height === 180, 'Apple-ikonen är 1
 check(worker.includes("const CACHE_PREFIX = 'vavr-shell-'"), 'cache-rensningen har projektspecifikt prefix');
 check(worker.includes("event.waitUntil(self.skipWaiting())"), 'uppdateringsmeddelandet hålls vid liv');
 check(worker.includes("new URL('./index.html', self.registration.scope)"), 'offlineindex byggs från worker-scope');
+check(worker.includes("'./valsang-engine.js'"), 'Valsångsmotorn ingår i offlinecachen');
+check(worker.includes("'./hardfork-engine.js'"), 'Hard Fork-motorn ingår i offlinecachen');
 
 console.log('\nSkrivstöd och Sektionstavla');
 
@@ -186,6 +206,31 @@ check(html.includes("soundReady ? 'Spelar ' : 'Startar '"), 'gränssnittet visar
 check(
   html.includes('Soundscape.stop(true);') && html.includes('Typewriter.stop(true);'),
   'ljudmotorerna stängs när sidan lämnas'
+);
+check(
+  html.includes('window.ValsangEngine') && html.includes('window.HardForkEngine'),
+  'VävR kopplar in de fullständiga SkrivR-motorerna'
+);
+check(
+  valsangEngine.includes('voiceOsc1') &&
+  valsangEngine.includes('voiceOsc2') &&
+  valsangEngine.includes('subOsc') &&
+  valsangEngine.includes('playEchoPhrase') &&
+  valsangEngine.includes('songLFO'),
+  'Valsång bevarar dubbelröst, subröst, frasminne och långsam tonböjning'
+);
+check(
+  hardForkEngine.includes('const BPM = 125') &&
+  hardForkEngine.includes('function playKick') &&
+  hardForkEngine.includes('function playBass') &&
+  hardForkEngine.includes('function playHat') &&
+  hardForkEngine.includes('function playSnare') &&
+  hardForkEngine.includes('function scheduleStep'),
+  'Hard Fork bevarar sequencer, bas och trumproduktion'
+);
+check(
+  hardForkEngine.includes('Direktansatsen tar bort upplevd tangentfördröjning'),
+  'Hard Fork har direkt tangentansats ovanpå rytmnätet'
 );
 
 const sendSoundSource = inlineScript?.match(
