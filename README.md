@@ -21,21 +21,42 @@ Dokumentytan har två lägen:
 Ett nytt dokument får sitt namn direkt i dokumentytan och öppnas sedan i
 Skriv. Den senast valda list- eller nodvyn sparas lokalt.
 
-## Tre arbetsrum
+När Vävbordet är öppet ligger samma dokument även i en horisontell
+**Dokumentkaj**. Varje dokument visas som en namngiven folio med ordmängd och
+tydlig markering av vilket dokument som är öppet. Kajen växlar dokument med
+ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
+
+## Två arbetsrum
 
 1. **Skriv** visar endast det block som formuleras nu. Enter väver in blocket,
    Shift + Enter ger radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
-   tillbaka senaste noden.
-2. **Väven** visar stycken, rubrikhierarki, dokumentordning och viktade
-   lexikala kopplingar. En vald nod öppnar ett sambandskort med full text,
-   närmiljö, delade ord och försiktiga omvävningsförslag. Vävlinsen kan
-   isolera alla lager, lexikala samband, dokumentstruktur eller glapp.
-3. **Struktur** är en hierarkisk sektionstavla. Roten visar dokumentets
-   huvudsektioner som kort. Varje rubrikkort öppnar nästa nivå, där direkta
-   stycken och undersektioner visas i separata grid. När en rubrik flyttas
-   följer hela dess sektion. Dokumentpulsen ovanför korten gör sektionernas
-   relativa omfång och lexikala signaler synliga och fungerar som klickbar
-   navigering. Tomma och ännu inte bedömbara sektioner märks uttryckligen.
+   tillbaka det senast invävda blocket. Om blocket lades mitt i manuset
+   återvävs det på samma plats.
+2. **Vävbord** är ett sammanhållet redigeringsrum med två projektioner av
+   samma blocklista:
+
+   - **Lista** visar hela manuset som en linjär ryggrad i verklig läsordning.
+     Rubriker, stycken och nivåer har olika form men texten förblir läsbar.
+     Block redigeras direkt, Alt + pil flyttar dem och rubrikflytt tar med
+     hela sektionen. Skrivsömmar mellan varje block placerar nästa nya block
+     exakt där användaren väljer. S på ett fokuserat block öppnar sömmen efter
+     blocket.
+   - **Noder** visar samma block som namngivna textfragment. Den vertikala
+     positionen är mjukt förankrad i läsordningen medan lexikala samband
+     påverkar sidledsdragningen. Ett valt block kan rullas ut till ett
+     redigeringsblad utan att nodfältet lämnas.
+
+Valt block och fokus följer med mellan Lista och Noder. Webbläsare med stöd
+för View Transitions låter blocket övergå mjukt mellan lägena, medan reducerad
+rörelse ger ett omedelbart skifte.
+
+En pågående direktredigering är en skyddad transaktion. Dokumentbyte,
+linsbyte och arbetsrumsbyte väntar tills texten har sparats eller avbrutits,
+och webbläsaren varnar om sidan stängs med osparad redigering.
+
+**Spänningslinsen** visar block där läsordningen och ordsläktskapet drar åt
+olika håll. Den är en fråga att undersöka, inte ett kvalitetsbetyg, och ändrar
+aldrig texten automatiskt.
 
 ## Skrivstöd
 
@@ -115,14 +136,16 @@ läsbart. När en dokumentnod får fokus visas den starkaste kopplingen och de
 gemensamma nyckelorden i klartext.
 
 Analysen och ritningen är åtskilda. Varningsstatus bygger på den fullständiga
-kohesionsmatrisen, medan Väven bara ritar ett begränsat antal trådar per nod.
+kohesionsmatrisen, medan Vävbordets Noder bara ritar ett begränsat antal
+trådar per nod.
 Det hindrar ett visuellt kanttak från att skapa falska varningar.
 
-I Väven visas dokumentordning med en sammanhängande gråblå linje, lexikal
+I Noder visas dokumentordning med en sammanhängande gråblå linje, lexikal
 återkoppling med en tydligt streckad cyan linje och rubrikhierarki med en
-prickad mässingslinje. Teckenförklaringen visar alla tre och Vävlinsen kan
-visa ett lager i taget utan att ändra dokumentet. Om en lins saknar mätbart
-underlag förklarar VävR varför i stället för att visa en tvetydigt tom vy.
+prickad mässingslinje. Trådkontrollen kan visa alla lager, samband eller
+ryggrad. Den globala Spänningslinsen visar dragkampen mot läsordningen utan
+att ändra dokumentet. Om en lins saknar mätbart underlag förklarar VävR varför
+i stället för att visa en tvetydigt tom vy.
 
 VävR mäter lexikal återkoppling, alltså delade centrala ord. Det är inte ett
 mått på full semantisk betydelse, argumentativ kvalitet eller om en text är

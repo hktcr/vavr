@@ -30,7 +30,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 140 kontroller av appskal, dokumentyta, dokumentlikhet, nodlayout, PWA, skrivstöd, Väven och ljudintegration |
+| `vavr-shell-test.mjs` | 162 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, nodlayout, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
@@ -56,6 +56,9 @@ Document = {
   blocks: [Block],
   draft,
   recalledBlock,
+  recalledIndex,
+  lastCommittedBlockId,
+  lastCommittedBlockUnavailable,
   goal: {
     enabled,
     metric: 'words' | 'characters',
@@ -90,6 +93,7 @@ Ljudinställningarna är också appövergripande:
 ```js
 settings = {
   documentHubView: 'list' | 'graph',
+  vavbordView: 'list' | 'nodes',
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
     'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
@@ -107,7 +111,7 @@ status och startar därför aldrig automatiskt efter omladdning.
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
-`vavr-weaver-v5`. Den interna tillståndsversionen är 8. Äldre VävR-data kan
+`vavr-weaver-v5`. Den interna tillståndsversionen är 9. Äldre VävR-data kan
 migreras vid inläsning.
 
 Markdown exporterar det aktiva dokumentets text. En VävR-säkerhetskopia
@@ -119,7 +123,7 @@ nuvarande tillstånd.
 
 ### Dokumentytan
 
-Dokumentytan är ett modalt arbetslager ovanpå de tre innehållslägena. En
+Dokumentytan är ett modalt arbetslager ovanpå de två arbetsrummen. En
 dedikerad knapp i toppbaren visar den aktiva dokumenttiteln och öppnar lagret.
 Öppning sparar det aktuella utkastet innan dokumentlistan renderas.
 
@@ -157,11 +161,21 @@ och kör därefter 150 fysiksteg med repulsion, likhetsfjädrar, centrering,
 dämpning och viewportklampning. Därmed ligger dokumentknapparna kvar inom
 grafytan även när dess storlek ändras.
 
+När Vävbordet är öppet renderar `renderVavbordDock()` samma dokument som en
+horisontell Dokumentkaj. Varje folio är en riktig knapp med titel, ordmängd,
+textetiketten `Öppet` för aktivt dokument och ett entydigt dokument-id. Kajen
+är inte modal. Dokumentbyte anropar `changeActiveDocument()` direkt, medan
+Nytt och Alla dokument återanvänder dokumentytans säkra formulärflöde.
+
 ### Skriv
 
 Endast det aktuella skrivfältet visar text. Enter committar blocket,
 Shift + Enter skapar radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
-tillbaka det senaste blocket.
+tillbaka det senast invävda blocket via `lastCommittedBlockId`. Dess index
+sparas i `recalledIndex`, så ett block som skrevs i en Skrivsöm återvävs på
+samma plats i stället för sist i dokumentet. Raderas det senast invävda
+blocket markeras det som otillgängligt, så återtagning aldrig faller tillbaka
+på och tar bort ett annat block av misstag.
 
 Dokumentmål och timer sammanfattas i en diskret statusrad när de är aktiva.
 Målet räknar endast committad text.
@@ -258,12 +272,48 @@ Vid ett senare iOS-avbrott, exempelvis bakgrundsläge eller byte av ljudrutt,
 försöker både ljudlandskapet och skrivmaskinen återväcka sin kontext i nästa
 uttryckliga tangentgest.
 
-### Väven
+### Vävbord
 
-Kanterna ritas på canvas. Noderna är absolut positionerade knappar i DOM.
-Fysiken kombinerar repulsion, kohesionsfjädrar, sekvenslänkar och
-rubrikgravitation. Den fullständiga kohesionsmatrisen används för analys,
-medan ett begränsat urval används för ritning.
+Vävbordet ersätter de tidigare separata arbetslägena Väven och Struktur med
+två projektioner av samma kanoniska blocklista. `settings.vavbordView` sparar
+`list` eller `nodes`. `switchVavbordView()` bevarar `selectedId`, aktivt
+dokument och redigeringskontext. Ett pågående textfält måste sparas eller
+avbrytas före vybyte. View Transitions används när webbläsaren stöder det och
+reducerad rörelse respekteras.
+
+#### Lista
+
+`renderOutline()` renderar nu hela dokumentet i läsordning som en linjär
+manusryggrad. `spineCard()` ger rubriker och stycken olika form, full läsbar
+text, metadata och samma block-id som nodfältet. Rubrikindrag härleds från
+H1 till H3 men ändrar inte DOM-ordningen.
+
+`writingSeam()` placerar en riktig knapp före, mellan och efter alla block.
+Ett klick anropar `beginWritingAt(index)`, vilket skapar ett
+`pendingInsertContext` med exakt infogningsindex och öppnar Skriv. Flera nya
+block fortsätter att vävas in från samma söm. Skrivsömmarna använder roving
+tabindex, så endast en söm ligger i Tab-ordningen. Upp, ned, Home och End
+flyttar mellan sömmarna. S på ett fokuserat block öppnar sömmen efter det.
+
+Text redigeras med riktig `textarea`. Ctrl eller Cmd + Enter sparar och
+Escape avbryter. Alt + pil flyttar. Stycken kan bara flyttas mellan stycken
+med samma ägarrubrik. Rubriker kan bara flyttas mellan syskon med samma nivå
+och ägare, och hela sektionen följer med rubriken. Dragning startar visuellt
+från ryggradens särskilda nålgrepp, medan tangentbordsvägen alltid finns.
+
+`editingBuffer` bevarar arbetskopian och `guardActiveEdit()` spärrar
+dokumentbyte, linsbyte, flytt, radering, modalöppning och arbetsrumsbyte tills
+användaren sparar eller avbryter. `beforeunload` varnar dessutom vid försök
+att lämna sidan med en aktiv direktredigering.
+
+#### Noder
+
+Kanterna ritas på canvas och textfragmenten är absolut positionerade
+DOM-knappar. Noderna är pappersformade och bär alltid typ, ordningsnummer och
+textutdrag. Fysiken kombinerar repulsion, kohesionsfjädrar, sekvenslänkar och
+rubrikgravitation, men varje nod får dessutom en mjuk vertikal kraft mot sitt
+index i blocklistan. Den sammanhängande sekvenslinjen blir därmed en läsbar
+manusrygg även när lexikala samband drar noder i sidled.
 
 Linjerna har separata visuella grammatiker:
 
@@ -272,36 +322,29 @@ Linjerna har separata visuella grammatiker:
   kopplingens relativa styrka
 - rubrikhierarki är en prickad mässingslinje
 
-Alla tre linjetyperna blir starkare när en ansluten nod är vald eller har
-fokus. Teckenförklaringen visar både nod- och linjesymboler.
+E öppnar vald nod i Kantnoten som ett otransformerat redigeringsblad.
+Fysiken stoppas under skrivningen och analysen räknas om först vid sparning.
+Ctrl eller Cmd + Enter sparar, Escape avbryter och fokus återgår till samma
+nod. Upp och ned följer läsordningen. Vänster och höger följer närmaste
+geometriska granne. Nodfältet använder roving tabindex, `aria-controls` och
+`aria-expanded`, så endast en nod ligger i Tab-ordningen och Kantnotens öppna
+läge går att uppfatta med hjälpmedel.
 
 `graphLens` är ett rent presentationsläge och sparas inte i dokumentet.
-Värdena `all`, `connections`, `structure` och `gaps` filtrerar ritade kanter
-med `graphEdgeVisible()`. Synliga noder härleds från ändpunkterna till de
-kanter som faktiskt ritas, inte från den fullständiga analysmatrisen. Den
-valda eller fokuserade noden förblir synlig, så ett linsbyte bryter inte
-orienteringen. Bortfiltrerade noder tas ur Tab-ordningen. En separat
-statusrad förklarar tomma resultat och skiljer brist på analysunderlag från
-ett faktiskt resultat utan signaler.
+Trådkontrollen visar `all`, `connections` och `structure`. Den globala
+Spänningslinsen använder internt värdet `tension`. `graphEdgeVisible()`
+filtrerar ritade kanter och bortfiltrerade noder tas ur piltangentsflödet.
+En separat statusrad skiljer brist på analysunderlag från ett mätbart resultat
+utan signaler.
 
-### Struktur
+#### Spänningslins
 
-Sektionstavlan härleder ett träd med en rubrikstack. Varje grid visar endast
-direkta stycken och direkta undersektioner på aktuell nivå. Breadcrumb och
-Upp en nivå navigerar hierarkin.
-
-Dokumentpulsen härleds från den aktuella nivåns direkta text och
-undersektioner. Segmentens flexvikt följer kvadratroten ur ordmängden, vilket
-visar relativa skillnader utan att en mycket lång sektion slår ut alla andra.
-En orange signal visar andelen bedömda stycken som är ensamma eller har svag
-återkoppling. Nämnaren omfattar alltså inte stycken med för litet
-analysunderlag. Tom sektion, för litet underlag, ej bedömda stycken och
-uppmätta signaler får olika textetiketter. Segmenten är knappar som flyttar
-fokus till direkttexten eller öppnar vald undersektion.
-
-Stycken kan bara flyttas mellan stycken med samma ägarrubrik. En rubrik kan
-bara flyttas mellan syskon med samma nivå och ägare. När en rubrik flyttas
-följer hela dess underträd.
+Spänning är inte ett tredje arbetsläge. Linsen använder endast `flow` för att
+isolera block där lokal läsordning och starkare lexikal dragning inte
+sammanfaller. `lonely` betyder i stället öppet lexikalt glapp och blandas inte
+in i dragkampen. I Lista tonas övriga block ned endast när en träff finns. I
+Noder visas berörda noder och trådar. Linsen beskriver en relation att
+undersöka, inte textkvalitet, och utför aldrig en automatisk flytt.
 
 ## PWA och offline
 
@@ -322,6 +365,8 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
   återställt fokus.
 - Dokumentlistans kort och dokumentvävens noder är riktiga knappar. Varje nod
   läser upp titel, aktiv status, ordmängd och antal synliga kopplingar.
+- Dokumentkajens folior är riktiga knappar och markerar aktivt dokument med
+  både ordet `Öppet`, form och mässingskant.
 - Dokumentlikhet förklaras också med text. Färg och linjebredd är inte den
   enda informationsbäraren.
 - Interaktiva mål är minst 44 gånger 44 pixlar.
@@ -330,9 +375,17 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 - Ljudknapparna exponerar uppspelningsstatus med text och `aria-pressed`.
 - Ljud startar aldrig automatiskt och kan stängas av samlat från toppbaren.
 - Viktiga händelser köas i en polite live-region.
-- Sektionstavlans kort nås med Tab. Pilar flyttar fokus, Alt + pil flyttar ett
-  kort, E redigerar, Enter öppnar eller väljer och Delete raderar efter
-  bekräftelse.
+- Vävbordets listkort följer blocklistans DOM-ordning. Pilar flyttar fokus,
+  Alt + pil flyttar, E redigerar, S skriver efter, Enter väljer och Delete
+  raderar efter bekräftelse. Skrivsömmarna är namngivna knappar med exakta
+  index och ett enda roving-tabbstopp.
+- Nodfältets knappar bär blocktyp, ordningsnummer och textutdrag. E öppnar en
+  riktig textarea. Roving tabindex, `aria-controls` och `aria-expanded`
+  binder noden till Kantnoten, och varje canvasrelation har en textmotsvarighet
+  i Kantnoten eller linsens statusrad.
+- På låga liggande skärmar fälls Dokumentkaj, Trådar och teckenförklaring ihop
+  medan nodernas storlek och ordningsfält komprimeras. Dokumentknappen i
+  toppbaren och den globala Spänningslinsen förblir tillgängliga.
 - Reduced motion minskar animering och synkrona fysiksteg.
 
 ## Verifiering

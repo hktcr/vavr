@@ -93,7 +93,7 @@ check(worker.includes("new URL('./index.html', self.registration.scope)"), 'offl
 check(worker.includes("'./valsang-engine.js'"), 'Valsångsmotorn ingår i offlinecachen');
 check(worker.includes("'./hardfork-engine.js'"), 'Hard Fork-motorn ingår i offlinecachen');
 
-console.log('\nSkrivstöd och Sektionstavla');
+console.log('\nSkrivstöd och Vävbord');
 
 for (const id of [
   'goal-enabled',
@@ -103,10 +103,12 @@ for (const id of [
   'writing-support-summary',
   'graph-lens',
   'graph-lens-status',
+  'vavbord-toolbar',
+  'vavbord-dock',
+  'vavbord-document-list',
+  'tension-lens',
   'structure-breadcrumb',
-  'structure-pulse',
   'structure-board',
-  'section-grid',
   'structure-heading-editor',
   'device-settings',
   'install-nudge'
@@ -119,6 +121,11 @@ check(html.includes("source.metric === 'characters'"), 'teckenmål normaliseras'
 check(html.includes("endAt: Date.now() + durationSec * 1000"), 'timern använder absolut sluttid');
 check(html.includes('function buildStructureTree'), 'sektionsträdet härleds');
 check(html.includes('function beginContextualWriting'), 'kontextuell infogning finns');
+check(html.includes('function beginWritingAt'), 'Skrivsömmen kan placera nästa block exakt');
+check(html.includes('function spineCard'), 'hela manusryggraden renderas som en redigerbar lista');
+check(html.includes('function switchVavbordView'), 'Lista och Noder är två lägen i samma Vävbord');
+check(html.includes("vavbordView: 'list'"), 'Vävbordets lugna standardläge är Lista');
+check(html.includes("stored.settings.vavbordView === 'nodes' ? 'nodes' : 'list'"), 'sparat Vävbordsläge normaliseras');
 check(html.includes('function downloadBackup'), 'säkerhetskopiering finns');
 check(html.includes("window.addEventListener('beforeinstallprompt'"), 'Chromiums installationssignal hanteras');
 
@@ -265,7 +272,7 @@ if (sendSoundSource) {
   check(false, 'sent iOS-beforeinput dedupliceras och styrtangenter ignoreras');
 }
 
-console.log('\nVävens linjer');
+console.log('\nVävbordets noder och spänningslins');
 
 check(html.includes('context.setLineDash([9, 6])'), 'lexikala kopplingar är streckade');
 check(html.includes('context.setLineDash([1.5, 5])'), 'rubrikhierarkin är prickad');
@@ -273,34 +280,27 @@ check(html.includes('legend-line cohesion'), 'teckenförklaringen visar lexikal 
 check(html.includes('legend-line hierarchy'), 'teckenförklaringen visar hierarkisk linje');
 check(html.includes('function setGraphLens'), 'Vävlinsen kan isolera grafens lager');
 check(html.includes('function graphEdgeVisible'), 'Vävlinsen filtrerar ritade kopplingar');
-check(html.includes('pulse-segment'), 'Dokumentpulsen visar sektionernas omfång och signaler');
 check(html.includes('function updateGraphLensStatus'), 'tomma Vävlinsresultat förklaras');
-check(html.includes('state.element.tabIndex = interactive && included ? 0 : -1'), 'Vävlinsen filtrerar tangentbordsfokus');
+check(html.includes('state.element.tabIndex = interactive && included && id === tabStopId ? 0 : -1'), 'Vävlinsen använder ett filtrerat roving-tabbstopp');
 check(html.includes('if (hoveredId === node.id) hoveredId = null'), 'gammalt nodfokus släpps när Vävlinsen används');
-check(html.includes('const { issueRatio, assessment, shortAssessment } = pulseAssessment(item)'), 'Dokumentpulsen skiljer signaler från analysunderlag');
-
-const pulseAssessmentSource = inlineScript?.match(
-  /function pulseAssessment\(item\) \{[\s\S]*?^    \}/m
-)?.[0];
-if (pulseAssessmentSource) {
-  const pulseSandbox = {};
-  vm.runInNewContext(`
-    ${pulseAssessmentSource}
-    globalThis.pulseResults = [
-      pulseAssessment({ paragraphs: 0, assessed: 0, unassessed: 0, issues: 0 }),
-      pulseAssessment({ paragraphs: 2, assessed: 0, unassessed: 2, issues: 0 }),
-      pulseAssessment({ paragraphs: 4, assessed: 2, unassessed: 2, issues: 1 })
-    ];
-  `, pulseSandbox);
-  check(
-    pulseSandbox.pulseResults[0].assessment === 'Tom sektion' &&
-    pulseSandbox.pulseResults[1].assessment === 'För litet analysunderlag' &&
-    pulseSandbox.pulseResults[2].issueRatio === .5,
-    'Dokumentpulsen märker tomt, otillräckligt och bedömt underlag korrekt'
-  );
-} else {
-  check(false, 'Dokumentpulsen märker tomt, otillräckligt och bedömt underlag korrekt');
-}
+check(html.includes("graphLens === 'tension'"), 'Spänningslinsen har ett eget begränsat nodlager');
+check(html.includes('Spänning mot en annan plats'), 'spänning beskrivs som relation, inte kvalitetsbetyg');
+check(html.includes('node-edit-text'), 'vald nod kan rullas ut till direkt textredigering');
+check(html.includes("document.startViewTransition(update)"), 'vybytet använder objektbevarande övergång när webbläsaren stöder den');
+check(html.includes('orderY - node.y'), 'nodfältet förankras mjukt i dokumentets läsordning');
+check(html.includes('data-writing-index'), 'synliga Skrivsömmar bär exakta infogningsindex');
+check(html.includes('function guardActiveEdit'), 'en central redigeringsspärr skyddar osparad direktredigering');
+check(html.includes('editingBuffer'), 'pågående direktredigering har en bevarad arbetsbuffert');
+check(html.includes('document.blocks.findIndex(block => block.id === document.lastCommittedBlockId)'), 'återtagning hittar exakt senast invävda block');
+check(html.includes('document.blocks.splice(insertion, 0, block)'), 'återtaget block återinfogas på sin ursprungliga plats');
+check(html.includes('lastCommittedBlockUnavailable'), 'raderat senast invävt block kan inte ersättas av fel återtagning');
+check(html.includes('if (changeActiveDocument(id) === false) return'), 'blockerat dokumentbyte lämnar fokus i redigeringsfältet');
+check(!html.includes('data-graph-lens="tension"'), 'Spänning visas bara som global lins, inte som ett tredje trådläge');
+check(html.includes('if (node.flow) ids.add(node.id)'), 'Spänningslinsen skiljer dragkamp från ensamma lexikala glapp');
+check(html.includes('lastWritingSeamIndex'), 'Skrivsömmarna använder ett enda roving-tabbstopp');
+check(html.includes("button.setAttribute('aria-controls', 'inspector')"), 'noder annonserar sin koppling till Kantnoten');
+check(html.includes('function graphOrderBounds'), 'nodfältet komprimeras för låga liggande skärmar');
+check(html.includes("window.addEventListener('beforeunload'"), 'webbläsaren varnar om direktredigering lämnas osparad');
 check(html.includes('const WIDTHS = [540, 640, 720, 820, 940, 1080, 1240, 1440]'), 'skrivfältet kan bli 1 440 pixlar brett');
 check(html.includes('elements.composer.getBoundingClientRect().width'), 'bredddragning utgår från synlig bredd');
 check(html.includes('const renderedWidths = WIDTHS.map(width => Math.min(width, widthLimit))'), 'bredddragning jämför viewportklampade kandidater');
