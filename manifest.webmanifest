@@ -2,7 +2,7 @@
   "id": "./",
   "name": "VävR",
   "short_name": "VävR",
-  "description": "Ett fokuserat skrivverktyg som synliggör textens struktur och kohesion.",
+  "description": "Ett fokuserat skrivverktyg som synliggör textens struktur, kohesion och språkliga ekon.",
   "lang": "sv",
   "start_url": "./",
   "scope": "./",

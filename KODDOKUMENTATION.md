@@ -23,6 +23,11 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, dokumentyta, dokumentlikhet, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
 | `valsang-engine.js` | Biologiskt inspirerad Valsångsmotor med omedelbar tangentrespons, frasminne och en fast tre-rösterspool för styckesvisa korsfader |
 | `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills och ett nytt omedelbart tangentanslag |
+| `ordekon-engine.js` | Lokal analysmotor för upprepade ord, fraser, meningsstarter, förekomster och begränsad lokal anhopning |
+| `ordekon-kelly.js` | Genererad kompakt frekvensreferens från Språkbankens Swedish Kelly-list, CC-BY-4.0 |
+| `ordekon-worker.js` | Lokal bakgrundstråd som kör Ordekon utan att låsa redigeringsgränssnittet |
+| `scripts/build-kelly-reference.mjs` | Reproducerbar generator som filtrerar och komprimerar Kelly XML till den lokala referensen |
+| `THIRD_PARTY_NOTICES.md` | Attribution, licens och bearbetningsbeskrivning för tredjepartsdata |
 | `manifest.webmanifest` | Appidentitet, färger, startadress och installationsikoner |
 | `sw.js` | Versionsstyrd appskal-cache, offlinefallback och användarstyrd uppdatering |
 | `icons/` | Vanlig, maskable och Apple-anpassad VävR-ikon |
@@ -30,8 +35,9 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 173 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, nodlayout, strukturflytt, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
+| `vavr-shell-test.mjs` | 209 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, Ordekon, nodlayout, strukturflytt, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
+| `vavr-ordekon-test.mjs` | 23 tester av frekvensviktning, formordsskydd, böjningsnormalisering, förekomstpositioner, maximala fraser, meningsstarter, anhopningstak och determinism |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
 
@@ -67,7 +73,10 @@ Document = {
   },
   created,
   updated,
-  hiddenWords: []
+  hiddenWords: [],
+  echoDecisions: {
+    ['word|normaliserad form']: 'intentional' | 'key' | 'hidden'
+  }
 }
 ```
 
@@ -93,7 +102,8 @@ Ljudinställningarna är också appövergripande:
 ```js
 settings = {
   documentHubView: 'list' | 'graph',
-  vavbordView: 'list' | 'nodes',
+  vavbordView: 'list' | 'nodes' | 'echo',
+  echoMode: 'words' | 'phrases' | 'starters',
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
     'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
@@ -111,7 +121,7 @@ status och startar därför aldrig automatiskt efter omladdning.
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
-`vavr-weaver-v5`. Den interna tillståndsversionen är 9. Äldre VävR-data kan
+`vavr-weaver-v5`. Den interna tillståndsversionen är 10. Äldre VävR-data kan
 migreras vid inläsning.
 
 Markdown exporterar det aktiva dokumentets text. En VävR-säkerhetskopia
@@ -282,8 +292,8 @@ uttryckliga tangentgest.
 ### Vävbord
 
 Vävbordet ersätter de tidigare separata arbetslägena Väven och Struktur med
-två projektioner av samma kanoniska blocklista. `settings.vavbordView` sparar
-`list` eller `nodes`. `switchVavbordView()` bevarar `selectedId`, aktivt
+tre projektioner av samma kanoniska blocklista. `settings.vavbordView` sparar
+`list`, `nodes` eller `echo`. `switchVavbordView()` bevarar `selectedId`, aktivt
 dokument och redigeringskontext. Ett pågående textfält måste sparas eller
 avbrytas före vybyte. View Transitions används när webbläsaren stöder det och
 reducerad rörelse respekteras.
@@ -358,6 +368,61 @@ filtrerar ritade kanter och bortfiltrerade noder tas ur piltangentsflödet.
 En separat statusrad skiljer brist på analysunderlag från ett mätbart resultat
 utan signaler.
 
+#### Ordekon
+
+Ordekon laddas som två lokala skript före applikationens huvudskript.
+`ordekon-kelly.js` exponerar ett fryst WPM-uppslag och
+`ordekon-engine.js` exponerar `window.Ordekon`. Motorn saknar DOM-beroenden
+och kan därför testas separat.
+
+`ensureEchoAnalysis()` startar analysen först när Ekon öppnas. Omfånget är
+hela dokumentet eller en sektion från `buildStructureTree()`. Arbetet körs i
+`ordekon-worker.js` så att långa dokument inte blockerar gränssnittstråden.
+Om Web Workers saknas finns en lokal reservväg. En textändring anropar
+`invalidateEcho()` och nästa render bygger resultatet på nytt. Analysen körs
+alltså inte efter varje tangenttryckning.
+
+Motorn tokeniserar Unicode-bokstäver och sparar ytform, block-id,
+teckenposition och global ordposition för varje träff. Samma försiktiga
+suffixtrunkering används för text och frekvensreferens. Detta är inte en full
+svensk lemmatiserare. Sammansättningar delas inte.
+
+Ordsignalen använder:
+
+1. logaritmen av faktisk repetitionsmängd
+2. en utjämnad frekvenskvot mot Kelly, med ett prior motsvarande 500 ord
+3. faktorn `antal / (antal + 3)`, som dämpar små stickprov
+4. lokal anhopning i ett glidande fönster om 100 ord, begränsad till högst
+   25 procents förstärkning
+
+Ord med bara en förekomst visas aldrig. Ord som saknas i den kompakta
+referensen får ett försiktigt golv på 0,5 förekomster per miljon ord. Kelly är
+lemmabaserad, vilket gör att vanliga böjda formord kan sakna direkt träff.
+Kända formord får därför en skyddsvikt på 5 000 förekomster per miljon. Det är
+en medvetet försiktig nedviktning, inte en uppmätt frekvens för den aktuella
+formen. Referensen är generell webbsvenska från 2010-talet och används inte
+som norm för genre, fackspråk eller stil.
+
+Fraser byggs endast inom en mening. Två- och treordsföljder kräver tre
+förekomster. Fyra- och femordsföljder kräver två. En kort kandidat tas bort
+om samtliga förekomster täcks av samma längre kandidat. Meningsstarter kör
+samma metod på meningens första två till fyra ord och hålls i en egen vy.
+Semantisk likhet, syntaktiska mallar och sekvenser med luckor ingår inte,
+eftersom de skulle ge betydligt fler svårtolkade träffar.
+
+`renderEcho()` visar ord i ett deterministiskt språkfält. Den visuella ordningen
+styrs av en stabil texthash, medan storleken följer uppmärksamhetssignalen.
+Fraser och meningsstarter visas som textremsor. `renderEchoMap()` visar
+förekomster över dokumentets kanoniska blockordning. Ett fynd kan föras till
+Lista eller Noder via `echoHighlightedIds`. Ett klick på en enskild
+förekomst växlar till Lista och anropar `startEditing()`, vilket återanvänder
+det gula transaktionsskyddade redigeringskortet.
+
+`echoDecisions` sparas per dokument. `intentional` tonar ned fyndet, `key`
+markerar ett nyckelbegrepp och `hidden` tar bort det från standardfältet.
+Dolda fynd kan visas igen och samma knapptryckning tar bort ett tidigare val.
+Besluten påverkar inte TF/IDF-kohesionen och ändrar aldrig texten automatiskt.
+
 #### Spänningslins
 
 Spänning är inte ett tredje arbetsläge. Linsen använder endast `flow` för att
@@ -373,6 +438,8 @@ Alla sökvägar är relativa till GitHub Pages-scope. Service workern ligger i
 reporoten och påverkar därför bara projektets egen katalog. Navigation använder
 nätverksförst med cachefallback. En väntande ny version aktiveras först när
 användaren väljer Uppdatera VävR, efter att utkastet har sparats.
+Kelly-referensen, Ordekonmotorn och dess bakgrundstråd ingår i appskalet och
+fungerar helt offline. Analysen gör inga nätverksanrop.
 
 Chromium använder `beforeinstallprompt` efter ett uttryckligt användartryck.
 iPhone och iPad får manuella steg via Dela och Lägg till på hemskärmen.
@@ -405,6 +472,10 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
   riktig textarea. Roving tabindex, `aria-controls` och `aria-expanded`
   binder noden till Kantnoten, och varje canvasrelation har en textmotsvarighet
   i Kantnoten eller linsens statusrad.
+- Ordekon använder riktiga knappar för ord, fraser, meningsstarter,
+  dokumentkarta och förekomster. Storlek kompletteras med exakta antal och
+  textförklaring. Flikarna använder `role="tab"`, piltangenter och roving
+  tabindex. Färg används inte ensam för Avsiktligt, Nyckelbegrepp eller Dold.
 - På låga liggande skärmar fälls Dokumentkaj, Trådar och teckenförklaring ihop
   medan nodernas storlek och ordningsfält komprimeras. Dokumentknappen i
   toppbaren och den globala Spänningslinsen förblir tillgängliga.
@@ -416,6 +487,7 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
 node vavr-test.mjs
 node vavr-shell-test.mjs
 node vavr-audio-test.mjs
+node vavr-ordekon-test.mjs
 node --check sw.js
 python3 -m http.server 8000
 ```

@@ -32,7 +32,7 @@ ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
    Shift + Enter ger radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
    tillbaka det senast invävda blocket. Om blocket lades mitt i manuset
    återvävs det på samma plats.
-2. **Vävbord** är ett sammanhållet redigeringsrum med två projektioner av
+2. **Vävbord** är ett sammanhållet redigeringsrum med tre projektioner av
    samma blocklista:
 
    - **Lista** visar hela manuset som en linjär ryggrad i verklig läsordning.
@@ -49,8 +49,14 @@ ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
      redigeringsblad utan att nodfältet lämnas. Flytta i manuset öppnar samma
      Lyft och placera-flöde i Lista, medan fri noddragning bara ändrar nodens
      visuella placering.
+   - **Ekon** öppnar Ordekon, ett stabilt språkfält för ord, återkommande
+     fraser och meningsstarter. Vanliga svenska ord viktas ned mot en lokal
+     frekvensreferens, men tas inte bort. Ett ovanligt ord måste återkomma för
+     att visas. Klick visar exakta förekomster, markerar berörda block i Lista
+     och Noder och kan öppna valfritt block direkt i den gula
+     redigeringsrutan.
 
-Valt block och fokus följer med mellan Lista och Noder. Webbläsare med stöd
+Valt block och fokus följer med mellan Lista, Noder och Ekon. Webbläsare med stöd
 för View Transitions låter blocket övergå mjukt mellan lägena, medan reducerad
 rörelse ger ett omedelbart skifte.
 
@@ -164,6 +170,38 @@ mått på full semantisk betydelse, argumentativ kvalitet eller om en text är
 korrekt. Orange markering visas därför först när det finns minst fyra
 brödtextblock och tillräckligt analysunderlag.
 
+### Ordekon
+
+Ordekon är en separat, helt lokal repetitionsanalys. Den har tre lägen:
+
+- **Ord** visar ord som förekommer minst två gånger i ett deterministiskt
+  språkfält. Fältet hoppar därför inte slumpmässigt mellan analyser.
+- **Fraser** söker sammanhängande sekvenser om två till fem normaliserade ord
+  inom samma mening. Två och tre ord kräver minst tre förekomster. Fyra och
+  fem ord kräver minst två. När en kort fras alltid ingår i en längre visas
+  den längsta.
+- **Meningsstarter** analyserar de första två till fyra orden separat.
+
+Ordstorleken kombinerar faktisk upprepning, en utjämnad logaritmisk
+frekvensjämförelse och lokal anhopning. Anhopning kan öka signalen med högst
+25 procent. Svenska böjningsformer förs försiktigt samman, men de ursprungliga
+formerna och deras textställen bevaras. Analysen körs lokalt i en
+bakgrundstråd så att längre dokument inte låser redigeringsytan.
+Vanliga böjda formord som saknar en direkt Kelly-träff får en försiktig
+skyddsvikt och behandlas därför inte som sällsynta.
+
+Frekvensreferensen är en kompakt lokal bearbetning av Swedish Kelly-list från
+Språkbanken Text. Listan bygger på SweWaC, 114 miljoner ord svenskt
+webbskriftspråk, och är därför en jämförelsepunkt snarare än en språknorm.
+Egennamn, genre, facktermer och stilistiska motiv kan avvika helt rimligt.
+Varje fynd kan märkas Avsiktligt eller Nyckelbegrepp eller döljas från
+Ordekon. Inga omskrivningar sker automatiskt och ingen text skickas över
+nätverket.
+
+Datakälla: Volodina, Elena och Johansson Kokkinakis, Sofie (2017),
+[Kelly](https://spraakbanken.gu.se/resurser/kelly),
+[DOI 10.23695/6act-rs25](https://doi.org/10.23695/6act-rs25), CC-BY-4.0.
+
 ## Installation och lokal lagring
 
 VävR kan installeras som en Progressive Web App från en webbläsare som stöder
@@ -194,4 +232,5 @@ Testsviterna körs med:
 node vavr-test.mjs
 node vavr-shell-test.mjs
 node vavr-audio-test.mjs
+node vavr-ordekon-test.mjs
 ```

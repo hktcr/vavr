@@ -6,6 +6,9 @@ const manifest = JSON.parse(readFileSync('manifest.webmanifest', 'utf8'));
 const worker = readFileSync('sw.js', 'utf8');
 const valsangEngine = readFileSync('valsang-engine.js', 'utf8');
 const hardForkEngine = readFileSync('hardfork-engine.js', 'utf8');
+const ordekonReference = readFileSync('ordekon-kelly.js', 'utf8');
+const ordekonEngine = readFileSync('ordekon-engine.js', 'utf8');
+const ordekonWorker = readFileSync('ordekon-worker.js', 'utf8');
 let passed = 0;
 let failed = 0;
 
@@ -35,8 +38,13 @@ check(/<link rel="manifest" href="\.\/manifest\.webmanifest">/.test(html), 'mani
 check(/<link rel="apple-touch-icon" href="\.\/icons\/vavr-180\.png"/.test(html), 'Apple-ikonen är länkad');
 const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
 check(
-  JSON.stringify(scriptSources) === JSON.stringify(['./valsang-engine.js', './hardfork-engine.js']),
-  'endast de två lokala SkrivR-motorerna laddas'
+  JSON.stringify(scriptSources) === JSON.stringify([
+    './valsang-engine.js',
+    './hardfork-engine.js',
+    './ordekon-kelly.js',
+    './ordekon-engine.js'
+  ]),
+  'endast lokala SkrivR- och Ordekonmotorer laddas'
 );
 check(!/@import\s|<link[^>]+rel="stylesheet"/.test(html), 'inga externa stilmallar används');
 
@@ -58,7 +66,10 @@ try {
 
 for (const [name, source] of [
   ['Valsångsmotorn', valsangEngine],
-  ['Hard Fork-motorn', hardForkEngine]
+  ['Hard Fork-motorn', hardForkEngine],
+  ['Ordekonreferensen', ordekonReference],
+  ['Ordekonmotorn', ordekonEngine],
+  ['Ordekonbakgrundstråden', ordekonWorker]
 ]) {
   try {
     new vm.Script(source);
@@ -92,6 +103,9 @@ check(worker.includes("event.waitUntil(self.skipWaiting())"), 'uppdateringsmedde
 check(worker.includes("new URL('./index.html', self.registration.scope)"), 'offlineindex byggs från worker-scope');
 check(worker.includes("'./valsang-engine.js'"), 'Valsångsmotorn ingår i offlinecachen');
 check(worker.includes("'./hardfork-engine.js'"), 'Hard Fork-motorn ingår i offlinecachen');
+check(worker.includes("'./ordekon-kelly.js'"), 'Kelly-referensen ingår i offlinecachen');
+check(worker.includes("'./ordekon-engine.js'"), 'Ordekonmotorn ingår i offlinecachen');
+check(worker.includes("'./ordekon-worker.js'"), 'Ordekons bakgrundstråd ingår i offlinecachen');
 
 console.log('\nSkrivstöd och Vävbord');
 
@@ -110,6 +124,12 @@ for (const id of [
   'structure-breadcrumb',
   'structure-board',
   'structure-heading-editor',
+  'echo-view',
+  'echo-scope',
+  'echo-mode-toggle',
+  'echo-field',
+  'echo-detail',
+  'echo-document-map',
   'device-settings',
   'install-nudge'
 ]) {
@@ -123,9 +143,9 @@ check(html.includes('function buildStructureTree'), 'sektionsträdet härleds');
 check(html.includes('function beginContextualWriting'), 'kontextuell infogning finns');
 check(html.includes('function beginWritingAt'), 'Skrivsömmen kan placera nästa block exakt');
 check(html.includes('function spineCard'), 'hela manusryggraden renderas som en redigerbar lista');
-check(html.includes('function switchVavbordView'), 'Lista och Noder är två lägen i samma Vävbord');
+check(html.includes('function switchVavbordView'), 'Lista, Noder och Ordekon delar samma Vävbord');
 check(html.includes("vavbordView: 'list'"), 'Vävbordets lugna standardläge är Lista');
-check(html.includes("stored.settings.vavbordView === 'nodes' ? 'nodes' : 'list'"), 'sparat Vävbordsläge normaliseras');
+check(html.includes("['nodes', 'echo'].includes(stored.settings.vavbordView)"), 'sparat Vävbordsläge normaliseras');
 check(html.includes('function downloadBackup'), 'säkerhetskopiering finns');
 check(html.includes("window.addEventListener('beforeinstallprompt'"), 'Chromiums installationssignal hanteras');
 
@@ -155,6 +175,36 @@ if (widthsSource && normalizeWidthSource) {
 } else {
   check(false, 'breddindex klampas, avrundas och får säker reservnivå');
 }
+
+console.log('\nOrdekon');
+
+check(html.includes('data-vavbord-view="echo"'), 'Ordekon är Vävbordets tredje projektion');
+check(html.includes('data-echo-mode="words"'), 'Ordekon har ordläge');
+check(html.includes('data-echo-mode="phrases"'), 'Ordekon har frasläge');
+check(html.includes('data-echo-mode="starters"'), 'Ordekon har separat läge för meningsstarter');
+check(html.includes('function renderEcho()'), 'Ordekon har en egen samlad renderingsväg');
+check(html.includes("new Worker('./ordekon-worker.js')"), 'Ordekon analyserar i en lokal bakgrundstråd');
+check(html.includes('window.Ordekon?.analyze(blocks)'), 'Ordekon har lokal reservväg utan bakgrundstråd');
+check(html.includes('Ordekon analyserar texten lokalt i bakgrunden.'), 'pågående bakgrundsanalys förklaras');
+check(html.includes('echoHighlightedIds = new Set(finding.blocks)'), 'ett fynd kan markera alla berörda block');
+check(html.includes("data-echo-action=\"list\""), 'ett fynd kan visas i Lista');
+check(html.includes("data-echo-action=\"nodes\""), 'ett fynd kan visas i Noder');
+check(html.includes('editEchoOccurrence(occurrence.dataset.blockId)'), 'en förekomst öppnar sitt block för redigering');
+check(html.includes('Är den här upprepningen avsiktlig?'), 'återkopplingen frågar neutralt om avsikt');
+check(html.includes('data-echo-decision="intentional"'), 'avsiktlig upprepning kan märkas');
+check(html.includes('data-echo-decision="key"'), 'nyckelbegrepp kan märkas');
+check(html.includes('data-echo-decision="hidden"'), 'fynd kan döljas från Ordekon');
+check(html.includes('Storlek betyder värt att granska, inte fel.'), 'ordstorlek förklaras som signal och inte dom');
+check(html.includes('https://spraakbanken.gu.se/resurser/kelly'), 'Kelly-referensens officiella källa länkas');
+check(ordekonReference.includes('https://doi.org/10.23695/6act-rs25'), 'Kelly-data citeras med DOI');
+check(ordekonReference.includes('CC-BY-4.0'), 'Kelly-datans licens anges');
+check(ordekonEngine.includes('1 + .25 * cluster.value'), 'lokal anhopning begränsas till 25 procents påverkan');
+check(ordekonEngine.includes("collectSequences(document, 'phrase')"), 'fraser analyseras utan nätverksanrop');
+check(ordekonEngine.includes("collectSequences(document, 'starter')"), 'meningsstarter analyseras utan nätverksanrop');
+check(
+  ordekonWorker.includes("importScripts('./ordekon-kelly.js', './ordekon-engine.js')"),
+  'bakgrundstråden laddar endast de lokala Ordekonresurserna'
+);
 
 console.log('\nLjudrum');
 

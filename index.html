@@ -525,9 +525,15 @@
     }
 
     body[data-view="structure"] #edge-canvas,
-    body[data-view="structure"] #node-layer {
+    body[data-view="structure"] #node-layer,
+    body[data-view="echo"] #edge-canvas,
+    body[data-view="echo"] #node-layer {
       opacity: 0;
       pointer-events: none;
+    }
+
+    body[data-view="echo"] #tension-lens {
+      display: none;
     }
 
     #graph-view {
@@ -1098,6 +1104,481 @@
 
     body:not([data-view="structure"]) #structure-view {
       display: none;
+    }
+
+    #echo-view {
+      z-index: 7;
+      overflow: auto;
+      padding:
+        calc(var(--topbar-height) + max(154px, env(safe-area-inset-top)))
+        max(20px, env(safe-area-inset-right))
+        max(80px, env(safe-area-inset-bottom))
+        max(20px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 22% 12%, rgba(89, 194, 255, .085), transparent 31rem),
+        radial-gradient(circle at 82% 42%, rgba(197, 160, 89, .045), transparent 26rem),
+        var(--ink);
+    }
+
+    body:not([data-view="echo"]) #echo-view {
+      display: none;
+    }
+
+    .echo-shell {
+      width: min(1240px, 100%);
+      margin: 0 auto;
+    }
+
+    .echo-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 22px;
+      margin: 22px 0 18px;
+    }
+
+    .echo-head h1 {
+      margin: 0;
+      font: 500 clamp(30px, 4.2vw, 49px)/1.02 var(--serif);
+    }
+
+    .echo-head-copy {
+      max-width: 39rem;
+      margin: 10px 0 0;
+      color: var(--paper-dim);
+      font: 13px/1.6 var(--sans);
+    }
+
+    .echo-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .echo-scope-label {
+      display: grid;
+      gap: 5px;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #echo-scope {
+      min-width: min(280px, 72vw);
+      min-height: 42px;
+      padding: 0 34px 0 11px;
+      border: 1px solid rgba(179, 229, 255, .14);
+      border-radius: 10px;
+      outline: 0;
+      background: rgba(10, 15, 23, .88);
+      color: var(--paper);
+      font: 600 11px/1 var(--sans);
+    }
+
+    .echo-mode-toggle {
+      display: flex;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+      gap: 3px;
+      margin-bottom: 14px;
+      padding: 4px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 12px;
+      background: rgba(3, 6, 10, .42);
+      scrollbar-width: thin;
+    }
+
+    .echo-mode-toggle button {
+      min-height: 42px;
+      flex: 0 0 auto;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--paper-dim);
+      cursor: pointer;
+      font: 650 11px/1 var(--sans);
+    }
+
+    .echo-mode-toggle button[aria-selected="true"] {
+      background: rgba(179, 229, 255, .1);
+      color: var(--cyan-bright);
+      box-shadow: inset 0 0 0 1px rgba(89, 194, 255, .12);
+    }
+
+    .echo-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(300px, .72fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .echo-field-panel,
+    #echo-detail {
+      min-height: 430px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 18px;
+      background: rgba(7, 11, 17, .7);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, .24);
+    }
+
+    .echo-field-panel {
+      position: relative;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      overflow: hidden;
+    }
+
+    #echo-status {
+      min-height: 44px;
+      margin: 0;
+      padding: 14px 17px 10px;
+      border-bottom: 1px solid rgba(179, 229, 255, .07);
+      color: var(--paper-faint);
+      font: 10px/1.5 var(--mono);
+      letter-spacing: .025em;
+    }
+
+    #echo-field {
+      display: flex;
+      min-height: 365px;
+      overflow: auto;
+      flex-wrap: wrap;
+      align-content: center;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(8px, 1.4vw, 18px);
+      padding: clamp(22px, 4vw, 48px);
+    }
+
+    #echo-field[data-mode="phrases"],
+    #echo-field[data-mode="starters"] {
+      display: grid;
+      align-content: start;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 18px;
+    }
+
+    .echo-word,
+    .echo-strip {
+      border: 1px solid transparent;
+      background: transparent;
+      color: rgba(179, 229, 255, var(--echo-opacity, .76));
+      cursor: pointer;
+      transition: color .16s, border-color .16s, background .16s, opacity .16s, transform .16s;
+    }
+
+    .echo-word {
+      order: var(--echo-order);
+      padding: 5px 8px;
+      border-radius: 999px;
+      font: 520 var(--echo-size)/1.06 var(--serif);
+      letter-spacing: -.018em;
+    }
+
+    .echo-word:hover,
+    .echo-word:focus-visible,
+    .echo-word[aria-pressed="true"] {
+      border-color: rgba(255, 216, 105, .48);
+      background: rgba(255, 216, 105, .07);
+      color: #ffe7a6;
+      transform: scale(1.035);
+    }
+
+    .echo-strip {
+      display: grid;
+      min-height: 58px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 13px;
+      border-color: rgba(179, 229, 255, .08);
+      border-radius: 11px;
+      text-align: left;
+    }
+
+    .echo-strip:hover,
+    .echo-strip:focus-visible,
+    .echo-strip[aria-pressed="true"] {
+      border-color: rgba(255, 216, 105, .42);
+      background: rgba(255, 216, 105, .055);
+      color: #ffe7a6;
+    }
+
+    .echo-strip-copy strong,
+    .echo-strip-copy small {
+      display: block;
+    }
+
+    .echo-strip-copy strong {
+      font: 500 17px/1.25 var(--serif);
+    }
+
+    .echo-strip-copy small,
+    .echo-strip-count {
+      margin-top: 4px;
+      color: var(--paper-faint);
+      font: 9px/1.3 var(--mono);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .echo-word[data-decision="intentional"],
+    .echo-strip[data-decision="intentional"] {
+      opacity: .47;
+    }
+
+    .echo-word[data-decision="key"],
+    .echo-strip[data-decision="key"] {
+      color: rgba(148, 224, 196, .82);
+    }
+
+    .echo-word[data-decision="hidden"],
+    .echo-strip[data-decision="hidden"] {
+      opacity: .24;
+      filter: grayscale(.7);
+    }
+
+    .echo-empty {
+      align-self: center;
+      justify-self: center;
+      max-width: 31rem;
+      margin: auto;
+      color: var(--paper-faint);
+      font: 12px/1.65 var(--mono);
+      text-align: center;
+    }
+
+    #echo-detail {
+      overflow: auto;
+      padding: 19px;
+    }
+
+    .echo-detail-empty {
+      display: grid;
+      min-height: 390px;
+      align-content: center;
+      gap: 9px;
+      color: var(--paper-faint);
+      text-align: center;
+    }
+
+    .echo-detail-empty strong {
+      color: var(--paper-dim);
+      font: 500 21px/1.2 var(--serif);
+    }
+
+    .echo-detail-head {
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(179, 229, 255, .08);
+    }
+
+    .echo-detail-head h2 {
+      margin: 4px 0 7px;
+      color: var(--paper);
+      font: 500 28px/1.08 var(--serif);
+    }
+
+    .echo-detail-head p,
+    .echo-question {
+      margin: 0;
+      color: var(--paper-dim);
+      font: 12px/1.55 var(--sans);
+    }
+
+    .echo-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin: 13px 0;
+    }
+
+    .echo-fact {
+      padding: 9px 10px;
+      border: 1px solid rgba(179, 229, 255, .075);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .025);
+    }
+
+    .echo-fact strong,
+    .echo-fact span {
+      display: block;
+    }
+
+    .echo-fact strong {
+      color: var(--cyan-bright);
+      font: 650 14px/1.1 var(--mono);
+    }
+
+    .echo-fact span {
+      margin-top: 4px;
+      color: var(--paper-faint);
+      font: 8px/1.2 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .echo-actions,
+    .echo-decisions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .echo-decisions .small-button[aria-pressed="true"] {
+      border-color: rgba(255, 216, 105, .58);
+      background: rgba(255, 216, 105, .1);
+      color: #ffe7a6;
+    }
+
+    .echo-occurrences {
+      display: grid;
+      gap: 7px;
+      margin-top: 15px;
+    }
+
+    .echo-occurrences h3 {
+      margin: 0 0 2px;
+      color: var(--paper-faint);
+      font: 9px/1 var(--mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .echo-occurrence {
+      width: 100%;
+      padding: 10px 11px;
+      border: 1px solid rgba(179, 229, 255, .08);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .025);
+      color: var(--paper-dim);
+      cursor: pointer;
+      font: 12px/1.5 var(--serif);
+      text-align: left;
+    }
+
+    .echo-occurrence:hover,
+    .echo-occurrence:focus-visible {
+      border-color: rgba(255, 216, 105, .4);
+      background: rgba(255, 216, 105, .055);
+      color: var(--paper);
+    }
+
+    .echo-occurrence mark {
+      border-radius: 3px;
+      background: rgba(255, 216, 105, .2);
+      color: #fff0bc;
+    }
+
+    .echo-document-map {
+      display: grid;
+      grid-template-columns: repeat(var(--echo-blocks, 1), minmax(4px, 1fr));
+      gap: 3px;
+      margin: 14px 0 0;
+      padding: 10px;
+      border: 1px solid rgba(179, 229, 255, .08);
+      border-radius: 12px;
+      background: rgba(3, 6, 10, .38);
+    }
+
+    .echo-map-block {
+      position: relative;
+      min-width: 5px;
+      height: 34px;
+      padding: 0;
+      border: 0;
+      border-radius: 3px;
+      background: rgba(179, 229, 255, .07);
+    }
+
+    .echo-map-block[data-heading="true"] {
+      height: 20px;
+      align-self: end;
+      border: 1px solid rgba(197, 160, 89, .18);
+      background: rgba(197, 160, 89, .08);
+    }
+
+    .echo-map-block[data-hit="true"] {
+      background: rgba(255, 216, 105, calc(.18 + var(--echo-density, .3) * .55));
+      box-shadow: 0 0 12px rgba(255, 216, 105, .12);
+      cursor: pointer;
+    }
+
+    .echo-map-block[data-hit="true"]::after {
+      position: absolute;
+      right: 2px;
+      bottom: 2px;
+      left: 2px;
+      height: max(2px, calc(var(--echo-density, .3) * 12px));
+      border-radius: 2px;
+      background: #ffe07a;
+      content: "";
+      opacity: .82;
+    }
+
+    .echo-method {
+      margin-top: 14px;
+      border: 1px solid rgba(179, 229, 255, .075);
+      border-radius: 12px;
+      background: rgba(3, 6, 10, .28);
+      color: var(--paper-faint);
+      font: 10px/1.6 var(--mono);
+    }
+
+    .echo-method summary {
+      min-height: 42px;
+      padding: 13px;
+      color: var(--paper-dim);
+      cursor: pointer;
+    }
+
+    .echo-method p {
+      margin: 0;
+      padding: 0 13px 14px;
+    }
+
+    .echo-method a {
+      color: var(--cyan-bright);
+    }
+
+    .block-card[data-echo-hit="true"] {
+      border-color: rgba(255, 216, 105, .48);
+      background: linear-gradient(90deg, rgba(255, 216, 105, .075), rgba(179, 229, 255, .025));
+      box-shadow: 0 0 24px rgba(255, 216, 105, .07);
+    }
+
+    .graph-node[data-echo-hit="true"] .node-shape {
+      border-color: #ffe07a;
+      box-shadow: 0 0 0 2px rgba(255, 216, 105, .16), 0 0 25px rgba(255, 216, 105, .22);
+    }
+
+    @media (max-width: 900px) {
+      .echo-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .echo-controls {
+        justify-content: flex-start;
+      }
+
+      .echo-layout {
+        grid-template-columns: 1fr;
+      }
+
+      #echo-detail,
+      .echo-field-panel {
+        min-height: 360px;
+      }
+
+      .echo-detail-empty {
+        min-height: 260px;
+      }
     }
 
     .structure-shell {
@@ -3319,6 +3800,44 @@
         padding-left: 10px;
       }
 
+      #echo-view {
+        padding-top: calc(var(--topbar-height) + max(140px, env(safe-area-inset-top)));
+        padding-right: 10px;
+        padding-left: 10px;
+      }
+
+      .echo-head {
+        margin-top: 12px;
+      }
+
+      #echo-scope {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .echo-scope-label {
+        min-width: 0;
+        flex: 1 1 100%;
+      }
+
+      .echo-mode-toggle {
+        width: 100%;
+      }
+
+      .echo-mode-toggle button {
+        flex: 1 0 auto;
+        padding: 0 10px;
+      }
+
+      #echo-field {
+        min-height: 330px;
+        padding: 20px 13px;
+      }
+
+      #echo-detail {
+        padding: 15px;
+      }
+
       .structure-head {
         margin-top: 12px;
       }
@@ -3589,7 +4108,7 @@
 
   <section id="vavbord-toolbar" aria-label="Vävbordets läge">
     <span class="vavbord-toolbar-label">Vävbord</span>
-    <div class="vavbord-view-toggle" role="group" aria-label="Visa Vävbordet som lista eller noder">
+    <div class="vavbord-view-toggle" role="group" aria-label="Visa Vävbordet som lista, noder eller Ordekon">
       <button type="button" data-vavbord-view="list" aria-pressed="true">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 6h12M8 12h9M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
         <span>Lista</span>
@@ -3597,6 +4116,10 @@
       <button type="button" data-vavbord-view="nodes" aria-pressed="false">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="17" cy="5" r="2.5"/><circle cx="19" cy="17" r="2.5"/><path d="m7.2 10.8 7.6-4.6M7.4 13l9.2 3M17.5 7.5l1 7"/></svg>
         <span>Noder</span>
+      </button>
+      <button type="button" data-vavbord-view="echo" aria-pressed="false" title="Ordekon, Ctrl eller Cmd + 4">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 17c2.4-6.7 4.8-6.7 7.2 0s4.8 6.7 8.8-4"/><path d="M4 11c2-4.8 4-4.8 6 0s4 4.8 7-2" opacity=".72"/></svg>
+        <span>Ekon</span>
       </button>
     </div>
     <button id="tension-lens" type="button" aria-pressed="false" aria-label="Visa Spänningslinsen" title="Visa var läsordning och ordsläktskap drar åt olika håll">
@@ -3708,6 +4231,48 @@
             <ul id="section-grid" class="structure-grid section-grid"></ul>
           </section>
         </div>
+      </div>
+    </section>
+
+    <section id="echo-view" class="view" aria-label="Ordekon, återkommande ord och formuleringar">
+      <div class="echo-shell">
+        <header class="echo-head">
+          <div>
+            <p class="eyebrow">Ordekon</p>
+            <h1>Vad återkommer i texten?</h1>
+            <p class="echo-head-copy">Upptäck ord, fraser och meningsstarter som kan vara avsiktliga motiv eller möjliga upprepningar att granska.</p>
+          </div>
+          <div class="echo-controls">
+            <label class="echo-scope-label" for="echo-scope">
+              Analysera
+              <select id="echo-scope">
+                <option value="document">Hela dokumentet</option>
+              </select>
+            </label>
+            <button id="echo-hidden-toggle" class="plain-button" type="button" aria-pressed="false" hidden>Visa dolda</button>
+          </div>
+        </header>
+
+        <div id="echo-mode-toggle" class="echo-mode-toggle" role="tablist" aria-label="Typ av språkligt eko">
+          <button type="button" role="tab" data-echo-mode="words" aria-selected="true" aria-controls="echo-field">Ord</button>
+          <button type="button" role="tab" data-echo-mode="phrases" aria-selected="false" aria-controls="echo-field">Fraser</button>
+          <button type="button" role="tab" data-echo-mode="starters" aria-selected="false" aria-controls="echo-field">Meningsstarter</button>
+        </div>
+
+        <div class="echo-layout">
+          <section class="echo-field-panel" aria-labelledby="echo-status">
+            <p id="echo-status" role="status" aria-live="polite">Ordekon förbereds.</p>
+            <div id="echo-field" role="tabpanel" data-mode="words"></div>
+          </section>
+          <aside id="echo-detail" aria-label="Valt eko"></aside>
+        </div>
+
+        <div id="echo-document-map" class="echo-document-map" aria-label="Förekomster genom dokumentet"></div>
+
+        <details class="echo-method">
+          <summary>Så läser du Ordekon</summary>
+          <p>Storlek betyder värt att granska, inte fel. Faktisk upprepning kombineras med en utjämnad jämförelse mot Swedish Kelly-list från Språkbanken och med en begränsad signal för lokal anhopning. Kelly bygger på svenskt webbskriftspråk och är inte ett facit för genre, fackspråk eller personlig stil. Böjningsnormaliseringen är försiktig och inte en full grammatisk analys. <a href="https://spraakbanken.gu.se/resurser/kelly" target="_blank" rel="noopener">Läs om referensen</a>.</p>
+        </details>
       </div>
     </section>
   </main>
@@ -4008,7 +4573,7 @@
 
       <section class="setting-group">
         <h3>Kortkommandon</h3>
-        <p class="method-note">Ctrl eller Cmd + 1: Skriv. + 2: Vävbordet. + 3: växla Lista eller Noder. + B: panel. I Vävbordet redigerar E, S skriver efter och Alt + pil flyttar. Ctrl eller Cmd + Z i ett tomt skrivfält tar tillbaka senast invävda blocket.</p>
+        <p class="method-note">Ctrl eller Cmd + 1: Skriv. + 2: Vävbordet. + 3: växla Lista eller Noder. + 4: Ordekon. + B: panel. I Lista redigerar E, S skriver efter och Alt + pil flyttar. Ctrl eller Cmd + Z i ett tomt skrivfält tar tillbaka senast invävda blocket.</p>
       </section>
     </div>
   </aside>
@@ -4029,6 +4594,8 @@
 
   <script src="./valsang-engine.js"></script>
   <script src="./hardfork-engine.js"></script>
+  <script src="./ordekon-kelly.js"></script>
+  <script src="./ordekon-engine.js"></script>
   <script>
   (() => {
     'use strict';
@@ -5394,6 +5961,14 @@
       structureHeadingInput: $('#structure-heading-input'),
       structureTitle: $('#structure-title'),
       structureSummary: $('#structure-summary'),
+      echoView: $('#echo-view'),
+      echoScope: $('#echo-scope'),
+      echoModeToggle: $('#echo-mode-toggle'),
+      echoStatus: $('#echo-status'),
+      echoField: $('#echo-field'),
+      echoDetail: $('#echo-detail'),
+      echoDocumentMap: $('#echo-document-map'),
+      echoHiddenToggle: $('#echo-hidden-toggle'),
       vavbordButton: $('#vavbord-button'),
       vavbordToolbar: $('#vavbord-toolbar'),
       tensionLens: $('#tension-lens'),
@@ -5494,6 +6069,14 @@
     let draggedBlockId = null;
     let structureSectionId = null;
     let graphLens = 'all';
+    let echoAnalysis = null;
+    let echoAnalysisPending = false;
+    let echoAnalysisRequestId = 0;
+    let echoWorker = null;
+    let echoScopeId = 'document';
+    let echoSelectionId = null;
+    let echoShowHidden = false;
+    let echoHighlightedIds = new Set();
     let pendingInsertContext = null;
     let commitsThisSession = 0;
     let recalledBlock = null;
@@ -5590,14 +6173,15 @@
         goal: createGoal(),
         created: now,
         updated: now,
-        hiddenWords: []
+        hiddenWords: [],
+        echoDecisions: {}
       };
     }
 
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 9,
+        version: 10,
         activeId: document.id,
         documents: [document],
         settings: {
@@ -5606,6 +6190,7 @@
           maxEdges: 3,
           documentHubView: 'list',
           vavbordView: 'list',
+          echoMode: 'words',
           focusMinutes: 25,
           breakMinutes: 5,
           showCountdown: true,
@@ -5645,7 +6230,10 @@
             recalledIndex: Number.isInteger(Number(document.recalledIndex)) ? Math.max(0, Number(document.recalledIndex)) : null,
             lastCommittedBlockId: document.lastCommittedBlockId || null,
             lastCommittedBlockUnavailable: document.lastCommittedBlockUnavailable === true,
-            goal: normalizeGoal(document.goal)
+            goal: normalizeGoal(document.goal),
+            echoDecisions: document.echoDecisions && typeof document.echoDecisions === 'object'
+              ? { ...document.echoDecisions }
+              : {}
           }));
           stored.settings = Object.assign({
             widthIndex: 2,
@@ -5653,6 +6241,7 @@
             maxEdges: 3,
             documentHubView: 'list',
             vavbordView: 'list',
+            echoMode: 'words',
             focusMinutes: 25,
             breakMinutes: 5,
             showCountdown: true,
@@ -5666,7 +6255,12 @@
           stored.settings.breakMinutes = clamp(Math.round(Number(stored.settings.breakMinutes) || 5), 1, 60);
           stored.settings.widthIndex = normalizeWidthIndex(stored.settings.widthIndex);
           stored.settings.documentHubView = stored.settings.documentHubView === 'graph' ? 'graph' : 'list';
-          stored.settings.vavbordView = stored.settings.vavbordView === 'nodes' ? 'nodes' : 'list';
+          stored.settings.vavbordView = ['nodes', 'echo'].includes(stored.settings.vavbordView)
+            ? stored.settings.vavbordView
+            : 'list';
+          stored.settings.echoMode = ['words', 'phrases', 'starters'].includes(stored.settings.echoMode)
+            ? stored.settings.echoMode
+            : 'words';
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
           stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
             ? stored.settings.soundTheme
@@ -5689,7 +6283,7 @@
             0,
             100
           );
-          stored.version = 9;
+          stored.version = 10;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -5710,7 +6304,7 @@
             hiddenWords: document.doldaOrd || []
           }));
           return {
-            version: 9,
+            version: 10,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
@@ -5719,6 +6313,7 @@
               maxEdges: 3,
               documentHubView: 'list',
               vavbordView: 'list',
+              echoMode: 'words',
               focusMinutes: 25,
               breakMinutes: 5,
               showCountdown: true,
@@ -6117,6 +6712,415 @@
         edges: [...sequenceEdges, ...hierarchyEdges, ...cohesionEdges],
         adjacency
       };
+    }
+
+    function echoScopeBlocks() {
+      const blocks = activeDocument().blocks;
+      if (echoScopeId === 'document') return blocks;
+      const { sections } = buildStructureTree(blocks);
+      const section = sections.get(echoScopeId);
+      if (!section) {
+        echoScopeId = 'document';
+        return blocks;
+      }
+      return blocks.slice(section.start, section.end);
+    }
+
+    function renderEchoScopeOptions() {
+      const { sections } = buildStructureTree();
+      const options = [{ id: 'document', label: 'Hela dokumentet' }];
+      const sectionOptions = [...sections.values()]
+        .filter(section => section.id && section.headingBlock)
+        .sort((a, b) => a.start - b.start)
+        .map(section => ({
+          id: section.id,
+          label: '· '.repeat(Math.max(0, section.level - 1)) + section.headingBlock.text
+        }));
+      options.push(...sectionOptions);
+      if (!options.some(option => option.id === echoScopeId)) echoScopeId = 'document';
+      elements.echoScope.innerHTML = options.map(option =>
+        `<option value="${escapeHtml(option.id)}">${escapeHtml(option.label)}</option>`
+      ).join('');
+      elements.echoScope.value = echoScopeId;
+    }
+
+    function currentEchoMode() {
+      return ['words', 'phrases', 'starters'].includes(app.settings.echoMode)
+        ? app.settings.echoMode
+        : 'words';
+    }
+
+    function echoModeLabel(mode = currentEchoMode()) {
+      return mode === 'phrases' ? 'fraser' : (mode === 'starters' ? 'meningsstarter' : 'ord');
+    }
+
+    function echoFindings(mode = currentEchoMode()) {
+      if (!echoAnalysis) return [];
+      return Array.isArray(echoAnalysis[mode]) ? echoAnalysis[mode] : [];
+    }
+
+    function echoDecision(id) {
+      return activeDocument().echoDecisions?.[id] || '';
+    }
+
+    function visibleEchoFindings() {
+      return echoFindings().filter(finding => echoShowHidden || echoDecision(finding.id) !== 'hidden');
+    }
+
+    function selectedEchoFinding() {
+      return echoFindings().find(finding => finding.id === echoSelectionId) || null;
+    }
+
+    function startEchoAnalysis() {
+      if (echoAnalysisPending) return;
+      const requestId = ++echoAnalysisRequestId;
+      const documentId = app.activeId;
+      const scopeId = echoScopeId;
+      const blocks = echoScopeBlocks().map(block => ({
+        id: block.id,
+        kind: block.kind,
+        level: block.level,
+        text: block.text
+      }));
+      echoAnalysisPending = true;
+      let settled = false;
+      let fallbackScheduled = false;
+
+      const finish = result => {
+        if (settled) return;
+        settled = true;
+        if (requestId !== echoAnalysisRequestId || documentId !== app.activeId || scopeId !== echoScopeId) return;
+        echoAnalysisPending = false;
+        echoAnalysis = result || {
+          words: [], phrases: [], starters: [], totalWords: 0, blockCount: 0, insufficient: true,
+          method: { referenceEntries: 0 }
+        };
+        if (view === 'echo') renderEcho();
+      };
+
+      const fallback = (sourceWorker = null) => {
+        if (settled || fallbackScheduled) return;
+        fallbackScheduled = true;
+        sourceWorker?.terminate();
+        if (!sourceWorker) echoWorker?.terminate();
+        if (!sourceWorker || echoWorker === sourceWorker) echoWorker = null;
+        setTimeout(() => {
+          fallbackScheduled = false;
+          try {
+            finish(window.Ordekon?.analyze(blocks));
+          } catch (error) {
+            console.warn('Ordekon kunde inte analysera texten.', error);
+            finish(null);
+          }
+        }, 0);
+      };
+
+      if (!window.Worker) return fallback();
+      try {
+        const worker = new Worker('./ordekon-worker.js');
+        echoWorker = worker;
+        worker.addEventListener('message', event => {
+          if (event.data?.requestId !== requestId) return;
+          worker.terminate();
+          if (echoWorker === worker) echoWorker = null;
+          if (event.data?.error) {
+            console.warn('Ordekon föll tillbaka till huvudtråden.', event.data.error);
+            fallback(worker);
+          } else {
+            finish(event.data?.result);
+          }
+        });
+        worker.addEventListener('error', () => fallback(worker), { once: true });
+        worker.postMessage({ requestId, blocks });
+      } catch (error) {
+        fallback();
+      }
+    }
+
+    function ensureEchoAnalysis() {
+      if (!echoAnalysis && !echoAnalysisPending) startEchoAnalysis();
+      return echoAnalysis;
+    }
+
+    function invalidateEcho(clearHighlights = true) {
+      echoAnalysisRequestId += 1;
+      echoAnalysisPending = false;
+      echoWorker?.terminate();
+      echoWorker = null;
+      echoAnalysis = null;
+      echoSelectionId = null;
+      if (clearHighlights) {
+        echoHighlightedIds.clear();
+        applyEchoHighlights();
+      }
+    }
+
+    function echoWordMarkup(finding, minimum, maximum) {
+      const span = Math.max(.0001, maximum - minimum);
+      const normalized = maximum - minimum < .0001
+        ? .58
+        : clamp((finding.score - minimum) / span, 0, 1);
+      const size = .92 + Math.sqrt(normalized) * 1.42;
+      const opacity = .54 + normalized * .42;
+      const decision = echoDecision(finding.id);
+      return `<button class="echo-word" type="button"
+        data-echo-id="${escapeHtml(finding.id)}"
+        data-decision="${escapeHtml(decision)}"
+        aria-pressed="${String(finding.id === echoSelectionId)}"
+        aria-label="${escapeHtml(finding.label)}, ${finding.count} förekomster"
+        style="--echo-size:${size.toFixed(3)}rem;--echo-opacity:${opacity.toFixed(3)};--echo-order:${finding.stableOrder % 10007}">${escapeHtml(finding.label)}</button>`;
+    }
+
+    function echoStripMarkup(finding) {
+      const decision = echoDecision(finding.id);
+      const typeLabel = finding.type === 'starter' ? 'Meningsstart' : `${finding.length} ord`;
+      return `<button class="echo-strip" type="button"
+        data-echo-id="${escapeHtml(finding.id)}"
+        data-decision="${escapeHtml(decision)}"
+        aria-pressed="${String(finding.id === echoSelectionId)}">
+        <span class="echo-strip-copy">
+          <strong>${escapeHtml(finding.label)}</strong>
+          <small>${escapeHtml(typeLabel)} · ${finding.blockCount} ${finding.blockCount === 1 ? 'block' : 'block'}</small>
+        </span>
+        <span class="echo-strip-count">${finding.count} gånger</span>
+      </button>`;
+    }
+
+    function echoStatusText(findings) {
+      const analysisResult = ensureEchoAnalysis();
+      const scope = echoScopeId === 'document'
+        ? 'hela dokumentet'
+        : 'den valda sektionen';
+      if (!analysisResult.totalWords) return 'Det finns ingen invävd text att analysera i ' + scope + '.';
+      if (!findings.length) {
+        return analysisResult.insufficient
+          ? `Underlaget är ännu litet: ${analysisResult.totalWords} ord. Inga tydliga ${echoModeLabel()} visas.`
+          : `Inga tydliga ${echoModeLabel()} hittades i ${scope}.`;
+      }
+      const qualifier = analysisResult.insufficient ? 'Försiktigt underlag. ' : '';
+      return qualifier + `${findings.length} ${echoModeLabel()} visas från ${formatNumber(analysisResult.totalWords)} analyserade ord.`;
+    }
+
+    function echoSnippet(block, occurrence) {
+      const text = String(block?.text || '');
+      const radius = 66;
+      const from = Math.max(0, occurrence.start - radius);
+      const to = Math.min(text.length, occurrence.end + radius);
+      const before = (from ? '…' : '') + text.slice(from, occurrence.start);
+      const hit = text.slice(occurrence.start, occurrence.end);
+      const after = text.slice(occurrence.end, to) + (to < text.length ? '…' : '');
+      return `${escapeHtml(before)}<mark>${escapeHtml(hit)}</mark>${escapeHtml(after)}`;
+    }
+
+    function echoFindingSummary(finding) {
+      const clustered = finding.cluster?.count || finding.count;
+      const window = finding.cluster?.window || finding.count;
+      if (finding.type === 'word') {
+        return `${finding.count} förekomster i ${finding.blockCount} ${finding.blockCount === 1 ? 'block' : 'block'}. Som mest ${clustered} inom ${window} ord.`;
+      }
+      return `${finding.count} förekomster i ${finding.blockCount} ${finding.blockCount === 1 ? 'block' : 'block'}. Följden består av ${finding.length} ord.`;
+    }
+
+    function echoFactMarkup(value, label) {
+      return `<div class="echo-fact"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function renderEchoDetail() {
+      const finding = selectedEchoFinding();
+      if (!finding) {
+        elements.echoDetail.innerHTML = `<div class="echo-detail-empty">
+          <strong>Välj ett eko</strong>
+          <span>Klicka på ett ord eller en fras för att se var och hur det återkommer.</span>
+        </div>`;
+        return;
+      }
+      const decision = echoDecision(finding.id);
+      const blocks = new Map(activeDocument().blocks.map(block => [block.id, block]));
+      const occurrences = finding.occurrences.slice(0, 24).map((occurrence, index) => {
+        const block = blocks.get(occurrence.blockId);
+        return `<button class="echo-occurrence" type="button" data-echo-occurrence="${index}" data-block-id="${escapeHtml(occurrence.blockId)}" aria-label="Öppna förekomsten i redigeringsläget">${echoSnippet(block, occurrence)}</button>`;
+      }).join('');
+      const forms = finding.type === 'word' && finding.forms?.length > 1
+        ? `<p class="echo-question">Former i texten: ${escapeHtml(finding.forms.join(', '))}</p>`
+        : '';
+      const reference = finding.type === 'word'
+        ? (finding.frequency.inReference
+          ? echoFactMarkup(
+              finding.frequency.referenceWpm.toLocaleString('sv-SE', { maximumFractionDigits: 1 }),
+              'per miljon i Kelly'
+            )
+          : (finding.frequency.commonFallback
+            ? echoFactMarkup('Vanligt formord', 'försiktigt nedviktat')
+            : echoFactMarkup('Under listan', 'per miljon i Kelly')))
+        : echoFactMarkup(String(finding.length), 'ord i följden');
+      elements.echoDetail.innerHTML = `
+        <header class="echo-detail-head">
+          <p class="eyebrow">${finding.type === 'word' ? 'Ord' : (finding.type === 'starter' ? 'Meningsstart' : 'Fras')}</p>
+          <h2>${escapeHtml(finding.label)}</h2>
+          <p>${escapeHtml(echoFindingSummary(finding))}</p>
+        </header>
+        <div class="echo-facts">
+          ${echoFactMarkup(String(finding.count), 'förekomster')}
+          ${echoFactMarkup(String(finding.blockCount), 'berörda block')}
+          ${echoFactMarkup(String(finding.cluster?.count || finding.count), `inom ${finding.cluster?.window || finding.count} ord`)}
+          ${reference}
+        </div>
+        ${forms}
+        <div class="echo-actions">
+          <button class="small-button primary" type="button" data-echo-action="list">Visa i Lista</button>
+          <button class="small-button" type="button" data-echo-action="nodes">Visa i Noder</button>
+        </div>
+        <p class="echo-question">Är den här upprepningen avsiktlig?</p>
+        <div class="echo-decisions" role="group" aria-label="Bedöm ekot">
+          <button class="small-button" type="button" data-echo-decision="intentional" aria-pressed="${String(decision === 'intentional')}">Avsiktligt</button>
+          <button class="small-button" type="button" data-echo-decision="key" aria-pressed="${String(decision === 'key')}">Nyckelbegrepp</button>
+          <button class="small-button" type="button" data-echo-decision="hidden" aria-pressed="${String(decision === 'hidden')}">Dölj från analysen</button>
+        </div>
+        <section class="echo-occurrences">
+          <h3>Förekomster, klicka för att redigera</h3>
+          ${occurrences}
+          ${finding.occurrences.length > 24 ? `<p class="echo-question">Ytterligare ${finding.occurrences.length - 24} förekomster visas i dokumentkartan.</p>` : ''}
+        </section>`;
+    }
+
+    function renderEchoMap(findings = visibleEchoFindings()) {
+      const documentBlocks = activeDocument().blocks;
+      const selected = selectedEchoFinding();
+      const source = selected ? [selected] : findings.slice(0, 24);
+      const counts = new Map();
+      for (const finding of source) {
+        for (const occurrence of finding.occurrences) {
+          counts.set(occurrence.blockId, (counts.get(occurrence.blockId) || 0) + 1);
+        }
+      }
+      const maximum = Math.max(1, ...counts.values());
+      elements.echoDocumentMap.style.setProperty('--echo-blocks', Math.max(1, documentBlocks.length));
+      elements.echoDocumentMap.innerHTML = documentBlocks.map((block, index) => {
+        const count = counts.get(block.id) || 0;
+        const label = block.kind === 'heading' ? `Rubrik ${index + 1}` : `Stycke ${index + 1}`;
+        return `<button class="echo-map-block" type="button"
+          data-block-id="${escapeHtml(block.id)}"
+          data-heading="${String(block.kind === 'heading')}"
+          data-hit="${String(count > 0)}"
+          ${count ? '' : 'disabled'}
+          aria-label="${escapeHtml(label + (count ? `, ${count} förekomster` : ', ingen förekomst'))}"
+          style="--echo-density:${(count / maximum).toFixed(3)}"></button>`;
+      }).join('');
+    }
+
+    function renderEcho() {
+      renderEchoScopeOptions();
+      const mode = currentEchoMode();
+      const result = ensureEchoAnalysis();
+      $$('[data-echo-mode]', elements.echoModeToggle).forEach(button => {
+        const selected = button.dataset.echoMode === mode;
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+      elements.echoField.dataset.mode = mode;
+      if (!result) {
+        elements.echoStatus.textContent = 'Ordekon analyserar texten lokalt i bakgrunden.';
+        elements.echoField.innerHTML = '<p class="echo-empty">Lyssnar efter återkommande ord och formuleringar…</p>';
+        elements.echoHiddenToggle.hidden = true;
+        renderEchoDetail();
+        renderEchoMap([]);
+        return;
+      }
+      const allFindings = echoFindings(mode);
+      if (echoSelectionId && !allFindings.some(finding => finding.id === echoSelectionId)) {
+        echoSelectionId = null;
+        echoHighlightedIds.clear();
+      }
+      const findings = visibleEchoFindings();
+      elements.echoStatus.textContent = echoStatusText(findings);
+      if (!findings.length) {
+        elements.echoField.innerHTML = `<p class="echo-empty">Ordekon hittar inget tydligt mönster i detta urval ännu. Det är ett neutralt resultat, inte ett omdöme om texten.</p>`;
+      } else if (mode === 'words') {
+        const scores = findings.map(finding => finding.score);
+        const minimum = Math.min(...scores);
+        const maximum = Math.max(...scores);
+        elements.echoField.innerHTML = findings.map(finding => echoWordMarkup(finding, minimum, maximum)).join('');
+      } else {
+        elements.echoField.innerHTML = findings.map(echoStripMarkup).join('');
+      }
+      const hiddenCount = allFindings.filter(finding => echoDecision(finding.id) === 'hidden').length;
+      elements.echoHiddenToggle.hidden = hiddenCount === 0;
+      elements.echoHiddenToggle.setAttribute('aria-pressed', String(echoShowHidden));
+      elements.echoHiddenToggle.textContent = echoShowHidden ? 'Dölj dolda' : `Visa dolda (${hiddenCount})`;
+      renderEchoDetail();
+      renderEchoMap(findings);
+      applyEchoHighlights();
+    }
+
+    function selectEchoFinding(id) {
+      const finding = echoFindings().find(item => item.id === id);
+      if (!finding) return;
+      echoSelectionId = id;
+      echoHighlightedIds = new Set(finding.blocks);
+      renderEcho();
+      announce(`${finding.label}, ${finding.count} förekomster`);
+    }
+
+    function setEchoMode(mode) {
+      if (!['words', 'phrases', 'starters'].includes(mode)) return;
+      app.settings.echoMode = mode;
+      echoSelectionId = null;
+      echoHighlightedIds.clear();
+      saveState('Ordekonläge sparat');
+      renderEcho();
+      requestAnimationFrame(() => $('[aria-selected="true"]', elements.echoModeToggle)?.focus());
+    }
+
+    function setEchoDecision(value) {
+      const finding = selectedEchoFinding();
+      if (!finding || !['intentional', 'key', 'hidden'].includes(value)) return;
+      const document = activeDocument();
+      document.echoDecisions = document.echoDecisions && typeof document.echoDecisions === 'object'
+        ? document.echoDecisions
+        : {};
+      if (document.echoDecisions[finding.id] === value) delete document.echoDecisions[finding.id];
+      else document.echoDecisions[finding.id] = value;
+      if (value === 'hidden' && document.echoDecisions[finding.id] === 'hidden' && !echoShowHidden) {
+        echoSelectionId = null;
+        echoHighlightedIds.clear();
+      }
+      saveState('Ordekonval sparat');
+      renderEcho();
+    }
+
+    function applyEchoHighlights() {
+      for (const [id, state] of nodeStates) {
+        state.element.dataset.echoHit = String(echoHighlightedIds.has(id));
+      }
+      $$('.block-card', elements.structureBoard).forEach(card => {
+        card.dataset.echoHit = String(echoHighlightedIds.has(card.dataset.blockId));
+      });
+    }
+
+    function showEchoIn(mode) {
+      const finding = selectedEchoFinding();
+      if (!finding) return;
+      echoHighlightedIds = new Set(finding.blocks);
+      const firstId = finding.occurrences[0]?.blockId;
+      if (firstId) {
+        selectedId = firstId;
+        lastVavbordFocusId = firstId;
+      }
+      switchVavbordView(mode);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        applyEchoHighlights();
+        if (mode === 'nodes') nodeStates.get(firstId)?.element.focus();
+        else focusBlockControl(firstId);
+      }));
+    }
+
+    function editEchoOccurrence(blockId) {
+      if (!activeDocument().blocks.some(block => block.id === blockId)) return;
+      selectedId = blockId;
+      lastVavbordFocusId = blockId;
+      echoHighlightedIds.add(blockId);
+      switchVavbordView('list');
+      requestAnimationFrame(() => requestAnimationFrame(() => startEditing(blockId)));
     }
 
     function documentContentText(document) {
@@ -7195,6 +8199,7 @@
         element.dataset.lonely = String(node.lonely);
         element.dataset.flow = String(node.flow);
         element.dataset.selected = String(node.id === selectedId);
+        element.dataset.echoHit = String(echoHighlightedIds.has(node.id));
         element.style.setProperty('--diameter', state.radius * 2 + 'px');
         $('.node-label', element).textContent = node.kind === 'heading'
           ? 'H' + node.level + ' · ' + snippet(block?.text, 32)
@@ -8890,6 +9895,7 @@
       });
       $('[data-cancel-move]', elements.outline)?.addEventListener('click', () => cancelLiftedMove());
       wireStructureGrid(elements.outline);
+      applyEchoHighlights();
     }
 
     function orderedDocuments() {
@@ -9133,11 +10139,13 @@
     }
 
     function recalculate(bornId = null) {
+      invalidateEcho();
       analysis = analyze(activeDocument().blocks);
       Soundscape.updateText(soundTextProfile());
       syncGraph(bornId);
       renderStats();
       renderOutline();
+      if (view === 'echo') renderEcho();
       if (selectedId && analysis.nodesById.has(selectedId) && elements.inspector.dataset.open === 'true') {
         renderInspector(selectedId);
       } else if (selectedId && !analysis.nodesById.has(selectedId)) {
@@ -9149,7 +10157,7 @@
     }
 
     function syncVavbordControls() {
-      const mode = view === 'graph' ? 'nodes' : 'list';
+      const mode = view === 'graph' ? 'nodes' : (view === 'echo' ? 'echo' : 'list');
       $$('[data-vavbord-view]', elements.vavbordToolbar).forEach(button => {
         button.setAttribute('aria-pressed', String(button.dataset.vavbordView === mode));
       });
@@ -9170,9 +10178,9 @@
     }
 
     function switchVavbordView(nextMode) {
-      const mode = nextMode === 'nodes' ? 'nodes' : 'list';
+      const mode = ['nodes', 'echo'].includes(nextMode) ? nextMode : 'list';
       if (!guardActiveEdit()) return;
-      const nextView = mode === 'nodes' ? 'graph' : 'structure';
+      const nextView = mode === 'nodes' ? 'graph' : (mode === 'echo' ? 'echo' : 'structure');
       if (view === nextView) return syncVavbordControls();
       app.settings.vavbordView = mode;
       saveState('Vävbordets vy sparad');
@@ -9185,15 +10193,15 @@
     }
 
     function switchView(nextView) {
-      if (!['write', 'graph', 'structure'].includes(nextView)) return;
+      if (!['write', 'graph', 'structure', 'echo'].includes(nextView)) return;
       if (nextView !== view && !guardActiveEdit()) return;
       if (nextView !== 'structure') {
         liftedMove = null;
         draggedBlockId = null;
       }
       view = nextView;
-      if (nextView === 'graph' || nextView === 'structure') {
-        app.settings.vavbordView = nextView === 'graph' ? 'nodes' : 'list';
+      if (nextView === 'graph' || nextView === 'structure' || nextView === 'echo') {
+        app.settings.vavbordView = nextView === 'graph' ? 'nodes' : (nextView === 'echo' ? 'echo' : 'list');
       }
       elements.body.dataset.view = nextView;
       $$('.mode-button').forEach(button => {
@@ -9220,7 +10228,7 @@
           if (selected?.tabIndex === 0) selected.focus();
           else (first || $('[data-graph-lens][aria-pressed="true"]', elements.graphLens))?.focus();
         });
-      } else {
+      } else if (nextView === 'structure') {
         stopSimulation();
         renderOutline();
         requestAnimationFrame(() => {
@@ -9232,8 +10240,24 @@
           target?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
           target?.focus({ preventScroll: true });
         });
+      } else {
+        closeInspector();
+        stopSimulation();
+        renderEcho();
+        requestAnimationFrame(() => {
+          const selected = echoSelectionId
+            ? $(`[data-echo-id="${CSS.escape(echoSelectionId)}"]`, elements.echoField)
+            : null;
+          (selected || $('[aria-selected="true"]', elements.echoModeToggle))?.focus();
+        });
       }
-      announce('Växlade till ' + (nextView === 'write' ? 'Skriv' : (nextView === 'graph' ? 'Vävbordets Noder' : 'Vävbordets Lista')));
+      announce('Växlade till ' + (
+        nextView === 'write'
+          ? 'Skriv'
+          : (nextView === 'graph'
+            ? 'Vävbordets Noder'
+            : (nextView === 'echo' ? 'Ordekon' : 'Vävbordets Lista'))
+      ));
     }
 
     function applyWidth(index) {
@@ -9317,6 +10341,8 @@
         if (view === 'write') elements.draft.focus();
         else if (view === 'graph') {
           [...nodeStates.values()].find(state => state.element.tabIndex === 0)?.element.focus();
+        } else if (view === 'echo') {
+          $('[aria-selected="true"]', elements.echoModeToggle)?.focus();
         } else {
           ($('.block-card', elements.structureBoard) || $('#structure-add'))?.focus();
         }
@@ -9451,14 +10477,22 @@
         recalledIndex: Number.isInteger(Number(document.recalledIndex)) ? Math.max(0, Number(document.recalledIndex)) : null,
         lastCommittedBlockId: document.lastCommittedBlockId || null,
         lastCommittedBlockUnavailable: document.lastCommittedBlockUnavailable === true,
-        goal: normalizeGoal(document.goal)
+        goal: normalizeGoal(document.goal),
+        echoDecisions: document.echoDecisions && typeof document.echoDecisions === 'object'
+          ? { ...document.echoDecisions }
+          : {}
       }));
       const settings = Object.assign({}, defaults.settings, source.settings || {});
       settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
       settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
       settings.widthIndex = normalizeWidthIndex(settings.widthIndex);
       settings.documentHubView = settings.documentHubView === 'graph' ? 'graph' : 'list';
-      settings.vavbordView = settings.vavbordView === 'nodes' ? 'nodes' : 'list';
+      settings.vavbordView = ['nodes', 'echo'].includes(settings.vavbordView)
+        ? settings.vavbordView
+        : 'list';
+      settings.echoMode = ['words', 'phrases', 'starters'].includes(settings.echoMode)
+        ? settings.echoMode
+        : 'words';
       settings.showCountdown = settings.showCountdown !== false;
       settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
       settings.soundVolume = clamp(
@@ -9482,7 +10516,7 @@
       app = {
         ...defaults,
         ...source,
-        version: 9,
+        version: 10,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
@@ -9653,6 +10687,11 @@
       app.activeId = id;
       selectedId = null;
       structureSectionId = null;
+      echoScopeId = 'document';
+      echoAnalysis = null;
+      echoSelectionId = null;
+      echoShowHidden = false;
+      echoHighlightedIds.clear();
       pendingInsertContext = null;
       recalledBlock = activeDocument().recalledBlock || null;
       recalledIndex = Number.isInteger(activeDocument().recalledIndex) ? activeDocument().recalledIndex : null;
@@ -9707,6 +10746,47 @@
       }));
       $$('[data-vavbord-view]', elements.vavbordToolbar).forEach(button => {
         button.addEventListener('click', () => switchVavbordView(button.dataset.vavbordView));
+      });
+      $$('[data-echo-mode]', elements.echoModeToggle).forEach(button => {
+        button.addEventListener('click', () => setEchoMode(button.dataset.echoMode));
+        button.addEventListener('keydown', event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const tabs = $$('[data-echo-mode]', elements.echoModeToggle);
+          const index = tabs.indexOf(button);
+          const next = event.key === 'Home'
+            ? 0
+            : (event.key === 'End'
+              ? tabs.length - 1
+              : (index + (event.key === 'ArrowLeft' ? -1 : 1) + tabs.length) % tabs.length);
+          setEchoMode(tabs[next].dataset.echoMode);
+        });
+      });
+      elements.echoScope.addEventListener('change', event => {
+        echoScopeId = event.target.value || 'document';
+        invalidateEcho();
+        renderEcho();
+        announce('Ordekon analyserar ' + event.target.selectedOptions[0]?.textContent);
+      });
+      elements.echoHiddenToggle.addEventListener('click', () => {
+        echoShowHidden = !echoShowHidden;
+        renderEcho();
+      });
+      elements.echoField.addEventListener('click', event => {
+        const target = event.target.closest('[data-echo-id]');
+        if (target) selectEchoFinding(target.dataset.echoId);
+      });
+      elements.echoDetail.addEventListener('click', event => {
+        const action = event.target.closest('[data-echo-action]')?.dataset.echoAction;
+        if (action === 'list' || action === 'nodes') return showEchoIn(action);
+        const decision = event.target.closest('[data-echo-decision]')?.dataset.echoDecision;
+        if (decision) return setEchoDecision(decision);
+        const occurrence = event.target.closest('[data-block-id]');
+        if (occurrence) editEchoOccurrence(occurrence.dataset.blockId);
+      });
+      elements.echoDocumentMap.addEventListener('click', event => {
+        const block = event.target.closest('.echo-map-block[data-hit="true"]');
+        if (block) editEchoOccurrence(block.dataset.blockId);
       });
       elements.tensionLens.addEventListener('click', () => setTensionLens(graphLens !== 'tension'));
       $$('[data-graph-lens]', elements.graphLens).forEach(button => {
@@ -10004,6 +11084,9 @@
         } else if (command && !event.shiftKey && event.key === '3') {
           event.preventDefault();
           switchVavbordView(view === 'graph' ? 'list' : 'nodes');
+        } else if (command && !event.shiftKey && event.key === '4') {
+          event.preventDefault();
+          switchVavbordView('echo');
         } else if (command && event.key.toLowerCase() === 'b') {
           event.preventDefault();
           elements.utility.dataset.open === 'true' ? closeUtility() : openUtility();
