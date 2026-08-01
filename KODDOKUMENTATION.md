@@ -35,7 +35,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 209 kontroller av appskal, dokumentyta, dokumentlikhet, Vävbord, Ordekon, nodlayout, strukturflytt, redigeringstransaktioner, PWA, skrivstöd och ljudintegration |
+| `vavr-shell-test.mjs` | 235 kontroller av appskal, dokumentyta, dokumentskydd, typografi, Vävbord, Ordekon, nodlayout, strukturflytt, PWA, skrivstöd och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 | `vavr-ordekon-test.mjs` | 23 tester av frekvensviktning, formordsskydd, böjningsnormalisering, förekomstpositioner, maximala fraser, meningsstarter, anhopningstak och determinism |
 
@@ -104,6 +104,7 @@ settings = {
   documentHubView: 'list' | 'graph',
   vavbordView: 'list' | 'nodes' | 'echo',
   echoMode: 'words' | 'phrases' | 'starters',
+  fontProfile: 'vav' | 'bok' | 'ren' | 'klar',
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
     'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
@@ -121,13 +122,36 @@ status och startar därför aldrig automatiskt efter omladdning.
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
-`vavr-weaver-v5`. Den interna tillståndsversionen är 10. Äldre VävR-data kan
+`vavr-weaver-v5`. Den interna tillståndsversionen är 12. Äldre VävR-data kan
 migreras vid inläsning.
+
+### Typografi
+
+VävR skiljer på text, gränssnitt och tekniska etiketter. `fontProfile` ändrar
+endast textrollen `--serif`, som används i skrivfält, dokumentblock,
+redigeringskort och Ordekon. Knappar använder `--sans` och mätvärden använder
+`--mono` oberoende av profil.
+
+Standardprofilen `vav` börjar med Charter och har lokala plattformsalternativ.
+`bok` prioriterar Iowan Old Style och Palatino, `ren` använder systemets sans
+serif och `klar` prioriterar Verdana. Alla stackar är lokala och fungerar
+offline. Namnen beskriver visuell karaktär. VävR påstår inte att en profil är
+universellt mer lättläst än en annan.
 
 Markdown exporterar det aktiva dokumentets text. En VävR-säkerhetskopia
 exporterar alla dokument, mål, inställningar och timerstatus som JSON.
 Återställning kräver bekräftelse och laddar först ner en säkerhetskopia av
 nuvarande tillstånd.
+
+Fördröjda utkast- och titelsparningar fångar dokument-id när de skapas. Ett
+dokumentbyte tömmer väntande timers, vilket hindrar en skrivning från dokument A
+att landa i dokument B. Dubbletter av dokument- och block-id ersätts vid
+normalisering.
+
+Skrivfältets ångrahistorik ligger i minnet och är separat per dokument. Blockens
+beständiga `revisions` skapas när redigering börjar och efter minst 140 ändrade
+tecken eller 24 ord. Tom text blir aldrig en automatisk version. Högst 18
+versioner sparas per block och de ingår automatiskt i JSON-säkerhetskopian.
 
 ## Arbetslägen
 
@@ -171,11 +195,12 @@ och kör därefter 150 fysiksteg med repulsion, likhetsfjädrar, centrering,
 dämpning och viewportklampning. Därmed ligger dokumentknapparna kvar inom
 grafytan även när dess storlek ändras.
 
-När Vävbordet är öppet renderar `renderVavbordDock()` samma dokument som en
-horisontell Dokumentkaj. Varje folio är en riktig knapp med titel, ordmängd,
-textetiketten `Öppet` för aktivt dokument och ett entydigt dokument-id. Kajen
-är inte modal. Dokumentbyte anropar `changeActiveDocument()` direkt, medan
-Nytt och Alla dokument återanvänder dokumentytans säkra formulärflöde.
+När Vävbordet är öppet renderar `renderVavbordDock()` samma dokument som
+kompakta folior i `#vavbord-chrome`. Arbetslisten samlar dokument, Lista,
+Noder, Ekon och vyberoende linser i ett enda höjdlager. Varje folio är en
+riktig knapp med titel, aktiv markering och ett entydigt dokument-id. På
+skärmar upp till 820 pixlar döljs foliorna, eftersom toppbarens dokumentknapp
+ger samma säkra väg till dokumentytan.
 
 ### Skriv
 
@@ -297,6 +322,13 @@ tre projektioner av samma kanoniska blocklista. `settings.vavbordView` sparar
 dokument och redigeringskontext. Ett pågående textfält måste sparas eller
 avbrytas före vybyte. View Transitions används när webbläsaren stöder det och
 reducerad rörelse respekteras.
+
+`workspaceTop()` läser arbetslistens verkliga nederkant. Nodfysikens övre
+gräns och vyernas CSS-variabel `--workspace-content-top` utgår därmed från
+samma visuella lager. Noders teckenförklaring är ett stängt `details`-element
+i viloläge. Ordekons detaljpanel får `data-open` först efter fyndval och kan
+stängas med fokus tillbaka till fyndet. Kantnot är högerdockad på desktop och
+ett begränsat bottom sheet på mindre skärmar.
 
 #### Lista
 
@@ -476,9 +508,9 @@ en säkerhetskopieringsvarning när lokalt innehåll finns.
   dokumentkarta och förekomster. Storlek kompletteras med exakta antal och
   textförklaring. Flikarna använder `role="tab"`, piltangenter och roving
   tabindex. Färg används inte ensam för Avsiktligt, Nyckelbegrepp eller Dold.
-- På låga liggande skärmar fälls Dokumentkaj, Trådar och teckenförklaring ihop
-  medan nodernas storlek och ordningsfält komprimeras. Dokumentknappen i
-  toppbaren och den globala Spänningslinsen förblir tillgängliga.
+- På skärmar upp till 820 pixlar döljs dokumentkajen medan dokumentknappen i
+  toppbaren finns kvar. Noders trådlins stannar i den horisontellt rullbara
+  arbetslisten och teckenförklaringen är hopfälld tills den öppnas.
 - Reduced motion minskar animering och synkrona fysiksteg.
 
 ## Verifiering

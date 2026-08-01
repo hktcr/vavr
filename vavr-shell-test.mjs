@@ -522,6 +522,46 @@ if (documentFunctionSources.every(Boolean)) {
   check(false, 'dokumentanalysens och nodlayoutens funktioner kunde testas');
 }
 
+console.log('\nTypografi och dokumentskydd');
+
+check(html.includes('id="font-profile-options"'), 'typografivalet finns i inställningarna');
+check((html.match(/<input type="radio" name="font-profile"/g) || []).length === 4, 'fyra lokala textprofiler kan väljas');
+check(html.includes("fontProfile: 'vav'") && html.includes('Charter'), 'Väv med Charter är standardprofil');
+check(!/fonts\.googleapis|use\.typekit|@font-face\s*\{[^}]*url\(/s.test(html), 'typografin kräver inga externa typsnitt');
+check(html.includes("document.documentElement.dataset.fontProfile = safeProfile"), 'vald profil appliceras på hela dokumentytan');
+check(/version:\s*12/.test(html), 'tillståndsversion 12 används för dokumentskyddet');
+check(html.includes('id="draft-undo"'), 'skrivfältet har en synlig ångraknapp');
+check(html.includes('draftHistories = new Map()'), 'utkasthistorik hålls separat per dokument');
+check(html.includes("elements.draft.addEventListener('input', handleDraftInput)"), 'varje skrivfältsändring registreras före sparning');
+check(html.includes('const documentId = app.activeId;') && html.includes("saveState(value.trim() ? 'Utkast sparat' : 'Lokalt sparat', documentId)"), 'fördröjd utkastssparning binds till dokument-id');
+check(html.includes('clearTimeout(draftSaveTimer);') && html.includes('clearTimeout(titleSaveTimer);'), 'dokumentbyte stoppar väntande sparningar');
+check(html.includes('ensureUniqueDocumentIds') && html.includes('normalizeBlocks'), 'dubbletter av dokument- och block-id normaliseras');
+check(html.includes('REVISION_CHARACTER_STEP = 140') && html.includes('REVISION_WORD_STEP = 24'), 'blockversioner utlöses av textmängd och inte tid');
+check(html.includes('MAX_BLOCK_REVISIONS = 18') && html.includes('revisions: []'), 'nya block har en begränsad versionshistorik');
+check(html.includes("addBlockRevision(block, block, 'Före redigering')"), 'en skyddspunkt skapas innan direktredigering');
+check(html.includes('data-action="versions"') && html.includes('data-restore-revision'), 'varje block kan visa och återställa versioner');
+
+const magnitudeSource = functionSource('textChangeMagnitude');
+if (magnitudeSource) {
+  const magnitudeSandbox = {};
+  vm.runInNewContext(`${magnitudeSource}; globalThis.appended = textChangeMagnitude('abc', 'abcdef'); globalThis.deleted = textChangeMagnitude('abcdef', ''); globalThis.replaced = textChangeMagnitude('abcdef', 'abXYef');`, magnitudeSandbox);
+  check(magnitudeSandbox.appended === 3 && magnitudeSandbox.deleted === 6 && magnitudeSandbox.replaced === 4, 'ändringsmängden räknar tillägg, radering och ersättning');
+} else {
+  check(false, 'ändringsmängdens funktion kunde testas');
+}
+
+console.log('\nVEP:s Vävbordshylla');
+
+check(html.includes('id="vavbord-chrome"'), 'Vävbordets verktyg delar en gemensam arbetslist');
+check(/#vavbord-chrome[\s\S]*?#vavbord-toolbar[\s\S]*?#vavbord-dock/.test(html), 'vyval och dokumentkaj ligger i samma arbetslist');
+check(html.indexOf('id="graph-lens"') < html.indexOf('<main>'), 'Noders trådlins ligger i den gemensamma arbetslisten');
+check(html.includes('@media (max-width: 820px)') && html.includes('#vavbord-dock { display: none; }'), 'den dubblerade dokumentkajen döljs på mobil');
+check(html.includes('function workspaceTop()') && html.includes('workspaceTop() +'), 'nodfältets övre gräns mäts från den verkliga arbetslisten');
+check(html.includes('<details id="graph-legend"'), 'Noders teckenförklaring är hopfälld i viloläge');
+check(html.includes('elements.echoDetail.dataset.open = String(Boolean(finding))'), 'Ordekons detaljpanel öppnas först när ett fynd väljs');
+check(html.includes('function closeEchoDetail()'), 'Ordekons detaljpanel kan stängas med bevarat fokus');
+check(html.includes('--workspace-content-top') && html.includes('padding-top: var(--workspace-content-top)'), 'Lista och Ordekon delar arbetslistens innehållsgräns');
+
 console.log('\nLyft och placera');
 
 const moveFunctionNames = [

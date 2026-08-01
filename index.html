@@ -28,8 +28,8 @@
       --line: rgba(179, 229, 255, .13);
       --glass: rgba(15, 19, 28, .78);
       --glass-strong: rgba(15, 19, 28, .94);
-      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Charter, Georgia, serif;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, ui-serif, serif;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
       --composer-width: 720px;
       --topbar-height: 64px;
@@ -37,6 +37,18 @@
       --visual-top: 0px;
       --radius: 18px;
       --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    html[data-font-profile="bok"] {
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
+    }
+
+    html[data-font-profile="ren"] {
+      --serif: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    html[data-font-profile="klar"] {
+      --serif: Verdana, Geneva, "DejaVu Sans", Arial, sans-serif;
     }
 
     * { box-sizing: border-box; }
@@ -760,6 +772,45 @@
       font: 10px/1.2 var(--mono);
       letter-spacing: .08em;
       text-transform: uppercase;
+    }
+
+    .composer-bottom-actions {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .draft-undo {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      gap: 6px;
+      padding: 0 10px;
+      border: 1px solid rgba(179, 229, 255, .16);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .035);
+      color: var(--paper-dim);
+      cursor: pointer;
+      font: 10px/1 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .draft-undo:hover:not(:disabled),
+    .draft-undo:focus-visible {
+      border-color: rgba(89, 194, 255, .45);
+      color: var(--cyan-bright);
+    }
+
+    .draft-undo:disabled {
+      cursor: default;
+      opacity: .35;
+    }
+
+    .draft-undo svg {
+      width: 15px;
+      height: 15px;
     }
 
     .composer-top {
@@ -2675,6 +2726,40 @@
       margin-top: 18px;
     }
 
+    .revision-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .revision-card {
+      padding: 12px;
+      border: 1px solid rgba(179, 229, 255, .12);
+      border-radius: 12px;
+      background: rgba(179, 229, 255, .025);
+    }
+
+    .revision-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--paper-faint);
+      font: 10px/1.3 var(--mono);
+      letter-spacing: .04em;
+    }
+
+    .revision-card p {
+      margin: 9px 0 11px;
+      color: var(--paper-dim);
+      font: 15px/1.45 var(--serif);
+    }
+
+    .revision-empty {
+      color: var(--paper-faint);
+      font: 12px/1.55 var(--sans);
+    }
+
     #utility-panel {
       position: fixed;
       z-index: 70;
@@ -3192,6 +3277,100 @@
     .field input[type="range"] {
       padding: 0;
       accent-color: var(--cyan);
+    }
+
+    .font-profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .font-profile-choice {
+      position: relative;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .font-profile-choice input {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .font-profile-card {
+      display: grid;
+      min-height: 112px;
+      align-content: space-between;
+      gap: 13px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(179, 229, 255, .025);
+      transition: border-color .16s, background .16s, box-shadow .16s;
+    }
+
+    .font-profile-choice input:hover + .font-profile-card {
+      border-color: rgba(179, 229, 255, .28);
+      background: rgba(179, 229, 255, .045);
+    }
+
+    .font-profile-choice input:focus-visible + .font-profile-card {
+      outline: 2px solid var(--cyan-bright);
+      outline-offset: 3px;
+    }
+
+    .font-profile-choice input:checked + .font-profile-card {
+      border-color: rgba(255, 216, 105, .5);
+      background: rgba(255, 216, 105, .07);
+      box-shadow: inset 0 0 0 1px rgba(255, 216, 105, .08);
+    }
+
+    .font-profile-name {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--paper);
+      font: 650 11px/1 var(--sans);
+    }
+
+    .font-profile-name small {
+      color: var(--paper-faint);
+      font: 8px/1 var(--mono);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .font-profile-preview {
+      overflow: hidden;
+      color: var(--paper-dim);
+      font: 16px/1.3 var(--profile-font);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .font-profile-choice[data-font-profile="vav"] {
+      --profile-font: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, ui-serif, serif;
+    }
+
+    .font-profile-choice[data-font-profile="bok"] {
+      --profile-font: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
+    }
+
+    .font-profile-choice[data-font-profile="ren"] {
+      --profile-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .font-profile-choice[data-font-profile="klar"] {
+      --profile-font: Verdana, Geneva, "DejaVu Sans", Arial, sans-serif;
     }
 
     .button-grid {
@@ -4058,6 +4237,272 @@
         transition-duration: .001ms !important;
       }
     }
+    /* VEP:s samlade Vävbord: en arbetslist, en arbetsyta och en detaljdocka. */
+    :root {
+      --workspace-rail-height: 58px;
+      --workspace-rail-top: calc(var(--topbar-height) + max(16px, env(safe-area-inset-top)));
+      --workspace-content-top: calc(var(--workspace-rail-top) + var(--workspace-rail-height) + 14px);
+    }
+
+    #vavbord-chrome {
+      position: fixed;
+      z-index: 15;
+      top: var(--workspace-rail-top);
+      right: max(14px, env(safe-area-inset-right));
+      left: max(14px, env(safe-area-inset-left));
+      display: flex;
+      min-width: 0;
+      height: var(--workspace-rail-height);
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid rgba(179, 229, 255, .11);
+      border-radius: 14px;
+      background: rgba(9, 11, 17, .88);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
+      backdrop-filter: blur(18px) saturate(120%);
+      -webkit-backdrop-filter: blur(18px) saturate(120%);
+    }
+
+    body[data-view="write"] #vavbord-chrome { display: none; }
+
+    #vavbord-toolbar,
+    #vavbord-dock {
+      position: static;
+      min-height: 44px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      transform: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    #vavbord-toolbar {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 5px;
+      order: 2;
+    }
+
+    #vavbord-dock {
+      display: flex;
+      flex: 1 1 auto;
+      order: 1;
+      overflow: hidden;
+    }
+
+    .vavbord-toolbar-label,
+    .vavbord-dock-label { display: none; }
+
+    #vavbord-document-list { min-width: 80px; }
+
+    .vavbord-document {
+      min-width: 118px;
+      min-height: 38px;
+      grid-template-columns: 21px minmax(0, 1fr);
+      gap: 6px;
+      padding: 4px 8px 4px 6px;
+      border-color: rgba(179, 229, 255, .1);
+      background: transparent;
+    }
+
+    .vavbord-document small { display: none; }
+
+    .vavbord-dock-action {
+      min-height: 40px;
+      padding: 0 10px;
+      border-color: rgba(179, 229, 255, .1);
+      background: transparent;
+      font-size: 12px;
+    }
+
+    #graph-lens {
+      position: static;
+      display: flex;
+      max-width: none;
+      padding: 0 0 0 6px;
+      border: 0;
+      border-left: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      transform: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .graph-lens-label { display: none; }
+
+    .graph-lens-button {
+      min-width: 0;
+      min-height: 40px;
+      border-radius: 9px;
+      font-size: 12px;
+    }
+
+    #graph-lens-status {
+      top: calc(var(--workspace-content-top) - 4px);
+      font-size: 12px;
+    }
+
+    #structure-view,
+    #echo-view {
+      padding-top: var(--workspace-content-top);
+    }
+
+    .structure-shell { width: min(1040px, 100%); }
+
+    .structure-head,
+    .echo-head {
+      min-height: 62px;
+      margin: 8px 0 12px;
+      align-items: center;
+    }
+
+    .structure-head .eyebrow,
+    .echo-head .eyebrow { display: none; }
+
+    .structure-head h1,
+    .echo-head h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 30px);
+    }
+
+    #structure-summary,
+    .echo-head-copy {
+      margin-top: 4px;
+      color: var(--paper-dim);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .board-zone-head { min-height: 26px; }
+    .board-zone-head h2,
+    .board-zone-head span,
+    .block-meta,
+    .pulse-meta { font-size: 12px; }
+
+    .structure-grid.spine-list { width: min(960px, 100%); }
+    .structure-grid.spine-list .block-card { padding-top: 12px; padding-bottom: 12px; }
+
+    #graph-legend {
+      padding: 0;
+      border-color: rgba(179, 229, 255, .1);
+      border-radius: 10px;
+      background: rgba(9, 11, 17, .82);
+      color: var(--paper-dim);
+      font: 12px/1 var(--sans);
+    }
+
+    #graph-legend summary {
+      min-height: 42px;
+      padding: 14px 16px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    #graph-legend summary::-webkit-details-marker { display: none; }
+
+    .graph-legend-items {
+      display: flex;
+      max-width: min(520px, calc(100vw - 36px));
+      flex-wrap: wrap;
+      gap: 14px;
+      padding: 0 14px 14px;
+    }
+
+    #inspector {
+      top: var(--workspace-content-top);
+      right: 0;
+      bottom: 0;
+      width: min(360px, calc(100vw - 24px));
+      border-width: 0 0 0 1px;
+      border-radius: 0;
+      box-shadow: -18px 0 46px rgba(0, 0, 0, .34);
+    }
+
+    .panel-head { min-height: 50px; }
+
+    .echo-layout:not(:has(#echo-detail[data-open="true"])) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    #echo-detail[data-open="false"] { display: none; }
+
+    .echo-field-panel,
+    #echo-detail {
+      border-color: rgba(179, 229, 255, .08);
+      border-radius: 14px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, .17);
+    }
+
+    .echo-detail-head { position: relative; padding-right: 40px; }
+    .echo-detail-close { position: absolute; top: -6px; right: -6px; }
+
+    @media (max-width: 820px) {
+      :root {
+        --workspace-rail-height: 52px;
+        --workspace-rail-top: calc(var(--topbar-height) + max(10px, env(safe-area-inset-top)));
+      }
+
+      #vavbord-chrome {
+        right: max(8px, env(safe-area-inset-right));
+        left: max(8px, env(safe-area-inset-left));
+        justify-content: center;
+      }
+
+      #vavbord-dock { display: none; }
+      #vavbord-toolbar { min-width: 0; order: 1; }
+      .vavbord-view-toggle button,
+      #tension-lens,
+      .graph-lens-button { min-height: 40px; padding-right: 9px; padding-left: 9px; }
+
+      body[data-view="graph"] .vavbord-view-toggle button span,
+      body[data-view="graph"] #tension-lens span:last-child { display: none; }
+
+      #graph-lens { overflow-x: auto; }
+
+      #inspector {
+        top: auto;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-height: 64dvh;
+        border-width: 1px 0 0;
+        border-radius: 18px 18px 0 0;
+        transform: translateY(calc(100% + 24px));
+      }
+
+      #inspector[data-open="true"] { transform: none; }
+
+      .echo-layout { grid-template-columns: 1fr; }
+      #echo-detail[data-open="true"] {
+        position: fixed;
+        z-index: 34;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        max-height: 64dvh;
+        min-height: 0;
+        border-radius: 18px 18px 0 0;
+        background: var(--glass-strong);
+        box-shadow: 0 -20px 55px rgba(0, 0, 0, .5);
+      }
+    }
+
+    @media (max-width: 560px) {
+      #structure-view,
+      #echo-view { padding-top: var(--workspace-content-top); }
+      .structure-head,
+      .echo-head { margin-top: 4px; }
+      .echo-head { align-items: stretch; }
+      .echo-head-copy { display: none; }
+      #graph-legend .legend-item span:last-child { display: inline; }
+    }
   </style>
 </head>
 <body data-view="write">
@@ -4106,6 +4551,7 @@
   <canvas id="edge-canvas" aria-hidden="true"></canvas>
   <section id="node-layer" aria-label="Textens nätverk"></section>
 
+  <div id="vavbord-chrome" aria-label="Vävbordets arbetslist">
   <section id="vavbord-toolbar" aria-label="Vävbordets läge">
     <span class="vavbord-toolbar-label">Vävbord</span>
     <div class="vavbord-view-toggle" role="group" aria-label="Visa Vävbordet som lista, noder eller Ordekon">
@@ -4126,6 +4572,13 @@
       <span class="tension-lens-mark" aria-hidden="true"></span>
       <span>Spänning</span>
     </button>
+    <div id="graph-lens" role="group" aria-label="Vävlins" aria-describedby="graph-lens-status">
+      <span class="graph-lens-label">Trådar</span>
+      <button class="graph-lens-button" type="button" data-graph-lens="all" aria-pressed="true">Alla</button>
+      <button class="graph-lens-button" type="button" data-graph-lens="connections" aria-pressed="false">Samband</button>
+      <button class="graph-lens-button" type="button" data-graph-lens="structure" aria-pressed="false">Ryggrad</button>
+    </div>
+    <p id="graph-lens-status" role="status" aria-live="polite" hidden></p>
   </section>
 
   <aside id="vavbord-dock" aria-label="Dokumentkaj">
@@ -4134,6 +4587,7 @@
     <button id="vavbord-new-document" class="vavbord-dock-action" type="button">+ Nytt</button>
     <button id="vavbord-all-documents" class="vavbord-dock-action" type="button">Alla dokument</button>
   </aside>
+  </div>
 
   <main>
     <section id="write-view" class="view" aria-label="Skrivläge">
@@ -4157,32 +4611,34 @@
         </div>
         <div class="composer-bottom">
           <span id="commit-hint">Enter väver in <span class="optional">· Shift + Enter ger radbrytning</span></span>
-          <label class="width-control" title="Skrivbredd">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>
-            <span class="sr-only">Skrivfältets bredd</span>
-            <input id="width-slider" type="range" min="0" max="7" step="1" value="2">
-          </label>
+          <div class="composer-bottom-actions">
+            <button id="draft-undo" class="draft-undo" type="button" disabled aria-label="Ångra senaste ändringen i skrivfältet" title="Ångra i skrivfältet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/></svg>
+              <span>Ångra</span>
+            </button>
+            <label class="width-control" title="Skrivbredd">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 7 3 12l5 5M16 7l5 5-5 5M3 12h18"/></svg>
+              <span class="sr-only">Skrivfältets bredd</span>
+              <input id="width-slider" type="range" min="0" max="7" step="1" value="2">
+            </label>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="graph-view" class="view" aria-label="Vävbordets nodläge">
       <p id="empty-graph">Nodfältet är tomt. Gå till Skriv och väv in ditt första stycke.</p>
-      <div id="graph-lens" role="group" aria-label="Vävlins" aria-describedby="graph-lens-status">
-        <span class="graph-lens-label">Trådar</span>
-        <button class="graph-lens-button" type="button" data-graph-lens="all" aria-pressed="true">Alla</button>
-        <button class="graph-lens-button" type="button" data-graph-lens="connections" aria-pressed="false">Samband</button>
-        <button class="graph-lens-button" type="button" data-graph-lens="structure" aria-pressed="false">Ryggrad</button>
-      </div>
-      <p id="graph-lens-status" role="status" aria-live="polite" hidden></p>
-      <div id="graph-legend" role="note" aria-label="Teckenförklaring">
+      <details id="graph-legend" aria-label="Teckenförklaring">
+        <summary>Förklaring</summary>
+        <div class="graph-legend-items">
         <span class="legend-item"><i class="legend-mark"></i><span>Stycke</span></span>
         <span class="legend-item"><i class="legend-mark heading"></i><span>Rubrik</span></span>
         <span class="legend-item"><i class="legend-mark lonely"></i><span>Saknar lexikal återkoppling</span></span>
         <span class="legend-item"><i class="legend-line"></i><span>Dokumentordning</span></span>
         <span class="legend-item"><i class="legend-line cohesion"></i><span>Lexikal koppling</span></span>
         <span class="legend-item"><i class="legend-line hierarchy"></i><span>Rubrikhierarki</span></span>
-      </div>
+        </div>
+      </details>
     </section>
 
     <section id="structure-view" class="view" aria-label="Vävbordets listläge">
@@ -4363,6 +4819,43 @@
           <div class="stat"><strong id="stat-blocks">0</strong><span>Block</span></div>
           <div class="stat"><strong id="stat-links">0</strong><span>Trådar</span></div>
         </div>
+      </section>
+
+      <section id="typography-settings" class="setting-group">
+        <h3>Typografi</h3>
+        <fieldset id="font-profile-options" class="font-profile-grid">
+          <legend class="sr-only">Textkaraktär</legend>
+          <label class="font-profile-choice" data-font-profile="vav">
+            <input type="radio" name="font-profile" value="vav" checked>
+            <span class="font-profile-card">
+              <span class="font-profile-name"><strong>Väv</strong><small>Standard</small></span>
+              <span class="font-profile-preview" aria-hidden="true">Orden hittar sin rytm.</span>
+            </span>
+          </label>
+          <label class="font-profile-choice" data-font-profile="bok">
+            <input type="radio" name="font-profile" value="bok">
+            <span class="font-profile-card">
+              <span class="font-profile-name"><strong>Bok</strong><small>Klassisk</small></span>
+              <span class="font-profile-preview" aria-hidden="true">Orden hittar sin rytm.</span>
+            </span>
+          </label>
+          <label class="font-profile-choice" data-font-profile="ren">
+            <input type="radio" name="font-profile" value="ren">
+            <span class="font-profile-card">
+              <span class="font-profile-name"><strong>Ren</strong><small>System</small></span>
+              <span class="font-profile-preview" aria-hidden="true">Orden hittar sin rytm.</span>
+            </span>
+          </label>
+          <label class="font-profile-choice" data-font-profile="klar">
+            <input type="radio" name="font-profile" value="klar">
+            <span class="font-profile-card">
+              <span class="font-profile-name"><strong>Klar</strong><small>Öppen</small></span>
+              <span class="font-profile-preview" aria-hidden="true">Orden hittar sin rytm.</span>
+            </span>
+          </label>
+        </fieldset>
+        <p id="font-profile-status" class="method-note" aria-live="polite">Väv ger texten en lugn redaktionell karaktär.</p>
+        <p class="method-note">Valet påverkar skrivtext, stycken, redigering och Ordekon. Knappar och mätvärden behåller sin fasta typografi. Inget typsnitt är bäst för alla.</p>
       </section>
 
       <section id="writing-support-settings" class="setting-group">
@@ -4606,6 +5099,27 @@
 
     const STORAGE_KEY = 'vavr-weaver-v5';
     const WIDTHS = [540, 640, 720, 820, 940, 1080, 1240, 1440];
+    const FONT_PROFILES = Object.freeze({
+      vav: {
+        name: 'Väv',
+        description: 'Väv ger texten en lugn redaktionell karaktär.'
+      },
+      bok: {
+        name: 'Bok',
+        description: 'Bok ger texten en mjukare och mer klassisk karaktär.'
+      },
+      ren: {
+        name: 'Ren',
+        description: 'Ren använder enhetens återhållsamma systemtypografi.'
+      },
+      klar: {
+        name: 'Klar',
+        description: 'Klar använder bredare och öppnare bokstavsformer.'
+      }
+    });
+    const REVISION_CHARACTER_STEP = 140;
+    const REVISION_WORD_STEP = 24;
+    const MAX_BLOCK_REVISIONS = 18;
     const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const STOP_WORDS = new Set((
       'och att det som en ett på är av för med till den har de inte om men var jag sig så vi man kan när han hon hans hennes ' +
@@ -4624,7 +5138,11 @@
     const $ = (selector, root = document) => root.querySelector(selector);
     const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-    const uid = (prefix = 'b') => prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    const uid = (prefix = 'b') => prefix + '-' + (
+      typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID()
+        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12)
+    );
     const wordCount = text => (String(text || '').match(/[^\s]+/g) || []).length;
     const graphemeSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
       ? new Intl.Segmenter('sv', { granularity: 'grapheme' })
@@ -4636,6 +5154,7 @@
         : Array.from(value).length;
     };
     const formatNumber = value => Number(value || 0).toLocaleString('sv-SE');
+    const normalizeFontProfile = value => Object.hasOwn(FONT_PROFILES, value) ? value : 'vav';
     const normalizeWidthIndex = value => {
       const numeric = value == null || (typeof value === 'string' && !value.trim())
         ? NaN
@@ -5934,6 +6453,7 @@
       writeView: $('#write-view'),
       composer: $('#composer'),
       draft: $('#draft-input'),
+      draftUndo: $('#draft-undo'),
       draftCount: $('#draft-count'),
       blockKind: $('#block-kind'),
       writingSupportSummary: $('#writing-support-summary'),
@@ -5972,6 +6492,7 @@
       vavbordButton: $('#vavbord-button'),
       vavbordToolbar: $('#vavbord-toolbar'),
       tensionLens: $('#tension-lens'),
+      vavbordChrome: $('#vavbord-chrome'),
       vavbordDock: $('#vavbord-dock'),
       vavbordDocumentList: $('#vavbord-document-list'),
       inspector: $('#inspector'),
@@ -6034,6 +6555,8 @@
       typewriterVolume: $('#typewriter-volume'),
       typewriterVolumeOutput: $('#typewriter-volume-output'),
       typewriterToggle: $('#typewriter-toggle'),
+      fontProfileOptions: $('#font-profile-options'),
+      fontProfileStatus: $('#font-profile-status'),
       deviceSettings: $('#device-settings'),
       installCard: $('#install-card'),
       installTitle: $('#install-title'),
@@ -6065,6 +6588,7 @@
     let editingId = null;
     let editingSnapshot = null;
     let editingBuffer = null;
+    let editingCheckpointText = null;
     let liftedMove = null;
     let draggedBlockId = null;
     let structureSectionId = null;
@@ -6086,6 +6610,7 @@
     let inspectorReturnFocusId = null;
     let undoStack = [];
     let redoStack = [];
+    let draftHistories = new Map();
     let toastTimer = null;
     let titleSaveTimer = null;
     let draftSaveTimer = null;
@@ -6181,7 +6706,7 @@
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 10,
+        version: 12,
         activeId: document.id,
         documents: [document],
         settings: {
@@ -6191,6 +6716,7 @@
           documentHubView: 'list',
           vavbordView: 'list',
           echoMode: 'words',
+          fontProfile: 'vav',
           focusMinutes: 25,
           breakMinutes: 5,
           showCountdown: true,
@@ -6204,6 +6730,18 @@
       };
     }
 
+    function normalizeRevision(revision) {
+      const kind = revision?.kind === 'heading' ? 'heading' : 'paragraph';
+      return {
+        id: revision?.id || uid('r'),
+        kind,
+        level: kind === 'heading' ? clamp(Number(revision?.level || 1), 1, 3) : null,
+        text: String(revision?.text || '').trim(),
+        created: revision?.created || new Date().toISOString(),
+        reason: String(revision?.reason || 'Återställningspunkt')
+      };
+    }
+
     function normalizeBlock(block) {
       const kind = block.kind || block.typ || 'paragraph';
       return {
@@ -6212,19 +6750,42 @@
         level: kind === 'rubrik' || kind === 'heading' ? clamp(Number(block.level || block.niva || 1), 1, 3) : null,
         text: String(block.text || '').trim(),
         comments: Array.isArray(block.comments) ? block.comments : (Array.isArray(block.kommentarer) ? block.kommentarer : []),
-        created: block.created || block.skapad || new Date().toISOString()
+        created: block.created || block.skapad || new Date().toISOString(),
+        revisions: (Array.isArray(block.revisions) ? block.revisions : [])
+          .map(normalizeRevision)
+          .filter(revision => revision.text)
+          .slice(-MAX_BLOCK_REVISIONS)
       };
+    }
+
+    function normalizeBlocks(blocks) {
+      const seen = new Set();
+      return (Array.isArray(blocks) ? blocks : []).map(source => {
+        const block = normalizeBlock(source);
+        if (seen.has(block.id)) block.id = uid('b');
+        seen.add(block.id);
+        return block;
+      });
+    }
+
+    function ensureUniqueDocumentIds(documents) {
+      const seen = new Set();
+      documents.forEach(document => {
+        if (!document.id || seen.has(document.id)) document.id = uid('d');
+        seen.add(document.id);
+      });
+      return documents;
     }
 
     function loadState() {
       try {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
         if (stored && Array.isArray(stored.documents) && stored.documents.length) {
-          stored.documents = stored.documents.map(document => ({
+          stored.documents = ensureUniqueDocumentIds(stored.documents.map(document => ({
             ...createDocument(document.title),
             ...document,
             title: document.title || document.titel || 'Namnlöst dokument',
-            blocks: (document.blocks || document.block || []).map(normalizeBlock),
+            blocks: normalizeBlocks(document.blocks || document.block || []),
             draft: String(document.draft || ''),
             recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null,
             recalledIndex: Number.isInteger(Number(document.recalledIndex)) ? Math.max(0, Number(document.recalledIndex)) : null,
@@ -6234,7 +6795,7 @@
             echoDecisions: document.echoDecisions && typeof document.echoDecisions === 'object'
               ? { ...document.echoDecisions }
               : {}
-          }));
+          })));
           stored.settings = Object.assign({
             widthIndex: 2,
             threshold: .12,
@@ -6242,6 +6803,7 @@
             documentHubView: 'list',
             vavbordView: 'list',
             echoMode: 'words',
+            fontProfile: 'vav',
             focusMinutes: 25,
             breakMinutes: 5,
             showCountdown: true,
@@ -6261,6 +6823,7 @@
           stored.settings.echoMode = ['words', 'phrases', 'starters'].includes(stored.settings.echoMode)
             ? stored.settings.echoMode
             : 'words';
+          stored.settings.fontProfile = normalizeFontProfile(stored.settings.fontProfile);
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
           stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
             ? stored.settings.soundTheme
@@ -6283,7 +6846,7 @@
             0,
             100
           );
-          stored.version = 10;
+          stored.version = 12;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -6296,15 +6859,15 @@
         const legacy = JSON.parse(localStorage.getItem('vavr-dokument') || '[]');
         if (Array.isArray(legacy) && legacy.length) {
           const activeLegacy = localStorage.getItem('vavr-aktivt');
-          const documents = legacy.map(document => ({
+          const documents = ensureUniqueDocumentIds(legacy.map(document => ({
             ...createDocument(document.titel || 'Namnlöst dokument'),
             id: document.id || uid('d'),
             title: document.titel || 'Namnlöst dokument',
-            blocks: (document.block || []).map(normalizeBlock),
+            blocks: normalizeBlocks(document.block || []),
             hiddenWords: document.doldaOrd || []
-          }));
+          })));
           return {
-            version: 10,
+            version: 12,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
@@ -6314,6 +6877,7 @@
               documentHubView: 'list',
               vavbordView: 'list',
               echoMode: 'words',
+              fontProfile: 'vav',
               focusMinutes: 25,
               breakMinutes: 5,
               showCountdown: true,
@@ -6343,11 +6907,12 @@
       return document;
     }
 
-    function saveState(message = 'Lokalt sparat') {
+    function saveState(message = 'Lokalt sparat', documentId = app.activeId) {
       try {
-        activeDocument().updated = new Date().toISOString();
+        const document = app.documents.find(item => item.id === documentId);
+        if (document) document.updated = new Date().toISOString();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(app));
-        elements.saveStatus.textContent = message;
+        if (documentId === app.activeId) elements.saveStatus.textContent = message;
       } catch (error) {
         elements.saveStatus.textContent = 'Kunde inte spara';
         console.warn('VävR kunde inte spara lokalt.', error);
@@ -6362,7 +6927,7 @@
 
     function restoreSnapshot(snapshot) {
       if (!snapshot) return;
-      activeDocument().blocks = JSON.parse(snapshot.blocks).map(normalizeBlock);
+      activeDocument().blocks = normalizeBlocks(JSON.parse(snapshot.blocks));
       recalledBlock = null;
       recalledIndex = null;
       activeDocument().recalledBlock = null;
@@ -6927,11 +7492,9 @@
 
     function renderEchoDetail() {
       const finding = selectedEchoFinding();
+      elements.echoDetail.dataset.open = String(Boolean(finding));
       if (!finding) {
-        elements.echoDetail.innerHTML = `<div class="echo-detail-empty">
-          <strong>Välj ett eko</strong>
-          <span>Klicka på ett ord eller en fras för att se var och hur det återkommer.</span>
-        </div>`;
+        elements.echoDetail.innerHTML = '';
         return;
       }
       const decision = echoDecision(finding.id);
@@ -6955,6 +7518,9 @@
         : echoFactMarkup(String(finding.length), 'ord i följden');
       elements.echoDetail.innerHTML = `
         <header class="echo-detail-head">
+          <button class="icon-button echo-detail-close" type="button" data-echo-action="close" aria-label="Stäng ekodetaljen">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
           <p class="eyebrow">${finding.type === 'word' ? 'Ord' : (finding.type === 'starter' ? 'Meningsstart' : 'Fras')}</p>
           <h2>${escapeHtml(finding.label)}</h2>
           <p>${escapeHtml(echoFindingSummary(finding))}</p>
@@ -6981,6 +7547,17 @@
           ${occurrences}
           ${finding.occurrences.length > 24 ? `<p class="echo-question">Ytterligare ${finding.occurrences.length - 24} förekomster visas i dokumentkartan.</p>` : ''}
         </section>`;
+    }
+
+    function closeEchoDetail() {
+      const previousId = echoSelectionId;
+      echoSelectionId = null;
+      echoHighlightedIds.clear();
+      renderEcho();
+      requestAnimationFrame(() => {
+        const target = previousId ? $(`[data-echo-id="${CSS.escape(previousId)}"]`, elements.echoField) : null;
+        target?.focus();
+      });
     }
 
     function renderEchoMap(findings = visibleEchoFindings()) {
@@ -7900,8 +8477,63 @@
       renderTimer();
     }
 
+    function draftHistory(documentId = app.activeId) {
+      if (!draftHistories.has(documentId)) {
+        const document = app.documents.find(item => item.id === documentId);
+        draftHistories.set(documentId, { current: document?.draft || '', undo: [] });
+      }
+      return draftHistories.get(documentId);
+    }
+
+    function syncDraftHistory(documentId, value) {
+      const history = draftHistory(documentId);
+      if (history.current !== value) {
+        history.current = value;
+        history.undo = [];
+      }
+      updateDraftUndoButton();
+    }
+
+    function resetDraftHistory(documentId, value = '') {
+      draftHistories.set(documentId, { current: value, undo: [] });
+      updateDraftUndoButton();
+    }
+
+    function recordDraftChange(value) {
+      const history = draftHistory();
+      if (value === history.current) return;
+      history.undo.push(history.current);
+      if (history.undo.length > 180) history.undo.shift();
+      history.current = value;
+      updateDraftUndoButton();
+    }
+
+    function updateDraftUndoButton() {
+      if (!elements.draftUndo) return;
+      elements.draftUndo.disabled = !draftHistory().undo.length;
+    }
+
+    function undoDraftChange() {
+      const history = draftHistory();
+      if (!history.undo.length) return;
+      const previous = history.undo.pop();
+      history.current = previous;
+      elements.draft.value = previous;
+      updateDraftUndoButton();
+      updateDraftMeta();
+      elements.draft.focus();
+      elements.draft.setSelectionRange(previous.length, previous.length);
+      announce('Senaste ändringen i skrivfältet ångrades');
+    }
+
+    function handleDraftInput() {
+      recordDraftChange(elements.draft.value);
+      updateDraftMeta();
+    }
+
     function updateDraftMeta() {
       const value = elements.draft.value;
+      const documentId = app.activeId;
       const parsed = parseDraft(value);
       const count = wordCount(parsed.text);
       const characters = characterCount(parsed.text);
@@ -7917,8 +8549,10 @@
       autoSizeDraft();
       clearTimeout(draftSaveTimer);
       draftSaveTimer = setTimeout(() => {
-        activeDocument().draft = value;
-        saveState(value.trim() ? 'Utkast sparat' : 'Lokalt sparat');
+        const document = app.documents.find(item => item.id === documentId);
+        if (!document) return;
+        document.draft = value;
+        saveState(value.trim() ? 'Utkast sparat' : 'Lokalt sparat', documentId);
       }, 220);
     }
 
@@ -7956,6 +8590,7 @@
           level: parsed.level,
           text: parsed.text,
           comments: [],
+          revisions: [],
           created: new Date().toISOString()
         };
         if (pendingInsertContext?.documentId === app.activeId) {
@@ -7972,6 +8607,7 @@
       const ghostText = elements.draft.value;
       document.draft = '';
       elements.draft.value = '';
+      resetDraftHistory(document.id, '');
       updateDraftMeta();
       saveState();
       commitsThisSession += 1;
@@ -7988,6 +8624,7 @@
           ? '#'.repeat(recalledBlock.level) + ' ' + recalledBlock.text
           : recalledBlock.text;
         document.draft = elements.draft.value;
+        resetDraftHistory(document.id, elements.draft.value);
         updateDraftMeta();
         elements.draft.focus();
         toast('Det återtagna blocket återställdes i skrivfältet');
@@ -8018,6 +8655,7 @@
         ? '#'.repeat(recalledBlock.level) + ' ' + recalledBlock.text
         : recalledBlock.text;
       document.draft = elements.draft.value;
+      resetDraftHistory(document.id, elements.draft.value);
       saveState();
       recalculate();
       updateDraftMeta();
@@ -8055,11 +8693,15 @@
       return viewport.height <= 520 && viewport.width > viewport.height ? diameter * .78 : diameter;
     }
 
+    function workspaceTop() {
+      const rect = elements.vavbordChrome?.getBoundingClientRect();
+      const measured = rect?.height ? rect.bottom + 14 : Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--workspace-content-top')) || 132;
+      return clamp(measured, 90, Math.max(90, viewport.height - 90));
+    }
+
     function graphOrderBounds() {
       const compactLandscape = viewport.height <= 520 && viewport.width > viewport.height;
-      const top = compactLandscape
-        ? Math.min(viewport.height - 70, Math.max(150, viewport.height * .48))
-        : Math.min(viewport.height - 80, 250);
+      const top = Math.min(viewport.height - 80, workspaceTop() + (compactLandscape ? 2 : 10));
       const bottom = Math.max(top, viewport.height - (compactLandscape ? 64 : 74));
       return { top, bottom };
     }
@@ -8783,6 +9425,120 @@
         .sort((a, b) => b.score - a.score);
     }
 
+    function textChangeMagnitude(before = '', after = '') {
+      let prefix = 0;
+      const shortest = Math.min(before.length, after.length);
+      while (prefix < shortest && before[prefix] === after[prefix]) prefix += 1;
+      let suffix = 0;
+      while (
+        suffix < shortest - prefix &&
+        before[before.length - 1 - suffix] === after[after.length - 1 - suffix]
+      ) suffix += 1;
+      return (before.length - prefix - suffix) + (after.length - prefix - suffix);
+    }
+
+    function addBlockRevision(block, source, reason = 'Automatisk version') {
+      if (!block) return false;
+      const parsed = typeof source === 'string'
+        ? parseDraft(source)
+        : { kind: source.kind, level: source.level, text: source.text };
+      if (!parsed.text) return false;
+      block.revisions = Array.isArray(block.revisions) ? block.revisions : [];
+      const latest = block.revisions[block.revisions.length - 1];
+      if (latest && latest.kind === parsed.kind && latest.level === parsed.level && latest.text === parsed.text) return false;
+      block.revisions.push({
+        id: uid('r'),
+        kind: parsed.kind,
+        level: parsed.kind === 'heading' ? parsed.level : null,
+        text: parsed.text,
+        created: new Date().toISOString(),
+        reason
+      });
+      block.revisions = block.revisions.slice(-MAX_BLOCK_REVISIONS);
+      return true;
+    }
+
+    function checkpointEditing(id, value) {
+      if (editingId !== id || editingCheckpointText === null || !value.trim()) return;
+      const changedCharacters = textChangeMagnitude(editingCheckpointText, value);
+      const changedWords = Math.abs(wordCount(parseDraft(value).text) - wordCount(parseDraft(editingCheckpointText).text));
+      if (changedCharacters < REVISION_CHARACTER_STEP && changedWords < REVISION_WORD_STEP) return;
+      const block = activeDocument().blocks.find(item => item.id === id);
+      const source = block?.kind === 'heading' && parseDraft(value).kind !== 'heading'
+        ? { kind: 'heading', level: block.level, text: value.trim() }
+        : value;
+      if (addBlockRevision(block, source, 'Automatisk skrivpunkt')) {
+        editingCheckpointText = value;
+        saveState('Styckeversion sparad');
+      }
+    }
+
+    function updateEditingBuffer(id, value) {
+      editingBuffer = value;
+      checkpointEditing(id, value);
+    }
+
+    function revisionTime(value) {
+      try {
+        return new Intl.DateTimeFormat('sv-SE', {
+          dateStyle: 'short',
+          timeStyle: 'short'
+        }).format(new Date(value));
+      } catch {
+        return 'Tidigare version';
+      }
+    }
+
+    function openBlockVersions(id) {
+      if (!guardActiveEdit()) return;
+      const block = activeDocument().blocks.find(item => item.id === id);
+      if (!block) return;
+      selectedId = id;
+      inspectorReturnFocusId = id;
+      const revisions = [...(block.revisions || [])].reverse();
+      elements.inspectorContent.innerHTML = `
+        <p class="eyebrow">Versionsskydd</p>
+        <h2 id="inspector-title">${escapeHtml(snippet(block.text, 72))}</h2>
+        <p class="method-note">VävR skapar en lokal version när texten förändrats med minst ${REVISION_CHARACTER_STEP} tecken eller ${REVISION_WORD_STEP} ord under redigering. Högst ${MAX_BLOCK_REVISIONS} versioner sparas per block.</p>
+        <div class="revision-list">
+          ${revisions.length ? revisions.map(revision => `
+            <article class="revision-card">
+              <div class="revision-card-head">
+                <span>${escapeHtml(revision.reason)}</span>
+                <time datetime="${escapeHtml(revision.created)}">${escapeHtml(revisionTime(revision.created))}</time>
+              </div>
+              <p>${escapeHtml(snippet(revision.text, 180))}</p>
+              <button class="plain-button" type="button" data-restore-revision="${escapeHtml(revision.id)}">Återställ den här versionen</button>
+            </article>`).join('') : '<p class="revision-empty">Ännu ingen tidigare version. En första skyddspunkt skapas när du börjar redigera blocket.</p>'}
+        </div>
+        <div class="inspector-actions">
+          <button class="plain-button" id="versions-back" type="button">Tillbaka till blocket</button>
+        </div>`;
+      $$('[data-restore-revision]', elements.inspectorContent).forEach(button => {
+        button.addEventListener('click', () => restoreBlockRevision(id, button.dataset.restoreRevision));
+      });
+      $('#versions-back')?.addEventListener('click', () => renderInspector(id));
+      elements.inspector.dataset.open = 'true';
+      elements.inspector.removeAttribute('inert');
+      syncNodeInspectorState();
+    }
+
+    function restoreBlockRevision(id, revisionId) {
+      const block = activeDocument().blocks.find(item => item.id === id);
+      const revision = block?.revisions?.find(item => item.id === revisionId);
+      if (!block || !revision) return;
+      pushHistory('Återställ blockversion');
+      addBlockRevision(block, block, 'Före återställning');
+      block.kind = revision.kind;
+      block.level = revision.level;
+      block.text = revision.text;
+      saveState();
+      recalculate(id);
+      renderInspector(id);
+      toast('Blockversionen återställdes');
+      announce('En tidigare blockversion återställdes');
+    }
+
     function renderInspector(id) {
       const node = analysis.nodesById.get(id);
       const block = activeDocument().blocks.find(item => item.id === id);
@@ -8815,9 +9571,7 @@
           </div>`;
         $('#node-edit-cancel')?.addEventListener('click', cancelEditing);
         $('#node-edit-save')?.addEventListener('click', () => saveEditing(id));
-        $('#node-edit-text')?.addEventListener('input', event => {
-          editingBuffer = event.target.value;
-        });
+        $('#node-edit-text')?.addEventListener('input', event => updateEditingBuffer(id, event.target.value));
         $('#node-edit-text')?.addEventListener('keydown', event => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
@@ -8875,6 +9629,7 @@
         </section>` : ''}
         <div class="inspector-actions">
           <button class="plain-button primary" id="edit-selected">${view === 'graph' ? 'Redigera noden här' : 'Redigera här'}</button>
+          <button class="plain-button" id="versions-selected">Versioner${block.revisions?.length ? ' (' + block.revisions.length + ')' : ''}</button>
           ${view === 'graph' ? '<button class="plain-button" id="move-selected">Flytta i manuset</button>' : ''}
           ${view === 'graph' ? '<button class="plain-button" id="show-selected">Visa i Lista</button>' : ''}
         </div>`;
@@ -8885,6 +9640,7 @@
       $('#edit-selected')?.addEventListener('click', () => {
         startEditing(id);
       });
+      $('#versions-selected')?.addEventListener('click', () => openBlockVersions(id));
       $('#move-selected')?.addEventListener('click', () => startLiftedMove(id));
       $('#show-selected')?.addEventListener('click', () => {
         structureSectionId = null;
@@ -9236,6 +9992,9 @@
       editingBuffer = block.kind === 'heading'
         ? '#'.repeat(block.level) + ' ' + block.text
         : block.text;
+      addBlockRevision(block, block, 'Före redigering');
+      editingCheckpointText = editingBuffer;
+      saveState('Skyddspunkt sparad');
       if (view === 'graph') {
         selectedId = id;
         stopSimulation();
@@ -9264,6 +10023,9 @@
       editingId = block.id;
       editingSnapshot = JSON.stringify(activeDocument().blocks);
       editingBuffer = block.text;
+      addBlockRevision(block, block, 'Före redigering');
+      editingCheckpointText = editingBuffer;
+      saveState('Skyddspunkt sparad');
       renderOutline();
       requestAnimationFrame(() => {
         elements.structureHeadingInput.focus();
@@ -9282,6 +10044,7 @@
       editingId = null;
       editingSnapshot = null;
       editingBuffer = null;
+      editingCheckpointText = null;
       saveState();
       recalculate();
       elements.structureEditHeading.focus();
@@ -9294,6 +10057,7 @@
       editingId = null;
       editingSnapshot = null;
       editingBuffer = null;
+      editingCheckpointText = null;
       if (view === 'graph' && id) {
         renderInspector(id);
         requestAnimationFrame(() => nodeStates.get(id)?.element.focus());
@@ -9319,6 +10083,7 @@
       editingId = null;
       editingSnapshot = null;
       editingBuffer = null;
+      editingCheckpointText = null;
       saveState();
       recalculate();
       selectNode(id, false);
@@ -9523,6 +10288,9 @@
           ${editing ? editMarkup(block) : `<button class="block-text" data-action="select">${escapeHtml(block.text)}</button>`}
         </div>
         <div class="block-tools">
+          <button class="icon-button" data-action="versions" aria-label="Visa versioner för stycket" title="Versioner">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 8v5l3 2"/></svg>
+          </button>
           <button class="icon-button" data-action="up" aria-label="Flytta tidigare" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
           </button>
@@ -9571,6 +10339,9 @@
             </div>`}
         </div>
         <div class="block-tools">
+          <button class="icon-button" data-action="versions" aria-label="Visa versioner för rubriken" title="Versioner">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 8v5l3 2"/></svg>
+          </button>
           <button class="icon-button" data-action="up" aria-label="Flytta sektionen tidigare" ${canMoveUnit(index, -1) ? '' : 'disabled'}>
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>
           </button>
@@ -9658,6 +10429,9 @@
           ${editing ? editMarkup(block) : `<button class="block-text" data-action="select">${escapeHtml(block.text)}</button>`}
         </div>
         <div class="block-tools">
+          <button class="icon-button" data-action="versions" aria-label="Visa versioner för ${block.kind === 'heading' ? 'rubriken' : 'stycket'}" title="Versioner${block.revisions?.length ? ' (' + block.revisions.length + ')' : ''}">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 8v5l3 2"/></svg>
+          </button>
           <button class="icon-button" data-action="lift" aria-label="Lyft och flytta ${block.kind === 'heading' ? 'sektionen' : 'stycket'}" title="Lyft och placera">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v18M3 12h18M8 7l4-4 4 4M8 17l4 4 4-4M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>
           </button>
@@ -9743,6 +10517,9 @@
           } else if (event.key.toLowerCase() === 'e') {
             event.preventDefault();
             startEditing(id);
+          } else if (event.key.toLowerCase() === 'v') {
+            event.preventDefault();
+            openBlockVersions(id);
           } else if (event.key.toLowerCase() === 's') {
             event.preventDefault();
             beginWritingAt(index + 1);
@@ -9791,14 +10568,13 @@
             } else if (action === 'up') moveBlockUnit(index, -1);
             else if (action === 'down') moveBlockUnit(index, 1);
             else if (action === 'edit') startEditing(id);
+            else if (action === 'versions') openBlockVersions(id);
             else if (action === 'delete') deleteBlock(id);
             else if (action === 'cancel') cancelEditing();
             else if (action === 'save') saveEditing(id);
           });
         });
-        $('textarea', card)?.addEventListener('input', event => {
-          editingBuffer = event.target.value;
-        });
+        $('textarea', card)?.addEventListener('input', event => updateEditingBuffer(id, event.target.value));
         $('textarea', card)?.addEventListener('keydown', event => {
           if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
             event.preventDefault();
@@ -9844,7 +10620,7 @@
       elements.structureTitle.textContent = document.title;
       elements.structureSummary.textContent = liftedMove
         ? `${liftedMoveDescription(liftedMove.id)}. Välj en lysande flyttsöm. Escape avbryter.`
-        : `${formatNumber(metrics.words)} ord i ${document.blocks.length} block. Klicka på en knut eller tryck mellanslag för att lyfta. Alt + pil snabbflyttar, E redigerar och S skriver efter fokuserat block.${tensionSummary}`;
+        : `${formatNumber(metrics.words)} ord · ${document.blocks.length} block${tensionSummary}`;
       elements.structureUp.hidden = true;
       elements.structureEditHeading.hidden = true;
       elements.structureHeadingEditor.hidden = true;
@@ -10273,6 +11049,24 @@
       document.documentElement.style.setProperty('--composer-width', width + 'px');
     }
 
+    function applyFontProfile(profile, relayout = false) {
+      const safeProfile = normalizeFontProfile(profile);
+      app.settings.fontProfile = safeProfile;
+      document.documentElement.dataset.fontProfile = safeProfile;
+      $$('input[name="font-profile"]', elements.fontProfileOptions).forEach(input => {
+        input.checked = input.value === safeProfile;
+      });
+      elements.fontProfileStatus.textContent = FONT_PROFILES[safeProfile].description;
+      if (!relayout) return;
+      requestAnimationFrame(() => {
+        autoSizeDraft();
+        resizeCanvas(true);
+        if (view === 'structure' || view === 'graph') renderOutline();
+        if (view === 'echo') renderEcho();
+        if (elements.documentHub.dataset.open === 'true') renderDocumentHub();
+      });
+    }
+
     function setWorkspaceInert(inert) {
       const method = inert ? 'setAttribute' : 'removeAttribute';
       $('main')[method]('inert', '');
@@ -10466,12 +11260,12 @@
       }
 
       const defaults = createDefaultState();
-      const documents = source.documents.map(document => ({
+      const documents = ensureUniqueDocumentIds(source.documents.map(document => ({
         ...createDocument(document.title || document.titel || 'Namnlöst dokument'),
         ...document,
         id: document.id || uid('d'),
         title: document.title || document.titel || 'Namnlöst dokument',
-        blocks: (document.blocks || document.block || []).map(normalizeBlock),
+        blocks: normalizeBlocks(document.blocks || document.block || []),
         draft: String(document.draft || ''),
         recalledBlock: document.recalledBlock ? normalizeBlock(document.recalledBlock) : null,
         recalledIndex: Number.isInteger(Number(document.recalledIndex)) ? Math.max(0, Number(document.recalledIndex)) : null,
@@ -10481,7 +11275,7 @@
         echoDecisions: document.echoDecisions && typeof document.echoDecisions === 'object'
           ? { ...document.echoDecisions }
           : {}
-      }));
+      })));
       const settings = Object.assign({}, defaults.settings, source.settings || {});
       settings.focusMinutes = clamp(Math.round(Number(settings.focusMinutes) || 25), 1, 180);
       settings.breakMinutes = clamp(Math.round(Number(settings.breakMinutes) || 5), 1, 60);
@@ -10493,6 +11287,7 @@
       settings.echoMode = ['words', 'phrases', 'starters'].includes(settings.echoMode)
         ? settings.echoMode
         : 'words';
+      settings.fontProfile = normalizeFontProfile(settings.fontProfile);
       settings.showCountdown = settings.showCountdown !== false;
       settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
       settings.soundVolume = clamp(
@@ -10516,12 +11311,13 @@
       app = {
         ...defaults,
         ...source,
-        version: 10,
+        version: 12,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
       };
       if (!documents.some(document => document.id === app.activeId)) app.activeId = documents[0].id;
+      applyFontProfile(settings.fontProfile, true);
       applyWidth(settings.widthIndex);
       changeActiveDocument(app.activeId, false);
       renderTimer();
@@ -10683,6 +11479,8 @@
     function changeActiveDocument(id, persistCurrent = true) {
       if (!app.documents.some(document => document.id === id)) return;
       if (id !== app.activeId && !guardActiveEdit()) return false;
+      clearTimeout(draftSaveTimer);
+      clearTimeout(titleSaveTimer);
       if (persistCurrent) activeDocument().draft = elements.draft.value;
       app.activeId = id;
       selectedId = null;
@@ -10698,6 +11496,7 @@
       editingId = null;
       editingSnapshot = null;
       editingBuffer = null;
+      editingCheckpointText = null;
       liftedMove = null;
       draggedBlockId = null;
       lastVavbordFocusId = null;
@@ -10707,6 +11506,7 @@
       for (const state of nodeStates.values()) state.element.remove();
       nodeStates.clear();
       elements.draft.value = activeDocument().draft || '';
+      syncDraftHistory(app.activeId, elements.draft.value);
       renderDocumentControls();
       updateDraftMeta();
       saveState();
@@ -10717,7 +11517,8 @@
     }
 
     function setupEvents() {
-      elements.draft.addEventListener('input', updateDraftMeta);
+      elements.draft.addEventListener('input', handleDraftInput);
+      elements.draftUndo.addEventListener('click', undoDraftChange);
       elements.draft.addEventListener('keydown', event => {
         if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
           sendDraftSound(event.key, 'keydown');
@@ -10778,6 +11579,7 @@
       });
       elements.echoDetail.addEventListener('click', event => {
         const action = event.target.closest('[data-echo-action]')?.dataset.echoAction;
+        if (action === 'close') return closeEchoDetail();
         if (action === 'list' || action === 'nodes') return showEchoIn(action);
         const decision = event.target.closest('[data-echo-decision]')?.dataset.echoDecision;
         if (decision) return setEchoDecision(decision);
@@ -10802,7 +11604,7 @@
       $('#structure-heading-cancel').addEventListener('click', cancelEditing);
       $('#structure-heading-save').addEventListener('click', saveCurrentHeading);
       elements.structureHeadingInput.addEventListener('input', event => {
-        if (editingId) editingBuffer = event.target.value;
+        if (editingId) updateEditingBuffer(editingId, event.target.value);
       });
       elements.structureHeadingInput.addEventListener('keydown', event => {
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -10940,6 +11742,14 @@
         renderSound();
       });
       elements.typewriterToggle.addEventListener('click', toggleTypewriter);
+
+      elements.fontProfileOptions.addEventListener('change', event => {
+        const input = event.target.closest('input[name="font-profile"]');
+        if (!input) return;
+        applyFontProfile(input.value, true);
+        saveState('Textkaraktär sparad');
+        announce('Textkaraktär: ' + FONT_PROFILES[app.settings.fontProfile].name);
+      });
 
       elements.widthSlider.addEventListener('input', event => {
         applyWidth(event.target.value);
@@ -11100,6 +11910,7 @@
           if (elements.utility.dataset.open === 'true') closeUtility();
           else if (editingId) cancelEditing();
           else if (liftedMove) cancelLiftedMove();
+          else if (view === 'echo' && echoSelectionId) closeEchoDetail();
           else if (elements.inspector.dataset.open === 'true') closeInspector();
           else if (view === 'structure' && structureSectionId) {
             const { sections } = buildStructureTree();
@@ -11114,14 +11925,16 @@
 
       elements.documentSelect.addEventListener('change', event => changeActiveDocument(event.target.value));
       elements.documentTitle.addEventListener('input', event => {
-        activeDocument().title = event.target.value || 'Namnlöst dokument';
-        elements.activeDocumentLabel.textContent = activeDocument().title;
-        elements.documentsButton.setAttribute('aria-label', 'Öppna dokument. Aktivt dokument: ' + activeDocument().title);
-        elements.structureTitle.textContent = activeDocument().title;
+        const document = activeDocument();
+        const documentId = document.id;
+        document.title = event.target.value || 'Namnlöst dokument';
+        elements.activeDocumentLabel.textContent = document.title;
+        elements.documentsButton.setAttribute('aria-label', 'Öppna dokument. Aktivt dokument: ' + document.title);
+        elements.structureTitle.textContent = document.title;
         clearTimeout(titleSaveTimer);
         titleSaveTimer = setTimeout(() => {
-          saveState();
-          renderDocumentControls();
+          saveState('Lokalt sparat', documentId);
+          if (app.activeId === documentId) renderDocumentControls();
         }, 260);
       });
 
@@ -11230,6 +12043,7 @@
         recalledBlock = null;
         recalledIndex = null;
         elements.draft.value = '';
+        resetDraftHistory(app.activeId, '');
         saveState();
         recalculate();
         updateDraftMeta();
@@ -11238,9 +12052,11 @@
     }
 
     function initialize() {
+      applyFontProfile(app.settings.fontProfile);
       applyWidth(app.settings.widthIndex);
       updateVisualViewport();
       elements.draft.value = activeDocument().draft || '';
+      syncDraftHistory(app.activeId, elements.draft.value);
       recalledBlock = activeDocument().recalledBlock || null;
       recalledIndex = Number.isInteger(activeDocument().recalledIndex) ? activeDocument().recalledIndex : null;
       $('#threshold-input').value = app.settings.threshold;

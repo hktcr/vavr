@@ -21,10 +21,11 @@ Dokumentytan har två lägen:
 Ett nytt dokument får sitt namn direkt i dokumentytan och öppnas sedan i
 Skriv. Den senast valda list- eller nodvyn sparas lokalt.
 
-När Vävbordet är öppet ligger samma dokument även i en horisontell
-**Dokumentkaj**. Varje dokument visas som en namngiven folio med ordmängd och
-tydlig markering av vilket dokument som är öppet. Kajen växlar dokument med
-ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
+När Vävbordet är öppet samlar en låg arbetslist vyval, dokumentfolior och
+kontextverktyg på en rad. På mobil används toppbarens dokumentknapp i stället
+för en dubblerad kaj. Lista har en kompakt titelrad, Noders gräns räknas från
+arbetslistens verkliga position och Ordekons detalj öppnas först när ett fynd
+väljs. Kantnot blir en högerdocka på bred skärm och ett bottom sheet på mobil.
 
 ## Två arbetsrum
 
@@ -59,6 +60,18 @@ ett klick och ger direkta vägar till nytt dokument och hela dokumentytan.
 Valt block och fokus följer med mellan Lista, Noder och Ekon. Webbläsare med stöd
 för View Transitions låter blocket övergå mjukt mellan lägena, medan reducerad
 rörelse ger ett omedelbart skifte.
+
+I Inställningar finns fyra lokala textkaraktärer: Väv, Bok, Ren och Klar.
+Väv med Charter som förstahandsval är standard. Valet syns direkt i skrivfält,
+dokumentblock, redigering och Ordekon. Knappar och mätvärden behåller sin fasta
+gränssnittstypografi, och inga typsnitt hämtas från nätet.
+
+Varje fördröjd sparning är bunden till dokumentets fasta id, så ett snabbt
+dokumentbyte kan inte flytta utkast eller titel mellan dokument. Skrivfältet har
+en synlig, separat ångrahistorik per dokument. Redigerade block får dessutom
+högst 18 lokala versioner: en skyddspunkt när redigeringen börjar och därefter
+en ny punkt efter minst 140 ändrade tecken eller 24 ord. Versionerna följer med
+i VävR-säkerhetskopian.
 
 En pågående direktredigering är en skyddad transaktion. Dokumentbyte,
 linsbyte och arbetsrumsbyte väntar tills texten har sparats eller avbrutits,
