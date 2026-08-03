@@ -130,6 +130,11 @@ for (const id of [
   'echo-field',
   'echo-detail',
   'echo-document-map',
+  'fulltext-view',
+  'fulltext-document',
+  'fulltext-markdown',
+  'fulltext-stats',
+  'fulltext-comments-toggle',
   'device-settings',
   'install-nudge'
 ]) {
@@ -147,6 +152,13 @@ check(html.includes('function switchVavbordView'), 'Lista, Noder och Ordekon del
 check(html.includes("vavbordView: 'list'"), 'Vävbordets lugna standardläge är Lista');
 check(html.includes("['nodes', 'echo'].includes(stored.settings.vavbordView)"), 'sparat Vävbordsläge normaliseras');
 check(html.includes('function downloadBackup'), 'säkerhetskopiering finns');
+check(html.includes("data-view-target=\"fulltext\""), 'Heltext är ett eget arbetsläge');
+check(html.includes('function renderFulltext'), 'Heltext har en samlad renderingsväg');
+check(html.includes('function reconcileMarkdownBlocks'), 'Markdownredigering återförs till dokumentets blockmodell');
+check(html.includes("reason: 'Före heltextredigering'"), 'heltextredigering skapar blockvisa skyddspunkter');
+check(html.includes('removedCommentCount') && html.includes('Spara ändå?'), 'kommentarer skyddas när heltext tar bort block');
+check(html.includes('readingMinutes(metrics.words)'), 'Heltext visar uppskattad lästid');
+check(html.includes("event.key === '5'"), 'Heltext har kortkommandot Ctrl eller Cmd + 5');
 check(html.includes("window.addEventListener('beforeinstallprompt'"), 'Chromiums installationssignal hanteras');
 
 const widthsSource = inlineScript?.match(/const WIDTHS = \[[^\n]+\];/)?.[0];
@@ -412,6 +424,42 @@ check(html.includes("active ? 'Aktivt dokument' : 'Dokument'"), 'dokumentnoder m
 const functionSource = name => inlineScript?.match(
   new RegExp(`function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?^    \\}`, 'm')
 )?.[0];
+
+const fulltextFunctionSources = [
+  'parseMarkdown',
+  'commentText',
+  'normalizeRevision',
+  'reconcileMarkdownBlocks'
+].map(functionSource);
+if (fulltextFunctionSources.every(Boolean)) {
+  const fulltextSandbox = {};
+  vm.runInNewContext(`
+    let sequence = 0;
+    const uid = prefix => prefix + (++sequence);
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const MAX_BLOCK_REVISIONS = 18;
+    ${fulltextFunctionSources.join('\n')}
+    const previous = [{
+      id: 'b1', kind: 'paragraph', level: null, text: 'Gammal text',
+      comments: [{ text: 'Bevara denna.' }], revisions: [], created: '2026-08-03T00:00:00.000Z'
+    }, {
+      id: 'b2', kind: 'heading', level: 1, text: 'Rubrik',
+      comments: [], revisions: [], created: '2026-08-03T00:00:01.000Z'
+    }];
+    globalThis.edited = reconcileMarkdownBlocks('Ny text\\n\\n# Rubrik\\n', previous);
+    globalThis.deleted = reconcileMarkdownBlocks('# Rubrik\\n', previous);
+  `, fulltextSandbox);
+  check(
+    fulltextSandbox.edited.blocks[0].id === 'b1' &&
+    fulltextSandbox.edited.blocks[0].comments[0].text === 'Bevara denna.' &&
+    fulltextSandbox.edited.blocks[0].revisions.length === 1,
+    'heltextredigering bevarar blockidentitet, kommentar och skyddspunkt'
+  );
+  check(fulltextSandbox.deleted.removedCommentCount === 1, 'borttagen kommenterad text upptäcks före heltextsparing');
+} else {
+  check(false, 'heltextens blockrekonsiliering kunde testas');
+  check(false, 'heltextens kommentarsskydd kunde testas');
+}
 const documentFunctionNames = [
   'documentContentText',
   'documentSimilarityThreshold',
