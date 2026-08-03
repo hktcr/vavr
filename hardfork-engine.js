@@ -9,6 +9,7 @@ window.HardForkEngine = (function() {
     const BPM = 125;
     const SIXTEENTH_DUR = 60 / BPM / 4;
     const LOOKAHEAD = 0.12;
+    const MAX_COMMIT_SOLO_PLANS = 2;
 
     // Scale
     const scale = [0, 3, 5, 7, 10]; // Minor pentatonic
@@ -52,6 +53,15 @@ window.HardForkEngine = (function() {
     let delayBloomUntilBar = -1;
     let sweepUntilTime = 0;
     let lastGlitchTime = 0;
+
+    // Block response
+    let paragraphSoloCount = 0;
+    let headingStingCount = 0;
+    let lastParagraphSolo = null;
+    let lastBlockResponse = null;
+    let pendingCommitSolos = [];
+    let activeCommitSolo = null;
+    let supersededCommitSolos = 0;
 
     // Sentence Memory (Part C)
     let lastHeadingCount = 0;
@@ -237,11 +247,25 @@ window.HardForkEngine = (function() {
         currentMelDegree = 4;
         pendingFillVariant = 'normal';
         activeFillVariant = 'normal';
+        delayBloomUntilBar = -1;
+        sweepUntilTime = 0;
+        lastGlitchTime = 0;
         typeHeat = 0;
         lastHeadingCount = 0;
         step16 = 0;
         barNumber = 0;
         nextNoteTime = 0;
+        currentChordOffset = 0;
+        currentKeyShift = 0;
+        traces = [];
+        activeAckordDegrees = [];
+        paragraphSoloCount = 0;
+        headingStingCount = 0;
+        lastParagraphSolo = null;
+        lastBlockResponse = null;
+        pendingCommitSolos = [];
+        activeCommitSolo = null;
+        supersededCommitSolos = 0;
     }
 
     function destroy() {
@@ -428,10 +452,209 @@ window.HardForkEngine = (function() {
         return closest;
     }
 
+    function textSignature(text) {
+        let hash = 2166136261;
+        for (const character of Array.from(String(text || '').toLowerCase())) {
+            hash ^= character.charCodeAt(0);
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+    }
+
+    function textDegrees(text, startDegree = 4) {
+        const letters = Array.from(String(text || '').toLowerCase())
+            .map(character => ALPHABET.indexOf(character))
+            .filter(index => index >= 0);
+        if (!letters.length) return [clamp(Math.round(startDegree), 0, 9)];
+
+        let degree = clamp(Math.round(startDegree), 0, 9);
+        let previous = letters[0];
+        return letters.map((index, position) => {
+            if (position) {
+                const difference = index - previous;
+                let step = clamp(Math.round(difference / 5), -2, 2);
+                if (!step && difference) step = difference > 0 ? 1 : -1;
+                degree = clamp(degree + step, 0, 9);
+            }
+            previous = index;
+            return degree;
+        });
+    }
+
+    function sampleContour(contour, count) {
+        if (count <= 1) return [contour[contour.length - 1] ?? 4];
+        return Array.from({ length: count }, (_, index) => {
+            const sourceIndex = Math.round(index * (contour.length - 1) / (count - 1));
+            return contour[sourceIndex] ?? contour[contour.length - 1] ?? 4;
+        });
+    }
+
+    function buildCommitSolo(kind = 'paragraph', blockProfile = {}) {
+        const text = String(blockProfile.text || '');
+        const heading = kind === 'heading';
+        const words = Math.max(0, Number(blockProfile.words) || text.trim().split(/\s+/).filter(Boolean).length);
+        const similarity = clamp(
+            Number.isFinite(Number(blockProfile.similarityToPrevious))
+                ? Number(blockProfile.similarityToPrevious)
+                : contextStats.cohesion * .62 + contextStats.connectedness * .38,
+            0,
+            1
+        );
+        const localVowelRatio = clamp(Number(blockProfile.vowelRatio) || contextStats.vowelRatio, .2, .65);
+        const signature = (
+            textSignature(text) ^
+            textSignature(contextStats.documentTitle) ^
+            Math.imul(heading ? 31 : 17, Math.max(1, Number(blockProfile.level) || 1))
+        ) >>> 0;
+        const letterCount = Array.from(text.toLowerCase()).filter(character => ALPHABET.includes(character)).length;
+        const micro = !heading && (words <= 2 || letterCount < 10);
+        const noteCount = heading
+            ? clamp(3 + Math.max(1, Number(blockProfile.level) || 1), 4, 5)
+            : micro ? 3 : words <= 8 ? 5 : clamp(6 + Math.floor(words / 28), 6, 10);
+        const sourceContour = textDegrees(text, currentMelDegree);
+        const sampled = sampleContour(sourceContour, noteCount);
+        const memory = melodyBuffer.length ? sampleContour(melodyBuffer, noteCount) : sampled;
+        const inheritance = .18 + similarity * .34;
+        const degrees = sampled.map((degree, index) => clamp(Math.round(
+            degree * (1 - inheritance) + memory[index] * inheritance
+        ), 0, 9));
+
+        const ending = text.trim().slice(-1);
+        const cadence = heading
+            ? 'section'
+            : ending === '?' ? 'question' : ending === '!' ? 'exclamation' : 'resolution';
+        if (heading) {
+            degrees[degrees.length - 1] = clamp(degrees[0] + 4, 0, 9);
+        } else if (ending === '?') {
+            degrees[degrees.length - 1] = clamp(degrees[degrees.length - 2] + 2, 0, 9);
+        } else if (ending === '!') {
+            degrees[degrees.length - 1] = degrees[degrees.length - 2];
+        } else {
+            degrees[degrees.length - 1] = snapToChord(degrees[degrees.length - 1]);
+        }
+
+        const rhythmFamilies = [
+            [0, 2, 4, 7, 8, 10, 12, 14, 16, 18],
+            [0, 1, 4, 6, 8, 11, 12, 15, 17, 20],
+            [0, 3, 4, 7, 9, 10, 13, 16, 18, 21],
+            [0, 2, 5, 6, 9, 12, 13, 15, 18, 20]
+        ];
+        const rhythm = rhythmFamilies[signature % rhythmFamilies.length];
+        const steps = rhythm.slice(0, noteCount);
+        const velocities = degrees.map((degree, index) => clamp(
+            .52 + ((signature >>> (index % 16)) & 3) * .08 + localVowelRatio * .18 + (degree / 9) * .07,
+            .5,
+            .94
+        ));
+        const durations = steps.map((step, index) => {
+            const nextStep = steps[index + 1] ?? step + (heading ? 4 : 3);
+            return clamp((nextStep - step) * SIXTEENTH_DUR * .72, .12, heading ? .46 : .34);
+        });
+
+        return {
+            kind: heading ? 'heading' : 'paragraph',
+            role: heading ? 'theme-sting' : micro ? 'microfill' : 'paragraph-solo',
+            cadence,
+            signature,
+            similarity,
+            vowelRatio: localVowelRatio,
+            degrees,
+            steps,
+            velocities,
+            durations,
+            intensity: micro ? .68 : 1,
+            durationSeconds: steps[steps.length - 1] * SIXTEENTH_DUR + durations[durations.length - 1]
+        };
+    }
+
+    function commit(kind = 'paragraph', blockProfile = {}) {
+        if (!ctx || !synthBus) return null;
+        if (!String(blockProfile.text || '').trim()) return null;
+        const solo = buildCommitSolo(kind, blockProfile);
+        const punctuationFillOverlap = fillScheduledForNextBar && kind !== 'heading';
+        const leadSteps = punctuationFillOverlap ? 2 : 0;
+        const compressed = sampleContour(solo.degrees, 8);
+        M_pending = compressed;
+        melodyBuffer = solo.degrees.slice(-8);
+        currentMelDegree = solo.degrees[solo.degrees.length - 1];
+        const response = {
+            ...solo,
+            degrees: [...solo.degrees],
+            steps: [...solo.steps],
+            velocities: [...solo.velocities],
+            durations: [...solo.durations],
+            startsOnGrid: true,
+            delayedForSentenceFill: punctuationFillOverlap,
+            maxConcurrentPlans: MAX_COMMIT_SOLO_PLANS
+        };
+        lastBlockResponse = response;
+        if (kind === 'heading') {
+            headingStingCount += 1;
+        } else {
+            paragraphSoloCount += 1;
+            lastParagraphSolo = response;
+        }
+
+        const queuedSolo = {
+            plan: response,
+            scheduledSteps: solo.steps.map(step => step + leadSteps),
+            noteIndex: 0,
+            position: 0
+        };
+        const pendingLimit = Math.max(0, MAX_COMMIT_SOLO_PLANS - (activeCommitSolo ? 1 : 0));
+        if (pendingCommitSolos.length >= pendingLimit) {
+            if (pendingCommitSolos.length) {
+                pendingCommitSolos[pendingCommitSolos.length - 1] = queuedSolo;
+            }
+            supersededCommitSolos += 1;
+        } else {
+            pendingCommitSolos.push(queuedSolo);
+        }
+        return response;
+    }
+
+    function scheduleCommitSoloStep(time) {
+        if (!activeCommitSolo && pendingCommitSolos.length) {
+            activeCommitSolo = pendingCommitSolos.shift();
+        }
+        const active = activeCommitSolo;
+        if (!active) return;
+
+        const { plan, scheduledSteps } = active;
+        if (active.position === scheduledSteps[0] && plan.kind === 'heading') {
+            playBass(time, true, .22);
+        }
+        while (
+            active.noteIndex < scheduledSteps.length &&
+            scheduledSteps[active.noteIndex] === active.position
+        ) {
+            const noteIndex = active.noteIndex;
+            const accent = noteIndex === 0 || noteIndex === plan.degrees.length - 1 ? 1.08 : 1;
+            playPluck(
+                time,
+                plan.degrees[noteIndex] + (
+                    plan.kind === 'heading' && noteIndex >= plan.degrees.length - 2 ? 5 : 0
+                ),
+                plan.velocities[noteIndex],
+                plan.durations[noteIndex],
+                (.56 + effectDepth * .22) * accent * plan.intensity
+            );
+            active.noteIndex += 1;
+        }
+        active.position += 1;
+        if (
+            active.noteIndex >= scheduledSteps.length &&
+            active.position > scheduledSteps[scheduledSteps.length - 1]
+        ) {
+            activeCommitSolo = null;
+        }
+    }
+
     // --- Sequencer ---
 
     function scheduleStep(step, time) {
         if (!ctx) return;
+        scheduleCommitSoloStep(time);
         
         if (step === 0) {
             const stats = getStats();
@@ -527,7 +750,7 @@ window.HardForkEngine = (function() {
     }
 
     function schedule() {
-        if (!isTyping && !isOutro) return;
+        if (!isTyping && !isOutro && !activeCommitSolo && !pendingCommitSolos.length) return;
         if (!ctx) return;
         
         if (ctx.state === 'suspended') ctx.resume();
@@ -752,7 +975,30 @@ window.HardForkEngine = (function() {
     }
 
     function getState() {
-        return { traces: traces, activeAckordDegrees: activeAckordDegrees };
+        return {
+            traces: [...traces],
+            activeAckordDegrees: [...activeAckordDegrees],
+            paragraphSoloCount,
+            headingStingCount,
+            pendingCommitSoloCount: pendingCommitSolos.length,
+            commitSoloActive: Boolean(activeCommitSolo),
+            supersededCommitSolos,
+            maxCommitSoloPlans: MAX_COMMIT_SOLO_PLANS,
+            lastBlockResponse: lastBlockResponse ? {
+                ...lastBlockResponse,
+                degrees: [...lastBlockResponse.degrees],
+                steps: [...lastBlockResponse.steps],
+                velocities: [...lastBlockResponse.velocities],
+                durations: [...lastBlockResponse.durations]
+            } : null,
+            lastParagraphSolo: lastParagraphSolo ? {
+                ...lastParagraphSolo,
+                degrees: [...lastParagraphSolo.degrees],
+                steps: [...lastParagraphSolo.steps],
+                velocities: [...lastParagraphSolo.velocities],
+                durations: [...lastParagraphSolo.durations]
+            } : null
+        };
     }
 
     let onSentenceCallback = null;
@@ -763,6 +1009,7 @@ window.HardForkEngine = (function() {
         setVolume,
         setDepth,
         setContext,
+        commit,
         destroy,
         handleKey,
         handleChar,

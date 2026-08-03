@@ -17,6 +17,8 @@ window.ValsangEngine = (() => {
     let activeVoiceIndex = 0;
     let voiceGeneration = 0;
     let commitCount = 0;
+    let responseSongCount = 0;
+    let lastResponseSong = null;
 
     let noiseBuffer = null;
     let irBuffer = null;
@@ -212,6 +214,15 @@ window.ValsangEngine = (() => {
 
     function init(audioContext, destination) {
         if (ctx) return;
+        rootMidi = 43;
+        degreeFloat = 4;
+        currentDegree = 4;
+        prevAlphaIdx = null;
+        sentenceBuffer = [];
+        blockBuffer = [];
+        dtEma = 420;
+        activeVoiceIndex = 0;
+        isDurScale = false;
         ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
         
         // Master chain
@@ -279,6 +290,8 @@ window.ValsangEngine = (() => {
         isIdle = false;
         voiceGeneration = 0;
         commitCount = 0;
+        responseSongCount = 0;
+        lastResponseSong = null;
         blockBuffer = [];
         lastKeyTime = performance.now();
     }
@@ -307,10 +320,17 @@ window.ValsangEngine = (() => {
         prevAlphaIdx = null;
         voiceGeneration = 0;
         commitCount = 0;
+        responseSongCount = 0;
+        lastResponseSong = null;
         stateObj.voicePoolSize = 0;
         stateObj.activeVoices = 0;
         stateObj.voiceGeneration = 0;
         stateObj.lastCommitKind = null;
+        stateObj.lastFadeSeconds = 0;
+        stateObj.lastAttackSeconds = 0;
+        stateObj.responseSongCount = 0;
+        stateObj.responseUsesVoicePool = true;
+        stateObj.lastResponseSong = null;
         isIdle = true;
         ctx = null;
     }
@@ -419,7 +439,10 @@ window.ValsangEngine = (() => {
         activeVoices: 0,
         lastCommitKind: null,
         lastFadeSeconds: 0,
-        lastAttackSeconds: 0
+        lastAttackSeconds: 0,
+        responseSongCount: 0,
+        responseUsesVoicePool: true,
+        lastResponseSong: null
     };
     
     function getState() {
@@ -434,7 +457,17 @@ window.ValsangEngine = (() => {
         stateObj.activeVoices = voices.filter((voice, index) =>
             index === activeVoiceIndex || voice.tailUntil > ctx.currentTime
         ).length;
-        return stateObj;
+        stateObj.responseSongCount = responseSongCount;
+        stateObj.responseUsesVoicePool = true;
+        stateObj.lastResponseSong = lastResponseSong ? {
+            ...lastResponseSong,
+            degrees: [...lastResponseSong.degrees],
+            offsets: [...lastResponseSong.offsets]
+        } : null;
+        return {
+            ...stateObj,
+            lastResponseSong: stateObj.lastResponseSong
+        };
     }
 
     function wakeUp() {
@@ -669,8 +702,104 @@ window.ValsangEngine = (() => {
         );
     }
 
+    function textContour(text, startDegree) {
+        const letters = Array.from(String(text || '').toLowerCase())
+            .map(character => ALPHABET.indexOf(character))
+            .filter(index => index >= 0);
+        if (!letters.length) return [clamp(Math.round(startDegree), 0, 15)];
+        let degree = clamp(Math.round(startDegree), 0, 15);
+        let previous = letters[0];
+        return letters.map((index, position) => {
+            if (position) {
+                const difference = index - previous;
+                let step = clamp(Math.round(difference / 5), -3, 3);
+                if (!step && difference) step = difference > 0 ? 1 : -1;
+                degree = clamp(degree + step, 0, 15);
+            }
+            previous = index;
+            return degree;
+        });
+    }
+
+    function sampleContour(contour, count) {
+        if (count <= 1) return [contour[contour.length - 1] ?? currentDegree];
+        return Array.from({ length: count }, (_, index) => {
+            const sourceIndex = Math.round(index * (contour.length - 1) / (count - 1));
+            return contour[sourceIndex] ?? contour[contour.length - 1] ?? currentDegree;
+        });
+    }
+
+    function buildResponseSong(kind, blockProfile, musicalContext) {
+        const heading = kind === 'heading';
+        const text = String(blockProfile.text || '');
+        const words = Math.max(0, Number(blockProfile.words) || text.trim().split(/\s+/).filter(Boolean).length);
+        const letterCount = Array.from(text.toLowerCase()).filter(character => ALPHABET.includes(character)).length;
+        const micro = !heading && (words <= 2 || letterCount < 10);
+        const noteCount = heading ? 4 : micro ? 2 : words <= 8 ? 3 : clamp(4 + Math.floor(words / 34), 4, 7);
+        const typedContour = blockBuffer.map(point => point.deg);
+        const source = typedContour.length >= 3
+            ? typedContour
+            : textContour(text, musicalContext.inheritedDegree);
+        const sampled = sampleContour(source, noteCount);
+        const answerDirection = musicalContext.similarity >= .56 ? 1 : -1;
+        const intervalScale = 1 + Math.round((1 - musicalContext.similarity) * 1.5);
+        const degrees = [clamp(Math.round(musicalContext.startDegree), 0, 15)];
+        for (let index = 1; index < sampled.length; index++) {
+            const sourceInterval = clamp(sampled[index] - sampled[index - 1], -3, 3);
+            const fallback = ((musicalContext.signature >>> index) & 1) ? 1 : -1;
+            const interval = (sourceInterval || fallback) * answerDirection * intervalScale;
+            degrees.push(clamp(degrees[index - 1] + interval, 0, 15));
+        }
+
+        const ending = text.trim().slice(-1);
+        if (heading) {
+            degrees[degrees.length - 1] = clamp(degrees[0] + 3, 0, 15);
+        } else if (ending === '?') {
+            degrees[degrees.length - 1] = clamp(degrees[degrees.length - 2] + 2, 0, 15);
+        } else if (ending === '!') {
+            degrees[degrees.length - 1] = degrees[degrees.length - 2];
+        } else {
+            degrees[degrees.length - 1] = clamp(
+                Math.round(degrees[degrees.length - 1] * .7 + musicalContext.endDegree * .3) - 1,
+                0,
+                15
+            );
+        }
+
+        const noteSeconds = clamp(
+            .46 + musicalContext.localSentenceWords * .012 + musicalContext.localVowelRatio * .22,
+            .54,
+            .96
+        );
+        const offsets = degrees.map((_, index) => index * noteSeconds * (heading ? .64 : .72));
+        const startDelay = heading ? .32 : .48 + musicalContext.similarity * .24;
+        const durationSeconds = startDelay + offsets[offsets.length - 1] + noteSeconds * 1.18;
+        return {
+            kind: heading ? 'heading' : 'paragraph',
+            role: heading ? 'theme-call' : micro ? 'micro-answer' : 'answer-song',
+            relationship: heading
+                ? 'section-call'
+                : musicalContext.similarity >= .56 ? 'echo' : 'counter-call',
+            cadence: heading
+                ? 'section'
+                : ending === '?' ? 'question' : ending === '!' ? 'exclamation' : 'resolution',
+            signature: musicalContext.signature,
+            source: typedContour.length >= 3 ? 'typed-contour' : 'block-text',
+            similarity: musicalContext.similarity,
+            vowelRatio: musicalContext.localVowelRatio,
+            degrees,
+            offsets,
+            noteSeconds,
+            startDelay,
+            durationSeconds,
+            pan: clamp(((musicalContext.signature % 201) - 100) / 260, -.38, .38),
+            words
+        };
+    }
+
     function commit(kind = 'paragraph', blockProfile = {}) {
         if (!ctx || !voices.length) return;
+        if (!String(blockProfile.text || '').trim()) return;
         const now = ctx.currentTime;
         const heading = kind === 'heading';
         const headingLevel = clamp(Number(blockProfile.level) || contextStats.lastHeadingLevel || 1, 1, 3);
@@ -709,8 +838,11 @@ window.ValsangEngine = (() => {
         const nextVoice = voices[nextIndex];
         const fadeSeconds = clamp((heading ? 10 : 8) + similarity * 4, 8, 14);
         const attackSeconds = clamp((heading ? 2.7 : 2.1) + (1 - similarity) * .45, 2, 3.2);
-        const phraseSeconds = clamp(2.4 + localSentenceWords * .19, 2.8, 8.5);
-        const targetGain = heading ? .145 : .125;
+        const localWords = Math.max(
+            0,
+            Number(blockProfile.words) || String(blockProfile.text || '').trim().split(/\s+/).filter(Boolean).length
+        );
+        const targetGain = heading ? .145 : localWords <= 2 ? .09 : .125;
 
         oldVoice.gain.gain.cancelScheduledValues(now);
         oldVoice.gain.gain.setValueAtTime(clamp(oldVoice.gain.gain.value || .12, .0001, .2), now);
@@ -730,9 +862,16 @@ window.ValsangEngine = (() => {
             15
         );
         const startFrequency = midiToFreq(degreeToMidi(startDegree, rootMidi));
-        const middleFrequency = midiToFreq(degreeToMidi(middleDegree, rootMidi));
-        const endFrequency = midiToFreq(degreeToMidi(endDegree, rootMidi));
         const detuneBias = signature % 37 - 18;
+        const responseSong = buildResponseSong(kind, blockProfile, {
+            signature,
+            similarity,
+            localVowelRatio,
+            localSentenceWords,
+            inheritedDegree,
+            startDegree,
+            endDegree
+        });
 
         for (const [oscillator, ratio] of [
             [nextVoice.osc1, 1],
@@ -741,9 +880,17 @@ window.ValsangEngine = (() => {
         ]) {
             oscillator.frequency.cancelScheduledValues(now);
             oscillator.frequency.setValueAtTime(Math.max(30, startFrequency * ratio * .78), now);
-            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, startFrequency * ratio), now + attackSeconds);
-            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, middleFrequency * ratio), now + attackSeconds + phraseSeconds * .48);
-            oscillator.frequency.exponentialRampToValueAtTime(Math.max(30, endFrequency * ratio), now + attackSeconds + phraseSeconds);
+            oscillator.frequency.exponentialRampToValueAtTime(
+                Math.max(30, startFrequency * ratio),
+                now + responseSong.startDelay
+            );
+            responseSong.degrees.forEach((degree, index) => {
+                const responseFrequency = midiToFreq(degreeToMidi(degree, rootMidi));
+                oscillator.frequency.exponentialRampToValueAtTime(
+                    Math.max(30, responseFrequency * ratio),
+                    now + responseSong.startDelay + responseSong.offsets[index] + responseSong.noteSeconds * .58
+                );
+            });
         }
         nextVoice.osc1.detune.setValueAtTime(detuneBias, now);
         nextVoice.osc2.detune.setValueAtTime(detuneBias + 5 + nextIndex * 1.5, now);
@@ -752,7 +899,11 @@ window.ValsangEngine = (() => {
         nextVoice.upperFormant.frequency.setTargetAtTime(900 + localVowelRatio * 760, now, .7);
         if (nextVoice.panner) {
             const spread = .08 + (1 - similarity) * .22;
-            nextVoice.panner.pan.setTargetAtTime(direction * spread, now, .8);
+            nextVoice.panner.pan.setTargetAtTime(
+                clamp(direction * spread * .65 + responseSong.pan * .35, -.36, .36),
+                now,
+                .8
+            );
         }
 
         useVoice(nextIndex);
@@ -763,6 +914,13 @@ window.ValsangEngine = (() => {
         stateObj.lastCommitKind = heading ? 'heading' : 'paragraph';
         stateObj.lastFadeSeconds = fadeSeconds;
         stateObj.lastAttackSeconds = attackSeconds;
+        responseSongCount += 1;
+        lastResponseSong = {
+            ...responseSong,
+            degrees: [...responseSong.degrees],
+            offsets: [...responseSong.offsets],
+            poolVoice: nextIndex
+        };
         playTransient('noise', 310 + localVowelRatio * 260, .72, heading ? .036 : .025, 1.15, 'wet');
         emitTrace(degreeToMidi(startDegree, rootMidi), heading ? 'theme' : 'voice', attackSeconds * 1000);
         sentenceBuffer = [];

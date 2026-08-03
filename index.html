@@ -277,7 +277,9 @@
     }
 
     body[data-view="write"] #vavbord-toolbar,
-    body[data-view="write"] #vavbord-dock {
+    body[data-view="write"] #vavbord-dock,
+    body[data-view="fulltext"] #vavbord-toolbar,
+    body[data-view="fulltext"] #vavbord-dock {
       display: none;
     }
 
@@ -538,6 +540,8 @@
 
     body[data-view="structure"] #edge-canvas,
     body[data-view="structure"] #node-layer,
+    body[data-view="fulltext"] #edge-canvas,
+    body[data-view="fulltext"] #node-layer,
     body[data-view="echo"] #edge-canvas,
     body[data-view="echo"] #node-layer {
       opacity: 0;
@@ -1173,6 +1177,205 @@
 
     body:not([data-view="echo"]) #echo-view {
       display: none;
+    }
+
+    #fulltext-view {
+      overflow: auto;
+      padding:
+        calc(var(--topbar-height) + max(30px, env(safe-area-inset-top)))
+        max(18px, env(safe-area-inset-right))
+        max(42px, env(safe-area-inset-bottom))
+        max(18px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 75% 10%, rgba(89, 194, 255, .055), transparent 32%),
+        var(--ink);
+    }
+
+    body:not([data-view="fulltext"]) #fulltext-view {
+      display: none;
+    }
+
+    .fulltext-shell {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+    }
+
+    .fulltext-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 22px;
+    }
+
+    .fulltext-head h1 {
+      margin: 4px 0 5px;
+      color: var(--paper);
+      font: 650 clamp(25px, 4vw, 42px)/1.08 var(--serif);
+    }
+
+    .fulltext-head p,
+    .fulltext-status {
+      margin: 0;
+      color: var(--paper-faint);
+      font: 11px/1.55 var(--mono);
+    }
+
+    .fulltext-actions,
+    .fulltext-view-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .fulltext-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .fulltext-paper,
+    .fulltext-sidebar {
+      border: 1px solid rgba(179, 229, 255, .13);
+      border-radius: 18px;
+      background: rgba(14, 17, 24, .9);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+    }
+
+    .fulltext-paper {
+      min-height: min(720px, calc(100vh - 180px));
+      padding: clamp(30px, 6vw, 76px);
+    }
+
+    .fulltext-document {
+      max-width: 72ch;
+      margin: 0 auto;
+      color: var(--paper);
+      font: 18px/1.72 var(--document-font, var(--serif));
+    }
+
+    .fulltext-document h1,
+    .fulltext-document h2,
+    .fulltext-document h3 {
+      color: var(--paper);
+      line-height: 1.18;
+      text-wrap: balance;
+    }
+
+    .fulltext-document h1 { margin: 1.8em 0 .65em; font-size: 2em; }
+    .fulltext-document h2 { margin: 1.65em 0 .6em; font-size: 1.48em; }
+    .fulltext-document h3 { margin: 1.45em 0 .5em; font-size: 1.18em; }
+    .fulltext-document > :first-child { margin-top: 0; }
+    .fulltext-document p { margin: 0 0 1.25em; }
+
+    .fulltext-block {
+      position: relative;
+      scroll-margin-top: calc(var(--topbar-height) + 20px);
+    }
+
+    .fulltext-block[data-has-comments="true"]::before {
+      position: absolute;
+      top: .75em;
+      left: -22px;
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--cyan);
+      border-radius: 50%;
+      content: "";
+      opacity: .72;
+    }
+
+    .fulltext-comments {
+      display: grid;
+      gap: 7px;
+      margin: -.5em 0 1.4em;
+      padding: 0 0 0 15px;
+      border-left: 1px solid rgba(89, 194, 255, .38);
+      color: var(--paper-dim);
+      font: 12px/1.55 var(--sans);
+    }
+
+    .fulltext-comments[hidden] { display: none; }
+    .fulltext-comments p { margin: 0; }
+
+    #fulltext-markdown {
+      width: 100%;
+      min-height: min(720px, calc(100vh - 250px));
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--paper);
+      font: 15px/1.7 var(--mono);
+      tab-size: 2;
+    }
+
+    .fulltext-sidebar {
+      position: sticky;
+      top: calc(var(--topbar-height) + 24px);
+      display: grid;
+      gap: 18px;
+      padding: 17px;
+    }
+
+    .fulltext-sidebar h2 {
+      margin: 0 0 10px;
+      color: var(--paper);
+      font: 650 12px/1 var(--sans);
+    }
+
+    .fulltext-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+    }
+
+    .fulltext-stat {
+      padding: 10px;
+      border: 1px solid rgba(179, 229, 255, .1);
+      border-radius: 10px;
+      background: rgba(179, 229, 255, .025);
+    }
+
+    .fulltext-stat strong,
+    .fulltext-stat span { display: block; }
+    .fulltext-stat strong { color: var(--paper); font: 600 17px/1 var(--mono); }
+    .fulltext-stat span { margin-top: 5px; color: var(--paper-faint); font: 8px/1.2 var(--mono); letter-spacing: .07em; text-transform: uppercase; }
+
+    .fulltext-empty {
+      color: var(--paper-faint);
+      font-style: italic;
+    }
+
+    @media (max-width: 820px) {
+      .fulltext-head { align-items: stretch; flex-direction: column; }
+      .fulltext-actions { flex-wrap: wrap; }
+      .fulltext-layout { grid-template-columns: 1fr; }
+      .fulltext-sidebar { position: static; grid-template-columns: 1fr 1fr; }
+      .fulltext-paper { padding: 28px clamp(20px, 6vw, 46px); }
+    }
+
+    @media (max-width: 560px) {
+      .fulltext-sidebar { grid-template-columns: 1fr; }
+      .fulltext-document { font-size: 16px; }
+      .fulltext-actions { align-items: stretch; flex-direction: column; }
+      .fulltext-view-toggle { width: 100%; }
+      .fulltext-view-toggle button { flex: 1; }
+    }
+
+    @media print {
+      body[data-view="fulltext"] { background: #fff; color: #111; }
+      body[data-view="fulltext"] #topbar,
+      body[data-view="fulltext"] .fulltext-head,
+      body[data-view="fulltext"] .fulltext-sidebar { display: none !important; }
+      body[data-view="fulltext"] #fulltext-view { position: static; overflow: visible; padding: 0; background: #fff; }
+      body[data-view="fulltext"] .fulltext-paper { min-height: 0; padding: 0; border: 0; background: #fff; box-shadow: none; }
+      body[data-view="fulltext"] .fulltext-document,
+      body[data-view="fulltext"] .fulltext-document h1,
+      body[data-view="fulltext"] .fulltext-document h2,
+      body[data-view="fulltext"] .fulltext-document h3 { color: #111; }
+      body[data-view="fulltext"] .fulltext-comments { color: #333; }
     }
 
     .echo-shell {
@@ -4526,6 +4729,10 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="5" cy="12" r="2.5"/><circle cx="17" cy="5" r="2.5"/><circle cx="19" cy="17" r="2.5"/><path d="m7.2 10.8 7.6-4.6M7.4 13l9.2 3M17.5 7.5l1 7"/></svg>
         <span>Vävbord</span>
       </button>
+      <button class="mode-button" type="button" data-view-target="fulltext" title="Heltext, Ctrl eller Cmd + 5">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 11h6M9 14.5h6M9 18h4"/></svg>
+        <span>Heltext</span>
+      </button>
     </nav>
 
     <div class="top-actions">
@@ -4639,6 +4846,44 @@
         <span class="legend-item"><i class="legend-line hierarchy"></i><span>Rubrikhierarki</span></span>
         </div>
       </details>
+    </section>
+
+    <section id="fulltext-view" class="view" aria-label="Heltext">
+      <div class="fulltext-shell">
+        <header class="fulltext-head">
+          <div>
+            <p class="eyebrow">Heltext</p>
+            <h1 id="fulltext-title">Namnlöst dokument</h1>
+            <p id="fulltext-status" class="fulltext-status">Invävd text i läsordning. Utkast räknas inte.</p>
+          </div>
+          <div class="fulltext-actions">
+            <div class="fulltext-view-toggle" role="group" aria-label="Heltextens visning">
+              <button id="fulltext-formatted-button" class="plain-button" type="button" aria-pressed="true">Formaterad</button>
+              <button id="fulltext-markdown-button" class="plain-button" type="button" aria-pressed="false">Markdown</button>
+            </div>
+            <button id="fulltext-comments-toggle" class="plain-button" type="button" aria-pressed="false">Visa kommentarer</button>
+            <button id="fulltext-edit" class="plain-button primary" type="button">Redigera hela texten</button>
+            <button id="fulltext-cancel" class="plain-button" type="button" hidden>Avbryt</button>
+            <button id="fulltext-save" class="plain-button primary" type="button" hidden>Spara hela texten</button>
+          </div>
+        </header>
+        <div class="fulltext-layout">
+          <article class="fulltext-paper" aria-live="polite">
+            <div id="fulltext-document" class="fulltext-document"></div>
+            <textarea id="fulltext-markdown" spellcheck="true" aria-label="Hela dokumentet som Markdown" hidden></textarea>
+          </article>
+          <aside class="fulltext-sidebar" aria-label="Dokumentöversikt">
+            <section>
+              <h2>Grundstatistik</h2>
+              <div id="fulltext-stats" class="fulltext-stats"></div>
+            </section>
+            <section>
+              <h2>Kommentarer</h2>
+              <p id="fulltext-comment-summary" class="method-note">Inga kommentarer i dokumentet.</p>
+            </section>
+          </aside>
+        </div>
+      </div>
     </section>
 
     <section id="structure-view" class="view" aria-label="Vävbordets listläge">
@@ -5218,13 +5463,13 @@
         name: 'Valsång',
         adaptive: true,
         dynamic: true,
-        description: 'En biologiskt inspirerad flock av glidande röster. Varje nytt stycke väcker en ny valfras medan den föregående långsamt tonar bort; likhet, rubriker och meningsrytm formar släktskapet mellan dem.'
+        description: 'En biologiskt inspirerad flock av glidande röster. Varje nytt stycke besvaras av en kort ekofras i nästa röst medan den föregående långsamt tonar bort; likhet, rubriker, längd och sluttecken formar svaret.'
       },
       hardfork: {
         name: 'Hard Fork',
         adaptive: true,
         dynamic: true,
-        description: 'SkrivR:s generativa 125 BPM-produktion, vidareutvecklad för VävR. Direkt tangentansats kombineras med bas, trummor, swing, ostinato, fills och textminne.'
+        description: 'SkrivR:s generativa 125 BPM-produktion, vidareutvecklad för VävR. Direkt tangentansats kombineras med bas, trummor, swing, ostinato, fills, textminne och ett kort solo av varje invävt stycke.'
       }
     };
 
@@ -6481,6 +6726,19 @@
       structureHeadingInput: $('#structure-heading-input'),
       structureTitle: $('#structure-title'),
       structureSummary: $('#structure-summary'),
+      fulltextView: $('#fulltext-view'),
+      fulltextTitle: $('#fulltext-title'),
+      fulltextStatus: $('#fulltext-status'),
+      fulltextDocument: $('#fulltext-document'),
+      fulltextMarkdown: $('#fulltext-markdown'),
+      fulltextFormattedButton: $('#fulltext-formatted-button'),
+      fulltextMarkdownButton: $('#fulltext-markdown-button'),
+      fulltextCommentsToggle: $('#fulltext-comments-toggle'),
+      fulltextEdit: $('#fulltext-edit'),
+      fulltextCancel: $('#fulltext-cancel'),
+      fulltextSave: $('#fulltext-save'),
+      fulltextStats: $('#fulltext-stats'),
+      fulltextCommentSummary: $('#fulltext-comment-summary'),
       echoView: $('#echo-view'),
       echoScope: $('#echo-scope'),
       echoModeToggle: $('#echo-mode-toggle'),
@@ -6589,6 +6847,10 @@
     let editingSnapshot = null;
     let editingBuffer = null;
     let editingCheckpointText = null;
+    let fulltextMode = 'formatted';
+    let fulltextEditing = false;
+    let fulltextCommentsVisible = false;
+    let fulltextOriginalMarkdown = '';
     let liftedMove = null;
     let draggedBlockId = null;
     let structureSectionId = null;
@@ -7005,6 +7267,59 @@
       return document.blocks.map(block =>
         block.kind === 'heading' ? '#'.repeat(block.level) + ' ' + block.text : block.text
       ).join('\n\n') + '\n';
+    }
+
+    function commentText(comment) {
+      if (typeof comment === 'string') return comment.trim();
+      return String(comment?.text || comment?.content || '').trim();
+    }
+
+    function documentCommentCount(document = activeDocument()) {
+      return document.blocks.reduce((sum, block) =>
+        sum + (Array.isArray(block.comments) ? block.comments.filter(comment => commentText(comment)).length : 0), 0);
+    }
+
+    function readingMinutes(words) {
+      return words ? Math.max(1, Math.ceil(words / 225)) : 0;
+    }
+
+    function reconcileMarkdownBlocks(markdown, previousBlocks) {
+      const parsed = parseMarkdown(markdown);
+      const previous = previousBlocks || [];
+      const used = new Set();
+      const exact = new Map();
+      const signature = block => `${block.kind}:${block.level || 0}:${block.text}`;
+
+      previous.forEach((block, index) => {
+        const key = signature(block);
+        if (!exact.has(key)) exact.set(key, []);
+        exact.get(key).push(index);
+      });
+
+      const blocks = parsed.map((block, index) => {
+        const exactIndex = (exact.get(signature(block)) || []).find(candidate => !used.has(candidate));
+        const positionalIndex = !used.has(index) && previous[index]?.kind === block.kind ? index : -1;
+        const sourceIndex = exactIndex ?? positionalIndex;
+        if (sourceIndex < 0) return block;
+        used.add(sourceIndex);
+        const source = previous[sourceIndex];
+        const changed = source.text !== block.text || source.level !== block.level || source.kind !== block.kind;
+        const revisions = [...(source.revisions || [])];
+        if (changed && source.text) {
+          revisions.push(normalizeRevision({ ...source, reason: 'Före heltextredigering' }));
+        }
+        return {
+          ...block,
+          id: source.id,
+          comments: [...(source.comments || [])],
+          created: source.created,
+          revisions: revisions.slice(-MAX_BLOCK_REVISIONS)
+        };
+      });
+
+      const removedCommentCount = previous.reduce((sum, block, index) =>
+        used.has(index) ? sum : sum + (block.comments || []).filter(comment => commentText(comment)).length, 0);
+      return { blocks, removedCommentCount };
     }
 
     function normalizeWord(word) {
@@ -7911,6 +8226,103 @@
         totals.characters += characterCount(block.text);
         return totals;
       }, { words: 0, characters: 0 });
+    }
+
+    function fulltextMetric(label, value) {
+      return `<div class="fulltext-stat"><strong>${escapeHtml(String(value))}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function renderFulltext() {
+      const document = activeDocument();
+      const metrics = documentMetrics(document);
+      const headings = document.blocks.filter(block => block.kind === 'heading').length;
+      const paragraphs = document.blocks.length - headings;
+      const comments = documentCommentCount(document);
+      elements.fulltextTitle.textContent = document.title;
+      elements.fulltextStats.innerHTML = [
+        fulltextMetric('Ord', formatNumber(metrics.words)),
+        fulltextMetric('Texttecken', formatNumber(metrics.characters)),
+        fulltextMetric('Stycken', formatNumber(paragraphs)),
+        fulltextMetric('Rubriker', formatNumber(headings)),
+        fulltextMetric('Lästid', readingMinutes(metrics.words) + ' min'),
+        fulltextMetric('Kommentarer', formatNumber(comments))
+      ].join('');
+      elements.fulltextCommentSummary.textContent = comments
+        ? `${comments} ${comments === 1 ? 'kommentar' : 'kommentarer'} i ${document.blocks.filter(block => (block.comments || []).some(comment => commentText(comment))).length} block.`
+        : 'Inga kommentarer i dokumentet.';
+
+      if (!fulltextEditing) {
+        elements.fulltextDocument.innerHTML = document.blocks.length
+          ? document.blocks.map(block => {
+              const tag = block.kind === 'heading' ? `h${clamp(block.level || 1, 1, 3)}` : 'p';
+              const commentsHtml = (block.comments || []).map(comment => commentText(comment)).filter(Boolean)
+                .map(text => `<p>${escapeHtml(text)}</p>`).join('');
+              return `<section class="fulltext-block" data-block-id="${escapeHtml(block.id)}" data-has-comments="${Boolean(commentsHtml)}">
+                <${tag}>${escapeHtml(block.text)}</${tag}>
+                ${commentsHtml ? `<aside class="fulltext-comments" ${fulltextCommentsVisible ? '' : 'hidden'} aria-label="Kommentarer till textblocket">${commentsHtml}</aside>` : ''}
+              </section>`;
+            }).join('')
+          : '<p class="fulltext-empty">Dokumentet har ännu ingen invävd text.</p>';
+      }
+
+      elements.fulltextDocument.hidden = fulltextMode !== 'formatted' || fulltextEditing;
+      elements.fulltextMarkdown.hidden = fulltextMode !== 'markdown' && !fulltextEditing;
+      elements.fulltextMarkdown.readOnly = !fulltextEditing;
+      elements.fulltextFormattedButton.setAttribute('aria-pressed', String(fulltextMode === 'formatted' && !fulltextEditing));
+      elements.fulltextMarkdownButton.setAttribute('aria-pressed', String(fulltextMode === 'markdown' || fulltextEditing));
+      elements.fulltextFormattedButton.disabled = fulltextEditing;
+      elements.fulltextMarkdownButton.disabled = fulltextEditing;
+      elements.fulltextCommentsToggle.disabled = !comments || fulltextEditing;
+      elements.fulltextCommentsToggle.setAttribute('aria-pressed', String(fulltextCommentsVisible));
+      elements.fulltextCommentsToggle.textContent = fulltextCommentsVisible ? 'Dölj kommentarer' : 'Visa kommentarer';
+      elements.fulltextEdit.hidden = fulltextEditing;
+      elements.fulltextCancel.hidden = !fulltextEditing;
+      elements.fulltextSave.hidden = !fulltextEditing;
+      elements.fulltextStatus.textContent = fulltextEditing
+        ? 'Redigerar hela dokumentets Markdown. Ctrl eller Cmd + Enter sparar.'
+        : `Invävd text i läsordning · ${formatNumber(metrics.words)} ord · utkast räknas inte.`;
+    }
+
+    function setFulltextMode(mode) {
+      if (fulltextEditing) return;
+      fulltextMode = mode === 'markdown' ? 'markdown' : 'formatted';
+      if (fulltextMode === 'markdown') elements.fulltextMarkdown.value = toMarkdown();
+      renderFulltext();
+    }
+
+    function startFulltextEditing() {
+      if (!guardActiveEdit()) return;
+      fulltextEditing = true;
+      fulltextOriginalMarkdown = toMarkdown();
+      elements.fulltextMarkdown.value = fulltextOriginalMarkdown;
+      renderFulltext();
+      requestAnimationFrame(() => elements.fulltextMarkdown.focus());
+    }
+
+    function cancelFulltextEditing() {
+      fulltextEditing = false;
+      elements.fulltextMarkdown.value = fulltextOriginalMarkdown;
+      fulltextMode = 'formatted';
+      renderFulltext();
+      requestAnimationFrame(() => elements.fulltextEdit.focus());
+    }
+
+    function saveFulltextEditing() {
+      if (!fulltextEditing) return;
+      const result = reconcileMarkdownBlocks(elements.fulltextMarkdown.value, activeDocument().blocks);
+      if (result.removedCommentCount && !confirm(
+        `${result.removedCommentCount} ${result.removedCommentCount === 1 ? 'kommentar hör' : 'kommentarer hör'} till text som tagits bort. Spara ändå?`
+      )) return;
+      pushHistory('Redigera heltext');
+      activeDocument().blocks = result.blocks;
+      fulltextEditing = false;
+      fulltextMode = 'formatted';
+      saveState('Heltext sparad');
+      recalculate();
+      renderFulltext();
+      toast('Hela texten sparades');
+      announce('Heltextredigeringen sparades');
+      requestAnimationFrame(() => elements.fulltextEdit.focus());
     }
 
     function goalUnit(metric, value) {
@@ -9668,6 +10080,12 @@
     }
 
     function guardActiveEdit() {
+      if (fulltextEditing) {
+        toast('Spara eller avbryt heltextredigeringen först');
+        announce('Heltextredigeringen måste sparas eller avbrytas innan du fortsätter');
+        requestAnimationFrame(() => elements.fulltextMarkdown.focus());
+        return false;
+      }
       if (!editingId) return true;
       toast('Spara eller avbryt den pågående redigeringen först');
       announce('Pågående redigering måste sparas eller avbrytas innan du fortsätter');
@@ -10922,6 +11340,7 @@
       renderStats();
       renderOutline();
       if (view === 'echo') renderEcho();
+      if (view === 'fulltext') renderFulltext();
       if (selectedId && analysis.nodesById.has(selectedId) && elements.inspector.dataset.open === 'true') {
         renderInspector(selectedId);
       } else if (selectedId && !analysis.nodesById.has(selectedId)) {
@@ -10969,7 +11388,7 @@
     }
 
     function switchView(nextView) {
-      if (!['write', 'graph', 'structure', 'echo'].includes(nextView)) return;
+      if (!['write', 'graph', 'structure', 'echo', 'fulltext'].includes(nextView)) return;
       if (nextView !== view && !guardActiveEdit()) return;
       if (nextView !== 'structure') {
         liftedMove = null;
@@ -10982,7 +11401,7 @@
       elements.body.dataset.view = nextView;
       $$('.mode-button').forEach(button => {
         const active = button.dataset.viewTarget === nextView ||
-          (button.dataset.viewTarget === 'vavbord' && nextView !== 'write');
+          (button.dataset.viewTarget === 'vavbord' && ['graph', 'structure', 'echo'].includes(nextView));
         if (active) button.setAttribute('aria-current', 'page');
         else button.removeAttribute('aria-current');
       });
@@ -11016,7 +11435,7 @@
           target?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth', block: 'center' });
           target?.focus({ preventScroll: true });
         });
-      } else {
+      } else if (nextView === 'echo') {
         closeInspector();
         stopSimulation();
         renderEcho();
@@ -11026,13 +11445,20 @@
             : null;
           (selected || $('[aria-selected="true"]', elements.echoModeToggle))?.focus();
         });
+      } else {
+        closeInspector();
+        stopSimulation();
+        renderFulltext();
+        requestAnimationFrame(() => elements.fulltextEdit.focus());
       }
       announce('Växlade till ' + (
         nextView === 'write'
           ? 'Skriv'
           : (nextView === 'graph'
             ? 'Vävbordets Noder'
-            : (nextView === 'echo' ? 'Ordekon' : 'Vävbordets Lista'))
+            : (nextView === 'echo'
+              ? 'Ordekon'
+              : (nextView === 'fulltext' ? 'Heltext' : 'Vävbordets Lista')))
       ));
     }
 
@@ -11497,6 +11923,9 @@
       editingSnapshot = null;
       editingBuffer = null;
       editingCheckpointText = null;
+      fulltextEditing = false;
+      fulltextMode = 'formatted';
+      fulltextOriginalMarkdown = '';
       liftedMove = null;
       draggedBlockId = null;
       lastVavbordFocusId = null;
@@ -11547,6 +11976,24 @@
       }));
       $$('[data-vavbord-view]', elements.vavbordToolbar).forEach(button => {
         button.addEventListener('click', () => switchVavbordView(button.dataset.vavbordView));
+      });
+      elements.fulltextFormattedButton.addEventListener('click', () => setFulltextMode('formatted'));
+      elements.fulltextMarkdownButton.addEventListener('click', () => setFulltextMode('markdown'));
+      elements.fulltextCommentsToggle.addEventListener('click', () => {
+        fulltextCommentsVisible = !fulltextCommentsVisible;
+        renderFulltext();
+      });
+      elements.fulltextEdit.addEventListener('click', startFulltextEditing);
+      elements.fulltextCancel.addEventListener('click', cancelFulltextEditing);
+      elements.fulltextSave.addEventListener('click', saveFulltextEditing);
+      elements.fulltextMarkdown.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && fulltextEditing) {
+          event.preventDefault();
+          saveFulltextEditing();
+        } else if (event.key === 'Escape' && fulltextEditing) {
+          event.preventDefault();
+          cancelFulltextEditing();
+        }
       });
       $$('[data-echo-mode]', elements.echoModeToggle).forEach(button => {
         button.addEventListener('click', () => setEchoMode(button.dataset.echoMode));
@@ -11805,7 +12252,7 @@
       });
       window.visualViewport?.addEventListener('resize', scheduleResize);
       window.addEventListener('beforeunload', event => {
-        if (!editingId) return;
+        if (!editingId && !fulltextEditing) return;
         event.preventDefault();
         event.returnValue = '';
       });
@@ -11897,6 +12344,9 @@
         } else if (command && !event.shiftKey && event.key === '4') {
           event.preventDefault();
           switchVavbordView('echo');
+        } else if (command && !event.shiftKey && event.key === '5') {
+          event.preventDefault();
+          switchView('fulltext');
         } else if (command && event.key.toLowerCase() === 'b') {
           event.preventDefault();
           elements.utility.dataset.open === 'true' ? closeUtility() : openUtility();
@@ -11908,6 +12358,7 @@
           redoDocument();
         } else if (event.key === 'Escape') {
           if (elements.utility.dataset.open === 'true') closeUtility();
+          else if (fulltextEditing) cancelFulltextEditing();
           else if (editingId) cancelEditing();
           else if (liftedMove) cancelLiftedMove();
           else if (view === 'echo' && echoSelectionId) closeEchoDetail();
@@ -11931,6 +12382,7 @@
         elements.activeDocumentLabel.textContent = document.title;
         elements.documentsButton.setAttribute('aria-label', 'Öppna dokument. Aktivt dokument: ' + document.title);
         elements.structureTitle.textContent = document.title;
+        elements.fulltextTitle.textContent = document.title;
         clearTimeout(titleSaveTimer);
         titleSaveTimer = setTimeout(() => {
           saveState('Lokalt sparat', documentId);

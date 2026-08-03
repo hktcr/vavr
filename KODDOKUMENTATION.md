@@ -21,8 +21,8 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | Fil | Roll |
 |---|---|
 | `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, dokumentyta, dokumentlikhet, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
-| `valsang-engine.js` | Biologiskt inspirerad Valsångsmotor med omedelbar tangentrespons, frasminne och en fast tre-rösterspool för styckesvisa korsfader |
-| `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills och ett nytt omedelbart tangentanslag |
+| `valsang-engine.js` | Biologiskt inspirerad Valsångsmotor med omedelbar tangentrespons, frasminne, kontextstyrda svarssånger och en fast tre-rösterspool för styckesvisa korsfader |
+| `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills, omedelbart tangentanslag och en begränsad lane för styckessolon |
 | `ordekon-engine.js` | Lokal analysmotor för upprepade ord, fraser, meningsstarter, förekomster och begränsad lokal anhopning |
 | `ordekon-kelly.js` | Genererad kompakt frekvensreferens från Språkbankens Swedish Kelly-list, CC-BY-4.0 |
 | `ordekon-worker.js` | Lokal bakgrundstråd som kör Ordekon utan att låsa redigeringsgränssnittet |
@@ -35,8 +35,8 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 235 kontroller av appskal, dokumentyta, dokumentskydd, typografi, Vävbord, Ordekon, nodlayout, strukturflytt, PWA, skrivstöd och ljudintegration |
-| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
+| `vavr-shell-test.mjs` | 249 kontroller av appskal, dokumentyta, Heltext, dokumentskydd, typografi, Vävbord, Ordekon, nodlayout, strukturflytt, PWA, skrivstöd och ljudintegration |
+| `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, deterministiska blocksvar, resursgränser vid 120 täta commits, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 | `vavr-ordekon-test.mjs` | 23 tester av frekvensviktning, formordsskydd, böjningsnormalisering, förekomstpositioner, maximala fraser, meningsstarter, anhopningstak och determinism |
 
 Applikationen har inga externa körtidsberoenden och inget byggsteg.
@@ -155,6 +155,26 @@ versioner sparas per block och de ingår automatiskt i JSON-säkerhetskopian.
 
 ## Arbetslägen
 
+### Heltext
+
+`renderFulltext()` härleder både manus och grundstatistik direkt från det
+aktiva dokumentets kanoniska blocklista. Den formaterade vyn skapar endast
+rubrikelement, stycken och escapad kommentarstext. Markdown-läget är skrivskyddat
+tills användaren uttryckligen väljer Redigera hela texten.
+
+`reconcileMarkdownBlocks()` tolkar den sparade Markdown-texten och matchar
+först block genom typ, nivå och exakt text, därefter genom säker position och
+blocktyp. Matchade block behåller id, kommentarer, skapandetid och tidigare
+versioner. Ändrad text skapar revisionen `Före heltextredigering`. Ett
+kommenterat block som inte längre kan matchas räknas i
+`removedCommentCount`, vilket utlöser en separat bekräftelse före mutation.
+
+Heltextredigering använder samma centrala redigeringsspärr som Lista och
+Noder. Dokumentbyte och arbetslägesbyte stoppas tills redigeringen sparats
+eller avbrutits. `beforeunload` skyddar även osparad heltext. Utskriftsstilen
+döljer gränssnitt och statistik men behåller manus och uttryckligen visade
+kommentarer.
+
 ### Dokumentytan
 
 Dokumentytan är ett modalt arbetslager ovanpå de två arbetsrummen. En
@@ -259,9 +279,14 @@ commit roterar exakt en gång till nästa röst. Den nya rösten växer fram und
 ungefär två till tre sekunder och den föregående tonar bort under åtta till
 fjorton sekunder. Rubriknivå väljer motivfamilj och register. Lokal
 TF/IDF-likhet, vokalandel och meningslängd styr konturavstånd, formanter,
-stereobredd och fraslängd. Röstpoolen återanvänds cirkulärt, masterkedjan har
-kompressor och reverbet använder en kortare 3,8 sekunders impulsrespons för
-lägre startkostnad på mobil.
+stereobredd och fraslängd. Vid samma commit samplas blockets typade kontur,
+eller blocktexten efter en inklistring, till en kort svarssång. Hög likhet ger
+ett närmare eko och låg likhet ger ett motriktat svar. Textlängd bestämmer två
+till sju tonpunkter och sluttecknet bestämmer kadens. Mycket korta block får
+ett lägre mikrosvar. Svarskonturen automatiseras på den nya poolrösten och
+skapar därför inga nya oscillatorer. Röstpoolen återanvänds cirkulärt,
+masterkedjan har kompressor och reverbet använder en kortare 3,8 sekunders
+impulsrespons för lägre startkostnad på mobil.
 
 Hard Fork är på motsvarande sätt SkrivR:s fullständiga 125 BPM-motor.
 En lookahead-scheduler driver ett swingande sextondelsnät med kick, bas,
@@ -273,11 +298,25 @@ ett kort okvantiserat pluck vid själva tangentgesten, medan det starkare
 musikaliska svaret ligger kvar på rytmnätet. Därmed bevaras Hard Fork-känslan
 utan den upplevda tangentfördröjningen.
 
+Ett styckecommit bygger dessutom en deterministisk soloplan från blocktextens
+bokstavsrörelser, textlängd, vokalandel, sluttecken, lokal likhet och det
+senaste melodiminnet. Mycket kort text ger ett tretons mikrofill. Längre text
+ger fem till tio toner under högst ungefär tre sekunder. Planen skapar inga
+ljudnoder vid commit utan konsumeras stegvis av samma lookahead-scheduler och
+routas genom `synthBus`, waveshaper och kompressor. Som mest finns två planer
+sammanlagt i aktiv och väntande lane. Om fler block vävs in innan de hinner
+spelas ersätter den senaste planen det senaste väntande svaret. Det första
+normala svaret får därmed avslutas utan att hundratals schemalagda oscillatorer
+kan byggas upp. Solots komprimerade kontur blir sedan nästa ostinatominne.
+Rubrikcommit använder samma begränsade lane men får ett tydligare temasting.
+
 Den lokala textprofilen innehåller också teckenmängd, alfabetiskt
 tyngdcentrum, rubrikskiften och dokumenttitel. Titeln och textens tillväxt
 ger Hard Fork ett deterministiskt musikaliskt fingeravtryck. Vid stopp
 återställs sequencer, fill, skrivstatus och vilomodulation så att en ny
-session aldrig ärver ett gammalt rytmläge.
+session aldrig ärver ett gammalt rytmläge. Även aktiv soloplan, väntande
+planer och blocksvarsräknare töms. Tomma block lämnar båda dynamiska motorerna
+helt oförändrade.
 
 `Typewriter` är en separat Web Audio-motor för direkt tangentfeedback.
 Mekanisk, Reseskrivare, Elektrisk och Dämpad använder olika kombinationer av

@@ -29,7 +29,8 @@ class FakeParam {
 }
 
 class FakeNode {
-  constructor() {
+  constructor(kind = 'node') {
+    this.kind = kind;
     this.gain = new FakeParam();
     this.frequency = new FakeParam();
     this.detune = new FakeParam();
@@ -49,7 +50,13 @@ class FakeNode {
   disconnect() {}
   addEventListener(name, callback) { this.listeners[name] = callback; }
   start(time) { FakeAudioContext.startTimes.push(time); }
-  stop() { this.listeners.ended?.(); }
+  stop(time) {
+    if (this.kind === 'oscillator') {
+      FakeAudioContext.oscillatorStopCalls += 1;
+      FakeAudioContext.oscillatorStopTimes.push(time);
+    }
+    this.listeners.ended?.();
+  }
 }
 
 class FakeAudioContext {
@@ -58,6 +65,8 @@ class FakeAudioContext {
   static bufferCreations = 0;
   static waveShaperCreations = 0;
   static oscillatorCreations = 0;
+  static oscillatorStopCalls = 0;
+  static oscillatorStopTimes = [];
   static convolverCreations = 0;
   static delayCreations = 0;
   static startTimes = [];
@@ -78,7 +87,7 @@ class FakeAudioContext {
     return { getChannelData: index => data[index] };
   }
 
-  createBufferSource() { return new FakeNode(); }
+  createBufferSource() { return new FakeNode('buffer-source'); }
   createBiquadFilter() { return new FakeNode(); }
   createConvolver() {
     FakeAudioContext.convolverCreations += 1;
@@ -91,7 +100,7 @@ class FakeAudioContext {
   createGain() { return new FakeNode(); }
   createOscillator() {
     FakeAudioContext.oscillatorCreations += 1;
-    return new FakeNode();
+    return new FakeNode('oscillator');
   }
   createStereoPanner() { return new FakeNode(); }
   createDynamicsCompressor() { return new FakeNode(); }
@@ -220,8 +229,16 @@ if (
 ) {
   throw new Error('Valsång byggde inte sin fasta tre-rösterspool, LFO:er och reverbrum.');
 }
+engine.commit('paragraph', { text: '   ' });
+if (
+  valsangEngine.getState().voiceGeneration !== 0 ||
+  valsangEngine.getState().responseSongCount !== 0
+) {
+  throw new Error('Valsång svarade musikaliskt på ett tomt block.');
+}
 engine.handleKey('a');
 engine.handleKey('s');
+engine.handleKey('k');
 engine.handleKey('.');
 const generationBeforeEnter = valsangEngine.getState().voiceGeneration;
 engine.handleKey('Enter');
@@ -229,6 +246,7 @@ if (valsangEngine.getState().voiceGeneration !== generationBeforeEnter) {
   throw new Error('Enter roterade Valsångens röst trots att inget block hade vävts in.');
 }
 const oscillatorsBeforeCommits = FakeAudioContext.oscillatorCreations;
+const oscillatorStopsBeforeCommits = FakeAudioContext.oscillatorStopCalls;
 engine.commit('paragraph', {
   text: 'Havet bär den första långa frasen vidare.',
   vowelRatio: .44,
@@ -240,10 +258,16 @@ if (
   valsangState.voiceGeneration !== generationBeforeEnter + 1 ||
   valsangState.foregroundVoice !== 1 ||
   valsangState.lastCommitKind !== 'paragraph' ||
+  valsangState.responseSongCount !== 1 ||
+  valsangState.lastResponseSong?.role !== 'answer-song' ||
+  valsangState.lastResponseSong?.relationship !== 'echo' ||
+  valsangState.lastResponseSong?.source !== 'typed-contour' ||
+  valsangState.lastResponseSong?.degrees.length < 3 ||
+  valsangState.lastResponseSong?.durationSeconds > 6 ||
   valsangState.lastFadeSeconds < 8 ||
   valsangState.lastFadeSeconds > 14
 ) {
-  throw new Error('Ett invävt stycke startade inte exakt en ny, långsamt övertonad Valsångsröst.');
+  throw new Error('Ett invävt stycke gav inte både en långsamt övertonad röst och en kort kontextstyrd svarssång.');
 }
 engine.commit('heading', {
   text: 'Djupare vatten',
@@ -253,8 +277,46 @@ engine.commit('heading', {
   similarityToPrevious: .28
 });
 valsangState = valsangEngine.getState();
-if (valsangState.lastCommitKind !== 'heading' || valsangState.foregroundVoice !== 2) {
+if (
+  valsangState.lastCommitKind !== 'heading' ||
+  valsangState.foregroundVoice !== 2 ||
+  valsangState.lastResponseSong?.role !== 'theme-call' ||
+  valsangState.lastResponseSong?.relationship !== 'section-call'
+) {
   throw new Error('En rubrik skapade inte en tydlig temaväxling i Valsången.');
+}
+engine.commit('paragraph', {
+  text: 'Eko?',
+  words: 1,
+  vowelRatio: .5,
+  averageSentenceWords: 1,
+  similarityToPrevious: .18
+});
+const microResponse = valsangEngine.getState().lastResponseSong;
+if (
+  microResponse?.role !== 'micro-answer' ||
+  microResponse?.cadence !== 'question' ||
+  microResponse?.degrees.length !== 2 ||
+  microResponse?.durationSeconds >= 3
+) {
+  throw new Error('Valsång gav inte ett kort, diskret mikrosvar på ett mycket kort block.');
+}
+engine.commit('paragraph', {
+  text: Array.from({ length: 150 }, (_, index) => 'havston' + index).join(' ') + '.',
+  words: 150,
+  vowelRatio: .43,
+  averageSentenceWords: 30,
+  similarityToPrevious: .64
+});
+const longResponse = valsangEngine.getState().lastResponseSong;
+if (
+  longResponse?.role !== 'answer-song' ||
+  longResponse?.cadence !== 'resolution' ||
+  longResponse?.degrees.length <= microResponse.degrees.length ||
+  longResponse?.degrees.length > 7 ||
+  longResponse?.durationSeconds > 6.2
+) {
+  throw new Error('Valsång lät inte textlängd och sluttecken forma en begränsad svarssång.');
 }
 for (let index = 0; index < 120; index++) {
   engine.commit('paragraph', {
@@ -268,15 +330,54 @@ valsangState = valsangEngine.getState();
 if (
   valsangState.voicePoolSize !== 3 ||
   valsangState.activeVoices > 3 ||
-  FakeAudioContext.oscillatorCreations !== oscillatorsBeforeCommits
+  !valsangState.responseUsesVoicePool ||
+  FakeAudioContext.oscillatorCreations !== oscillatorsBeforeCommits ||
+  FakeAudioContext.oscillatorStopCalls !== oscillatorStopsBeforeCommits ||
+  valsangState.lastResponseSong?.source !== 'block-text'
 ) {
-  throw new Error('Valsångens styckesväxling växte utanför den fasta tre-rösterspoolen.');
+  throw new Error('Valsångens svarssånger stannade inte inom den fasta tre-rösterspoolen.');
 }
 engine.stop(true);
-if (valsangEngine.getState().voicePoolSize !== 0) {
-  throw new Error('Valsångens röstpool tömdes inte vid stopp.');
+if (
+  valsangEngine.getState().voicePoolSize !== 0 ||
+  valsangEngine.getState().responseSongCount !== 0 ||
+  valsangEngine.getState().lastResponseSong !== null
+) {
+  throw new Error('Valsångens röstpool eller svarsmusik tömdes inte vid stopp.');
 }
-console.log('  ok   Valsång skiljer frasslut från blockcommit och korsfadar högst tre dokumentstyrda röster');
+console.log('  ok   Valsång skiljer frasslut från blockcommit och formar varje svarssång inom sin fasta tre-rösterspool');
+
+const deterministicValsangProfile = {
+  words: 44,
+  characters: 280,
+  vowelRatio: .42,
+  paragraphs: 2,
+  documentTitle: 'Samma hav'
+};
+const deterministicValsangBlock = {
+  text: 'Samma stycke återvänder och ber havet att svara?',
+  words: 9,
+  vowelRatio: .44,
+  averageSentenceWords: 9,
+  similarityToPrevious: .63
+};
+await engine.start('valsang', 24, deterministicValsangProfile);
+engine.commit('paragraph', deterministicValsangBlock);
+const firstResponsePlan = valsangEngine.getState().lastResponseSong;
+engine.stop(true);
+await engine.start('valsang', 24, deterministicValsangProfile);
+engine.commit('paragraph', deterministicValsangBlock);
+const repeatedResponsePlan = valsangEngine.getState().lastResponseSong;
+if (
+  repeatedResponsePlan.signature !== firstResponsePlan.signature ||
+  JSON.stringify(repeatedResponsePlan.degrees) !== JSON.stringify(firstResponsePlan.degrees) ||
+  JSON.stringify(repeatedResponsePlan.offsets) !== JSON.stringify(firstResponsePlan.offsets) ||
+  repeatedResponsePlan.cadence !== firstResponsePlan.cadence
+) {
+  throw new Error('Valsång gav inte samma block samma svar från samma musikaliska utgångsläge.');
+}
+engine.stop(true);
+console.log('  ok   Valsångens blockmappning är deterministisk från samma utgångsläge');
 
 const hardForkDelaysBefore = FakeAudioContext.delayCreations;
 const hardForkShapersBefore = FakeAudioContext.waveShaperCreations;
@@ -306,8 +407,142 @@ if (
 }
 engine.handleKey(' ');
 engine.handleKey('.');
+hardForkContext.currentTime = 12;
+FakeAudioContext.startTimes = [];
+const hardForkEngine = sandbox.window.HardForkEngine;
+const emptySoloOscillators = FakeAudioContext.oscillatorCreations;
+engine.commit('paragraph', { text: '   ' });
+if (
+  hardForkEngine.getState().paragraphSoloCount !== 0 ||
+  hardForkEngine.getState().pendingCommitSoloCount !== 0 ||
+  FakeAudioContext.oscillatorCreations !== emptySoloOscillators
+) {
+  throw new Error('Hard Fork svarade musikaliskt på ett tomt block.');
+}
+const soloProfile = {
+  text: 'Koden delar sig, men styckets motiv lever vidare genom grenen.',
+  words: 11,
+  vowelRatio: .41,
+  averageSentenceWords: 11,
+  similarityToPrevious: .68
+};
+hardForkEngine.resetMemory();
+const soloOscillatorsBefore = FakeAudioContext.oscillatorCreations;
+engine.commit('paragraph', soloProfile);
+let hardForkState = hardForkEngine.getState();
+const firstSolo = hardForkState.lastParagraphSolo;
+if (
+  hardForkState.paragraphSoloCount !== 1 ||
+  firstSolo?.role !== 'paragraph-solo' ||
+  firstSolo?.degrees.length < 6 ||
+  firstSolo?.degrees.length > 10 ||
+  firstSolo?.steps.some((step, index) => index > 0 && step <= firstSolo.steps[index - 1]) ||
+  !firstSolo?.startsOnGrid ||
+  firstSolo?.durationSeconds > 3.2 ||
+  hardForkState.pendingCommitSoloCount !== 1 ||
+  hardForkState.maxCommitSoloPlans !== 2 ||
+  FakeAudioContext.oscillatorCreations !== soloOscillatorsBefore
+) {
+  throw new Error('Hard Fork byggde inte ett kort, rytmnätsbundet och köbegränsat solo av det invävda stycket.');
+}
+hardForkEngine.resetMemory();
+engine.commit('paragraph', soloProfile);
+hardForkState = hardForkEngine.getState();
+const repeatedSolo = hardForkState.lastParagraphSolo;
+if (
+  repeatedSolo.signature !== firstSolo.signature ||
+  JSON.stringify(repeatedSolo.degrees) !== JSON.stringify(firstSolo.degrees) ||
+  JSON.stringify(repeatedSolo.steps) !== JSON.stringify(firstSolo.steps)
+) {
+  throw new Error('Hard Fork gav inte samma stycke samma solo från samma musikaliska utgångsläge.');
+}
+hardForkEngine.resetMemory();
+engine.commit('paragraph', {
+  text: 'Gren?',
+  words: 1,
+  vowelRatio: .34,
+  averageSentenceWords: 1,
+  similarityToPrevious: .12
+});
+const microSolo = hardForkEngine.getState().lastParagraphSolo;
+engine.commit('paragraph', {
+  text: Array.from({ length: 120 }, (_, index) => 'grenord' + index).join(' ') + '.',
+  words: 120,
+  vowelRatio: .42,
+  averageSentenceWords: 30,
+  similarityToPrevious: .74
+});
+const longSolo = hardForkEngine.getState().lastParagraphSolo;
+if (
+  microSolo?.role !== 'microfill' ||
+  microSolo?.cadence !== 'question' ||
+  microSolo?.degrees.length !== 3 ||
+  longSolo?.role !== 'paragraph-solo' ||
+  longSolo?.cadence !== 'resolution' ||
+  longSolo?.degrees.length <= microSolo.degrees.length ||
+  longSolo?.degrees.length > 10 ||
+  hardForkEngine.getState().pendingCommitSoloCount !== 2
+) {
+  throw new Error('Hard Fork lät inte textlängd och sluttecken forma mikrofill respektive styckessolo.');
+}
+const rapidCommitOscillators = FakeAudioContext.oscillatorCreations;
+for (let index = 0; index < 120; index++) {
+  engine.commit('paragraph', {
+    text: 'Snabb gren ' + index + ' får ersätta en väntande soloplan.',
+    words: 9,
+    vowelRatio: .4,
+    averageSentenceWords: 9,
+    similarityToPrevious: (index % 10) / 10
+  });
+}
+hardForkState = hardForkEngine.getState();
+if (
+  hardForkState.pendingCommitSoloCount !== 2 ||
+  hardForkState.commitSoloActive ||
+  hardForkState.supersededCommitSolos < 120 ||
+  FakeAudioContext.oscillatorCreations !== rapidCommitOscillators
+) {
+  throw new Error('Hard Fork samlade för många väntande solon eller skapade noder direkt vid 120 snabba commits.');
+}
+await new Promise(resolve => setTimeout(resolve, 35));
+hardForkState = hardForkEngine.getState();
+if (
+  hardForkState.pendingCommitSoloCount > 2 ||
+  !hardForkState.commitSoloActive ||
+  hardForkState.pendingCommitSoloCount + Number(hardForkState.commitSoloActive) > 2 ||
+  FakeAudioContext.oscillatorCreations - rapidCommitOscillators > 10
+) {
+  throw new Error('Hard Fork höll inte den faktiska sololane-gränsen när schedulern började spela kön.');
+}
+const activeLaneOscillators = FakeAudioContext.oscillatorCreations;
+for (let index = 0; index < 120; index++) {
+  engine.commit('paragraph', {
+    text: 'Aktiv gren ' + index + ' samsas med högst ett väntande svar.',
+    words: 10,
+    vowelRatio: .41,
+    averageSentenceWords: 10,
+    similarityToPrevious: .5
+  });
+}
+hardForkState = hardForkEngine.getState();
+if (
+  !hardForkState.commitSoloActive ||
+  hardForkState.pendingCommitSoloCount !== 1 ||
+  hardForkState.pendingCommitSoloCount + Number(hardForkState.commitSoloActive) !== 2 ||
+  FakeAudioContext.oscillatorCreations !== activeLaneOscillators
+) {
+  throw new Error('Hard Fork överskred två soloplaner när nya commits kom under ett aktivt solo.');
+}
 engine.stop(true);
-console.log('  ok   Hard Fork kombinerar direkt tangentansats med sequencer, distortion och stereodelay');
+hardForkState = hardForkEngine.getState();
+if (
+  hardForkState.pendingCommitSoloCount !== 0 ||
+  hardForkState.commitSoloActive ||
+  hardForkState.lastParagraphSolo !== null
+) {
+  throw new Error('Hard Fork tömde inte solo-lane och väntande svar vid stopp.');
+}
+console.log('  ok   Hard Fork kombinerar direktansats och full produktion med ett deterministiskt styckessolo');
 
 const typewriter = sandbox.testTypewriter;
 const typewriterThemes = ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad'];

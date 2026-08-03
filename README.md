@@ -27,7 +27,7 @@ för en dubblerad kaj. Lista har en kompakt titelrad, Noders gräns räknas frå
 arbetslistens verkliga position och Ordekons detalj öppnas först när ett fynd
 väljs. Kantnot blir en högerdocka på bred skärm och ett bottom sheet på mobil.
 
-## Två arbetsrum
+## Tre arbetsrum
 
 1. **Skriv** visar endast det block som formuleras nu. Enter väver in blocket,
    Shift + Enter ger radbrytning och Ctrl eller Cmd + Z i ett tomt fält tar
@@ -56,6 +56,19 @@ väljs. Kantnot blir en högerdocka på bred skärm och ett bottom sheet på mob
      att visas. Klick visar exakta förekomster, markerar berörda block i Lista
      och Noder och kan öppna valfritt block direkt i den gula
      redigeringsrutan.
+3. **Heltext** visar hela den invävda texten som ett sammanhängande manus.
+   Användaren kan växla mellan en typograferad läsvy och ren Markdown, visa
+   eller dölja befintliga kommentarer och redigera hela dokumentet i ett
+   professionellt Markdown-fält. Sidopanelen visar ord, texttecken, stycken,
+   rubriker, uppskattad lästid och kommentarantal. Utkastet i Skriv räknas
+   inte förrän det har vävts in.
+
+Heltextredigering använder samma blocklista som övriga arbetsrum. Oförändrade
+block behåller id, kommentarer, skapandetid och versioner. Ett ändrat block
+får en skyddspunkt med texten före heltextredigeringen. Om en redigering skulle
+ta bort ett kommenterat block krävs en separat bekräftelse. Ctrl eller Cmd + 5
+öppnar Heltext och Ctrl eller Cmd + Enter sparar en pågående heltextredigering.
+Läsvyn har även ett rent utskriftsläge.
 
 Valt block och fokus följer med mellan Lista, Noder och Ekon. Webbläsare med stöd
 för View Transitions låter blocket övergå mjukt mellan lägena, medan reducerad
@@ -121,13 +134,24 @@ sammanlagda form:
   När ett nytt stycke vävs in växer nästa röst fram under ungefär två till
   tre sekunder medan den föregående tonar bort under åtta till fjorton
   sekunder. Rubriknivå, lokal likhet med föregående stycke, vokalandel och
-  meningslängd styr register, motivsläktskap, formanter och överlappning.
-  Enter avslutar en fras men skapar inte en ny röst förrän blocket verkligen
-  har vävts in.
+  meningslängd styr register, motivsläktskap, formanter och överlappning. Den
+  nya rösten formar samtidigt en kort svarssång av blockets bokstavskontur.
+  Längd och sluttecken påverkar svarets omfång och kadens. Ett mycket kort
+  block får ett diskret mikrosvar. Enter avslutar en fras men skapar inte en
+  ny röst förrän blocket verkligen har vävts in. Svarssången återanvänder
+  samma tre röster och skapar inga ytterligare oscillatorer vid commit.
 - **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
   bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
   Ett nytt direktanslag hörs vid själva tangenten, medan det fylligare lagret
-  fortfarande placeras på sequencerns rytmnät.
+  fortfarande placeras på sequencerns rytmnät. När ett stycke vävs in görs
+  dess bokstavskontur om till ett deterministiskt solo på tre till tio toner.
+  Ett mycket kort block får ett mikrofill. Solot går sedan vidare som nytt
+  ostinatominne. Högst två soloplaner får finnas samtidigt. Vid tätare commits
+  ersätter det senaste stycket det senaste väntande svaret, så ljudnoder inte
+  kan staplas utan gräns.
+
+Tomma block ger inget musikaliskt svar i något av de två dynamiska temana.
+Rubriker behåller sina tydligare temaväxlingar.
 
 Ett separat skrivmaskinslager kan kombineras med vilket ljudlandskap som
 helst. Det har fyra karaktärer: Mekanisk, Reseskrivare, Elektrisk och Dämpad.
