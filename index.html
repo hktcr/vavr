@@ -596,7 +596,12 @@
         0 0 0 1px rgba(89, 194, 255, .08),
         0 12px 24px rgba(0, 0, 0, .3),
         0 0 13px rgba(89, 194, 255, .16);
-      transition: transform .2s var(--ease), box-shadow .2s, border-color .2s;
+      transition:
+        transform .2s var(--ease),
+        box-shadow .2s,
+        border-color .2s,
+        background-color .82s var(--ease),
+        opacity .2s;
     }
 
     .node-shape::before {
@@ -707,8 +712,21 @@
       display: none;
     }
 
+    .graph-node.is-awaiting-birth {
+      opacity: 0;
+    }
+
     .graph-node.is-born .node-shape {
       animation: node-birth .58s var(--ease) both;
+    }
+
+    body[data-view="write"] .graph-node.is-golden-born .node-shape {
+      border-color: rgba(255, 244, 187, .95);
+      background: #ffd45c;
+      box-shadow:
+        0 0 0 5px rgba(255, 212, 92, .13),
+        0 0 22px rgba(255, 212, 92, .95),
+        0 0 54px rgba(197, 160, 89, .72);
     }
 
     @keyframes node-birth {
@@ -744,6 +762,7 @@
 
     #composer {
       position: relative;
+      isolation: isolate;
       width: min(var(--composer-width), calc(100% - 48px));
       border: 1px solid rgba(179, 229, 255, .27);
       border-radius: var(--radius);
@@ -758,6 +777,15 @@
       -webkit-backdrop-filter: blur(22px) saturate(125%);
       pointer-events: auto;
       transition: width .24s var(--ease), border-color .2s, box-shadow .2s;
+    }
+
+    #composer > :not(.composer-grip) {
+      position: relative;
+      z-index: 1;
+    }
+
+    #composer::before {
+      pointer-events: none;
     }
 
     #composer:focus-within {
@@ -822,6 +850,49 @@
       padding: 14px 18px 2px;
     }
 
+    .composer-top-main,
+    .composer-top-meta {
+      display: inline-flex;
+      min-width: 0;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .typewriter-mode-toggle {
+      display: inline-flex;
+      min-height: 30px;
+      align-items: center;
+      gap: 6px;
+      padding: 0 9px;
+      border: 1px solid rgba(179, 229, 255, .11);
+      border-radius: 999px;
+      background: rgba(179, 229, 255, .025);
+      color: var(--paper-faint);
+      cursor: pointer;
+      font: 9px/1 var(--mono);
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      transition: color .16s, border-color .16s, background .16s, box-shadow .2s;
+    }
+
+    .typewriter-mode-toggle svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .typewriter-mode-toggle:hover,
+    .typewriter-mode-toggle:focus-visible {
+      border-color: rgba(89, 194, 255, .36);
+      color: var(--cyan-bright);
+    }
+
+    .typewriter-mode-toggle[aria-pressed="true"] {
+      border-color: rgba(197, 160, 89, .55);
+      background: rgba(197, 160, 89, .09);
+      box-shadow: 0 0 18px rgba(197, 160, 89, .1);
+      color: #f2d68f;
+    }
+
     #block-kind {
       color: var(--cyan);
     }
@@ -884,7 +955,63 @@
       font-variant-numeric: tabular-nums;
     }
 
+    #draft-stage {
+      position: relative;
+      min-height: 132px;
+    }
+
+    #typewriter-focus-layer {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent var(--typewriter-mask-start, 0%),
+        #000 var(--typewriter-mask-end, 18%),
+        #000 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent var(--typewriter-mask-start, 0%),
+        #000 var(--typewriter-mask-end, 18%),
+        #000 100%
+      );
+    }
+
+    #typewriter-focus-copy {
+      width: 100%;
+      min-height: 100%;
+      padding: 19px 24px 21px;
+      color: var(--paper);
+      font: 400 clamp(20px, 2.1vw, 27px)/1.58 var(--serif);
+      overflow-wrap: break-word;
+      text-wrap: pretty;
+      white-space: pre-wrap;
+      will-change: transform;
+    }
+
+    .typewriter-sentence {
+      opacity: var(--sentence-opacity, .18);
+      transition: opacity .24s var(--ease), color .24s var(--ease), text-shadow .24s var(--ease);
+    }
+
+    .typewriter-sentence.current {
+      color: #fffdf6;
+      opacity: 1;
+      text-shadow: 0 0 18px rgba(89, 194, 255, .12);
+    }
+
+    .typewriter-sentence.future {
+      opacity: .18;
+    }
+
     #draft-input {
+      position: relative;
+      z-index: 2;
       display: block;
       width: 100%;
       min-height: 132px;
@@ -899,6 +1026,150 @@
       caret-color: var(--cyan);
       font: 400 clamp(20px, 2.1vw, 27px)/1.58 var(--serif);
       text-wrap: pretty;
+    }
+
+    body[data-typewriter-mode="true"] #draft-input:not([data-heading]) {
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+    }
+
+    body[data-typewriter-mode="true"] #draft-input:not([data-heading])::selection {
+      background: rgba(89, 194, 255, .3);
+      color: var(--paper);
+      -webkit-text-fill-color: var(--paper);
+    }
+
+    body[data-typewriter-mode="true"] #draft-input:not([data-heading])::placeholder {
+      color: rgba(154, 170, 181, .4);
+      -webkit-text-fill-color: rgba(154, 170, 181, .4);
+    }
+
+    body:not([data-typewriter-mode="true"]) #typewriter-focus-layer,
+    #typewriter-focus-layer[data-heading="true"] {
+      display: none;
+    }
+
+    .typewriter-context-control {
+      position: absolute;
+      z-index: 4;
+      top: 50%;
+      left: calc(100% + 7px);
+      display: none;
+      width: 44px;
+      height: 164px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(9, 11, 17, .46);
+      color: var(--paper-faint);
+      transform: translateY(-50%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    body[data-typewriter-mode="true"] .typewriter-context-control {
+      display: flex;
+    }
+
+    #typewriter-context-slider {
+      width: 128px;
+      height: 24px;
+      margin: 0;
+      accent-color: var(--amber);
+      cursor: ns-resize;
+      transform: rotate(-90deg);
+    }
+
+    #typewriter-context-output {
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      min-width: 22px;
+      color: #f2d68f;
+      font: 9px/1 var(--mono);
+      text-align: center;
+      transform: translateX(-50%);
+    }
+
+    body[data-typewriter-mode="true"] #composer {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    body[data-typewriter-mode="true"] #composer:focus-within {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    body[data-typewriter-mode="true"] #composer::before {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(255, 222, 145, .035), transparent 44%),
+        var(--glass);
+      box-shadow:
+        0 28px 80px rgba(0, 0, 0, .38),
+        0 0 72px rgba(197, 160, 89, .055);
+      content: "";
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent var(--typewriter-glass-start, 22%),
+        #000 var(--typewriter-glass-solid, 46%),
+        #000 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent var(--typewriter-glass-start, 22%),
+        #000 var(--typewriter-glass-solid, 46%),
+        #000 100%
+      );
+      backdrop-filter: blur(22px) saturate(125%);
+      -webkit-backdrop-filter: blur(22px) saturate(125%);
+    }
+
+    body[data-typewriter-mode="true"] .composer-bottom {
+      border-top-color: transparent;
+    }
+
+    .commit-receipt {
+      position: absolute !important;
+      z-index: 5 !important;
+      right: 14px;
+      bottom: 52px;
+      left: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity .2s, transform .25s var(--ease);
+    }
+
+    .commit-receipt[data-visible="true"] {
+      opacity: 1;
+      transform: none;
+    }
+
+    .commit-receipt-item {
+      min-width: 0;
+      padding: 6px 9px;
+      border: 1px solid rgba(197, 160, 89, .22);
+      border-radius: 999px;
+      background: rgba(197, 160, 89, .055);
+      color: #ead397;
+      font: 9px/1.25 var(--mono);
+      letter-spacing: .035em;
+      white-space: nowrap;
     }
 
     #draft-input::placeholder {
@@ -3673,6 +3944,33 @@
       accent-color: var(--cyan);
     }
 
+    .receipt-options {
+      display: grid;
+      margin: 2px 0 0;
+      padding: 14px 0 0;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      border: 0;
+      border-top: 1px solid rgba(179, 229, 255, .08);
+    }
+
+    .receipt-options legend {
+      padding: 0 0 8px;
+      color: var(--paper-dim);
+      font: 600 10px/1.2 var(--mono);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .receipt-options .check-control {
+      min-height: 44px;
+      justify-content: flex-start;
+      padding: 8px 10px;
+      border: 1px solid rgba(179, 229, 255, .08);
+      border-radius: 9px;
+      background: rgba(179, 229, 255, .018);
+    }
+
     .support-fields {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -3921,15 +4219,88 @@
 
     .commit-ghost {
       position: fixed;
-      z-index: 60;
-      max-width: 25rem;
+      z-index: 43;
+      max-width: min(30rem, calc(100vw - 32px));
       overflow: hidden;
-      color: var(--cyan-bright);
-      font: 18px/1.4 var(--serif);
-      opacity: .75;
+      color: #ffe48a;
+      font: 500 clamp(16px, 2vw, 22px)/1.4 var(--serif);
+      opacity: .92;
       pointer-events: none;
+      text-shadow:
+        0 0 8px rgba(255, 228, 138, .9),
+        0 0 24px rgba(255, 196, 55, .72);
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .commit-ray {
+      position: fixed;
+      z-index: 42;
+      height: 14px;
+      pointer-events: none;
+      transform-origin: 0 50%;
+    }
+
+    .commit-ray-core,
+    .commit-ray-halo {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      left: 0;
+      display: block;
+      border-radius: 999px;
+      transform: translateY(-50%);
+      transform-origin: 0 50%;
+    }
+
+    .commit-ray-core {
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255, 223, 109, .08), #ffe580 24%, #fff7c7 72%, #fff 100%);
+      box-shadow:
+        0 0 7px rgba(255, 228, 128, .98),
+        0 0 18px rgba(255, 193, 51, .76);
+    }
+
+    .commit-ray-halo {
+      height: 12px;
+      background: linear-gradient(90deg, transparent, rgba(255, 202, 64, .25) 54%, rgba(255, 233, 156, .58));
+      filter: blur(5px);
+    }
+
+    .commit-node-orb {
+      position: fixed;
+      z-index: 44;
+      width: 24px;
+      height: 24px;
+      border: 1px solid rgba(255, 248, 201, .96);
+      border-radius: 50%;
+      background: #ffd45c;
+      box-shadow:
+        0 0 0 7px rgba(255, 212, 92, .12),
+        0 0 22px rgba(255, 225, 118, .98),
+        0 0 58px rgba(197, 160, 89, .76);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, -50%) scale(.16);
+      transition:
+        opacity .22s,
+        transform .42s var(--ease),
+        background-color .8s var(--ease),
+        box-shadow .8s var(--ease);
+    }
+
+    .commit-node-orb[data-visible="true"] {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .commit-node-orb[data-settling="true"] {
+      background-color: var(--orb-final-color, var(--cyan));
+      box-shadow:
+        0 0 0 4px rgba(89, 194, 255, .08),
+        0 0 18px rgba(89, 194, 255, .52);
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(.82);
     }
 
     #node-tooltip {
@@ -4076,6 +4447,19 @@
       #width-slider {
         min-height: 44px;
       }
+
+      .typewriter-context-control {
+        right: 3px;
+        left: auto;
+        width: 44px;
+        min-height: 164px;
+        background: rgba(9, 11, 17, .58);
+      }
+
+      body[data-typewriter-mode="true"] #draft-input,
+      body[data-typewriter-mode="true"] #typewriter-focus-copy {
+        padding-right: 52px;
+      }
     }
 
     @media (max-width: 560px) {
@@ -4141,6 +4525,44 @@
         min-height: 118px;
         padding: 16px 17px 18px;
         font-size: 20px;
+      }
+
+      #draft-stage {
+        min-height: 118px;
+      }
+
+      #typewriter-focus-copy {
+        padding: 16px 17px 18px;
+        font-size: 20px;
+      }
+
+      body[data-typewriter-mode="true"] #draft-input,
+      body[data-typewriter-mode="true"] #typewriter-focus-copy {
+        padding-right: 48px;
+      }
+
+      .composer-top {
+        gap: 8px;
+        padding-right: 12px;
+        padding-left: 12px;
+      }
+
+      .typewriter-mode-toggle {
+        width: 36px;
+        min-height: 36px;
+        justify-content: center;
+        padding: 0;
+      }
+
+      .typewriter-mode-toggle span {
+        display: none;
+      }
+
+      .commit-receipt {
+        flex-wrap: wrap;
+        gap: 5px;
+        padding-right: 12px;
+        padding-left: 12px;
       }
 
       .composer-bottom {
@@ -4280,6 +4702,10 @@
       }
 
       .support-fields {
+        grid-template-columns: 1fr;
+      }
+
+      .receipt-options {
         grid-template-columns: 1fr;
       }
 
@@ -4802,10 +5228,25 @@
         <span class="composer-grip left" aria-hidden="true"></span>
         <span class="composer-grip right" aria-hidden="true"></span>
         <div class="composer-top">
-          <span id="block-kind">Nytt stycke</span>
-          <span id="draft-count">0 ord</span>
+          <span class="composer-top-main">
+            <span id="block-kind">Nytt stycke</span>
+            <button id="typewriter-mode-toggle" class="typewriter-mode-toggle" type="button" aria-pressed="false" aria-label="Aktivera skrivmaskinsvy" title="Skrivmaskinsvy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 4h10v5H7zM5 10h14a2 2 0 0 1 2 2v6H3v-6a2 2 0 0 1 2-2Z"/><path d="M7 15h10M8 18v2h8v-2"/></svg>
+              <span>Skrivmaskinsvy</span>
+            </button>
+          </span>
+          <span class="composer-top-meta"><span id="draft-count">0 ord</span></span>
         </div>
-        <textarea id="draft-input" rows="4" spellcheck="true" autocomplete="off" placeholder="Skriv ett stycke. Enter väver in det." aria-label="Skriv nästa stycke"></textarea>
+        <div id="draft-stage">
+          <div id="typewriter-focus-layer" aria-hidden="true"><div id="typewriter-focus-copy"></div></div>
+          <textarea id="draft-input" rows="4" spellcheck="true" autocomplete="off" placeholder="Skriv ett stycke. Enter väver in det." aria-label="Skriv nästa stycke"></textarea>
+          <label id="typewriter-context-control" class="typewriter-context-control" for="typewriter-context-slider" title="Synlig tidigare text i det aktuella stycket">
+            <output id="typewriter-context-output" for="typewriter-context-slider">6</output>
+            <span class="sr-only">Hur många rader av tidigare text som syns</span>
+            <input id="typewriter-context-slider" type="range" min="0" max="7" step="1" value="3" aria-label="Synlig tidigare text" aria-orientation="vertical" aria-valuetext="Cirka 6 tidigare rader">
+          </label>
+        </div>
+        <div id="commit-receipt" class="commit-receipt" aria-live="off" aria-atomic="true"></div>
         <div id="writing-support-summary" class="writing-support-summary" hidden>
           <button id="goal-compact" class="support-compact" type="button" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M22 12h-3"/></svg>
@@ -5175,6 +5616,30 @@
           </div>
           <p class="method-note">Timern är frivillig och blockerar aldrig skrivfältet. Ingenting startar automatiskt.</p>
         </div>
+
+        <div class="support-card">
+          <div class="support-card-head">
+            <div class="support-card-title">
+              <strong>Skrivmaskinsvy</strong>
+              <span id="typewriter-view-state">Av</span>
+            </div>
+            <label class="check-control">
+              <input id="typewriter-view-enabled" type="checkbox">
+              <span>Använd vyn</span>
+            </label>
+          </div>
+          <p class="sound-theme-copy">Den aktuella meningen är tydlig. Tidigare meningar tonas successivt bort inom det aktuella stycket. Skrivmaskinsljud väljs separat.</p>
+          <fieldset id="commit-receipt-options" class="receipt-options">
+            <legend>Efter invävning</legend>
+            <label class="check-control"><input type="checkbox" value="clock"><span>Klockslag</span></label>
+            <label class="check-control"><input type="checkbox" value="timer" checked><span>Tid kvar i skrivpasset</span></label>
+            <label class="check-control"><input type="checkbox" value="blockWords" checked><span>Ord i det invävda stycket</span></label>
+            <label class="check-control"><input type="checkbox" value="passWords"><span>Nettoord under skrivpasset</span></label>
+            <label class="check-control"><input type="checkbox" value="documentWords"><span>Dokumentets totala ord</span></label>
+            <label class="check-control"><input type="checkbox" value="goal" checked><span>Målstatus</span></label>
+          </fieldset>
+          <p class="method-note">Kvitton visas bara i skrivmaskinsvyn. Timer och mål utelämnas automatiskt när de inte är aktiva. Nettoord jämför dokumentens invävda ord med läget när skrivpasset startade.</p>
+        </div>
       </section>
 
       <section id="sound-settings" class="setting-group">
@@ -5344,6 +5809,12 @@
 
     const STORAGE_KEY = 'vavr-weaver-v5';
     const WIDTHS = [540, 640, 720, 820, 940, 1080, 1240, 1440];
+    const TYPEWRITER_CONTEXT_LINES = [0, 2, 4, 6, 9, 13, 18, Infinity];
+    const COMMIT_RECEIPT_OPTIONS = Object.freeze([
+      'clock', 'timer', 'blockWords', 'passWords', 'documentWords', 'goal'
+    ]);
+    const DEFAULT_COMMIT_RECEIPTS = Object.freeze(['timer', 'blockWords', 'goal']);
+    const MAX_COMMIT_EFFECTS = 4;
     const FONT_PROFILES = Object.freeze({
       vav: {
         name: 'Väv',
@@ -5392,6 +5863,9 @@
     const graphemeSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
       ? new Intl.Segmenter('sv', { granularity: 'grapheme' })
       : null;
+    const sentenceSegmenter = typeof Intl !== 'undefined' && Intl.Segmenter
+      ? new Intl.Segmenter('sv', { granularity: 'sentence' })
+      : null;
     const characterCount = text => {
       const value = String(text || '');
       return graphemeSegmenter
@@ -5409,6 +5883,17 @@
         0,
         WIDTHS.length - 1
       );
+    };
+    const normalizeTypewriterContextIndex = value => {
+      const numeric = value == null || (typeof value === 'string' && !value.trim())
+        ? NaN
+        : Number(value);
+      return clamp(Number.isFinite(numeric) ? Math.round(numeric) : 3, 0, TYPEWRITER_CONTEXT_LINES.length - 1);
+    };
+    const normalizeCommitReceipts = value => {
+      const source = Array.isArray(value) ? value : DEFAULT_COMMIT_RECEIPTS;
+      const selected = new Set(source.filter(option => COMMIT_RECEIPT_OPTIONS.includes(option)));
+      return COMMIT_RECEIPT_OPTIONS.filter(option => selected.has(option));
     };
     const formatClock = seconds => {
       const safe = Math.max(0, Math.ceil(Number(seconds) || 0));
@@ -6697,7 +7182,15 @@
       nodeLayer: $('#node-layer'),
       writeView: $('#write-view'),
       composer: $('#composer'),
+      draftStage: $('#draft-stage'),
       draft: $('#draft-input'),
+      typewriterFocusLayer: $('#typewriter-focus-layer'),
+      typewriterFocusCopy: $('#typewriter-focus-copy'),
+      typewriterModeToggle: $('#typewriter-mode-toggle'),
+      typewriterContextControl: $('#typewriter-context-control'),
+      typewriterContextSlider: $('#typewriter-context-slider'),
+      typewriterContextOutput: $('#typewriter-context-output'),
+      commitReceipt: $('#commit-receipt'),
       draftUndo: $('#draft-undo'),
       draftCount: $('#draft-count'),
       blockKind: $('#block-kind'),
@@ -6797,6 +7290,9 @@
       timerBreak: $('#timer-break'),
       timerRestart: $('#timer-restart'),
       timerDone: $('#timer-done'),
+      typewriterViewEnabled: $('#typewriter-view-enabled'),
+      typewriterViewState: $('#typewriter-view-state'),
+      commitReceiptOptions: $('#commit-receipt-options'),
       soundButton: $('#sound-button'),
       soundSettings: $('#sound-settings'),
       soundTheme: $('#sound-theme'),
@@ -6874,6 +7370,13 @@
     let redoStack = [];
     let draftHistories = new Map();
     let toastTimer = null;
+    let receiptTimer = null;
+    let receiptShownAt = 0;
+    let typewriterRenderFrame = null;
+    let isDraftComposing = false;
+    let allowDraftLineBreakUntil = 0;
+    let commitEffectSequence = 0;
+    const activeCommitEffects = new Map();
     let titleSaveTimer = null;
     let draftSaveTimer = null;
     let soundProfileTimer = null;
@@ -6913,6 +7416,14 @@
       };
     }
 
+    function totalCommittedWords(documents = []) {
+      return (Array.isArray(documents) ? documents : []).reduce(
+        (sum, document) => sum + (Array.isArray(document?.blocks) ? document.blocks : [])
+          .reduce((blockSum, block) => blockSum + wordCount(block?.text), 0),
+        0
+      );
+    }
+
     function createTimer(minutes = 25) {
       const durationSec = clamp(Math.round(Number(minutes) || 25), 1, 180) * 60;
       return {
@@ -6921,7 +7432,8 @@
         durationSec,
         remainingSec: durationSec,
         endAt: null,
-        announced: false
+        announced: false,
+        baselineWords: null
       };
     }
 
@@ -6942,7 +7454,10 @@
         durationSec,
         remainingSec,
         endAt: Number.isFinite(Number(timer.endAt)) ? Number(timer.endAt) : null,
-        announced: Boolean(timer.announced)
+        announced: Boolean(timer.announced),
+        baselineWords: timer.baselineWords != null && Number.isFinite(Number(timer.baselineWords))
+          ? Math.max(0, Math.round(Number(timer.baselineWords)))
+          : null
       };
     }
 
@@ -6968,7 +7483,7 @@
     function createDefaultState() {
       const document = createDocument();
       return {
-        version: 12,
+        version: 13,
         activeId: document.id,
         documents: [document],
         settings: {
@@ -6982,6 +7497,9 @@
           focusMinutes: 25,
           breakMinutes: 5,
           showCountdown: true,
+          typewriterView: false,
+          typewriterContextIndex: 3,
+          commitReceipts: [...DEFAULT_COMMIT_RECEIPTS],
           soundTheme: 'none',
           soundVolume: 24,
           soundReactive: true,
@@ -7069,6 +7587,9 @@
             focusMinutes: 25,
             breakMinutes: 5,
             showCountdown: true,
+            typewriterView: false,
+            typewriterContextIndex: 3,
+            commitReceipts: [...DEFAULT_COMMIT_RECEIPTS],
             soundTheme: 'none',
             soundVolume: 24,
             soundReactive: true,
@@ -7087,6 +7608,9 @@
             : 'words';
           stored.settings.fontProfile = normalizeFontProfile(stored.settings.fontProfile);
           stored.settings.showCountdown = stored.settings.showCountdown !== false;
+          stored.settings.typewriterView = stored.settings.typewriterView === true;
+          stored.settings.typewriterContextIndex = normalizeTypewriterContextIndex(stored.settings.typewriterContextIndex);
+          stored.settings.commitReceipts = normalizeCommitReceipts(stored.settings.commitReceipts);
           stored.settings.soundTheme = SOUND_THEMES[stored.settings.soundTheme]
             ? stored.settings.soundTheme
             : 'none';
@@ -7108,7 +7632,7 @@
             0,
             100
           );
-          stored.version = 12;
+          stored.version = 13;
           stored.timer = normalizeTimer(stored.timer, stored.settings.focusMinutes);
           if (!stored.documents.some(document => document.id === stored.activeId)) stored.activeId = stored.documents[0].id;
           return stored;
@@ -7129,7 +7653,7 @@
             hiddenWords: document.doldaOrd || []
           })));
           return {
-            version: 12,
+            version: 13,
             activeId: documents.some(document => document.id === activeLegacy) ? activeLegacy : documents[0].id,
             documents,
             settings: {
@@ -7143,6 +7667,9 @@
               focusMinutes: 25,
               breakMinutes: 5,
               showCountdown: true,
+              typewriterView: false,
+              typewriterContextIndex: 3,
+              commitReceipts: [...DEFAULT_COMMIT_RECEIPTS],
               soundTheme: 'none',
               soundVolume: 24,
               soundReactive: true,
@@ -8478,7 +9005,8 @@
         durationSec,
         remainingSec: durationSec,
         endAt: Date.now() + durationSec * 1000,
-        announced: false
+        announced: false,
+        baselineWords: mode === 'focus' ? totalCommittedWords(app.documents) : null
       };
       saveState(mode === 'break' ? 'Paus startad' : 'Skrivpass startat');
       startTimerTicker();
@@ -8889,6 +9417,318 @@
       renderTimer();
     }
 
+    function typewriterContextLabel(index = app.settings.typewriterContextIndex) {
+      const safeIndex = normalizeTypewriterContextIndex(index);
+      const lines = TYPEWRITER_CONTEXT_LINES[safeIndex];
+      if (lines === 0) return 'Endast aktuell mening';
+      if (!Number.isFinite(lines)) return 'Hela stycket';
+      return `Cirka ${lines} tidigare rader`;
+    }
+
+    function applyTypewriterContext(index, shouldSave = false) {
+      const safeIndex = normalizeTypewriterContextIndex(index);
+      const lines = TYPEWRITER_CONTEXT_LINES[safeIndex];
+      const glassStops = [78, 70, 62, 54, 46, 38, 28, 12];
+      app.settings.typewriterContextIndex = safeIndex;
+      elements.typewriterContextSlider.value = String(safeIndex);
+      elements.typewriterContextSlider.setAttribute('aria-orientation', 'vertical');
+      elements.typewriterContextSlider.setAttribute('aria-valuetext', typewriterContextLabel(safeIndex));
+      elements.typewriterContextOutput.textContent = Number.isFinite(lines) ? String(lines) : 'allt';
+      elements.composer.style.setProperty('--typewriter-glass-solid', glassStops[safeIndex] + '%');
+      renderTypewriterFocus();
+      if (shouldSave) saveState('Texttoning sparad');
+    }
+
+    function renderTypewriterControls() {
+      const enabled = app.settings.typewriterView === true;
+      elements.body.dataset.typewriterMode = String(enabled);
+      elements.typewriterModeToggle.setAttribute('aria-pressed', String(enabled));
+      elements.typewriterModeToggle.setAttribute(
+        'aria-label',
+        enabled ? 'Stäng av skrivmaskinsvy' : 'Aktivera skrivmaskinsvy'
+      );
+      elements.typewriterViewEnabled.checked = enabled;
+      elements.typewriterViewState.textContent = enabled ? 'På' : 'Av';
+      const selected = new Set(normalizeCommitReceipts(app.settings.commitReceipts));
+      $$('input[type="checkbox"]', elements.commitReceiptOptions).forEach(input => {
+        input.checked = selected.has(input.value);
+      });
+      applyTypewriterContext(app.settings.typewriterContextIndex, false);
+      if (!enabled) hideCommitReceipt();
+    }
+
+    function setTypewriterView(enabled, shouldSave = true, focusDraft = true) {
+      app.settings.typewriterView = Boolean(enabled);
+      renderTypewriterControls();
+      if (shouldSave) {
+        saveState('Skrivmaskinsvy sparad');
+        announce(app.settings.typewriterView ? 'Skrivmaskinsvyn är på' : 'Skrivmaskinsvyn är av');
+      }
+      requestAnimationFrame(() => {
+        autoSizeDraft();
+        renderTypewriterFocus();
+        resizeCanvas(true);
+        if (focusDraft) elements.draft.focus({ preventScroll: true });
+      });
+    }
+
+    function isFreshSentenceBoundary(text, caret) {
+      const before = String(text || '').slice(0, Math.max(0, caret)).trimEnd();
+      const match = before.match(/([.!?…])(?:["'”’»\)\]]*)$/u);
+      if (!match) return false;
+      if (match[1] !== '.') return true;
+      const lower = before.toLocaleLowerCase('sv-SE');
+      if (/(?:\b(?:t\.ex|bl\.a|d\.v\.s|m\.m|m\.fl|osv|etc)|(?:\p{L}\.){2,})[."'”’»\)\]]*$/iu.test(lower)) {
+        return false;
+      }
+      return true;
+    }
+
+    function sentenceRanges(text) {
+      const value = String(text || '');
+      if (!value) return [];
+      if (sentenceSegmenter) {
+        return [...sentenceSegmenter.segment(value)].map(part => ({
+          start: part.index,
+          end: part.index + part.segment.length,
+          text: part.segment
+        }));
+      }
+      const ranges = [];
+      const pattern = /[^.!?…]+(?:[.!?…]+["'”’»\)\]]*\s*|$)|[.!?…]+["'”’»\)\]]*\s*/gu;
+      let match;
+      while ((match = pattern.exec(value))) {
+        ranges.push({ start: match.index, end: match.index + match[0].length, text: match[0] });
+      }
+      if (!ranges.length) ranges.push({ start: 0, end: value.length, text: value });
+      return ranges;
+    }
+
+    function appendTypewriterSentence(text, state, opacity = null) {
+      if (!text && state !== 'current') return null;
+      const span = document.createElement('span');
+      span.className = 'typewriter-sentence ' + state;
+      span.dataset.sentenceState = state;
+      span.textContent = text || '\u200b';
+      if (opacity != null) span.style.setProperty('--sentence-opacity', String(opacity));
+      elements.typewriterFocusCopy.appendChild(span);
+      return span;
+    }
+
+    function updateTypewriterFade() {
+      if (!app.settings.typewriterView || elements.typewriterFocusLayer.dataset.heading === 'true') return;
+      const current = $('.typewriter-sentence.current', elements.typewriterFocusCopy);
+      const layerRect = elements.typewriterFocusLayer.getBoundingClientRect();
+      const currentRect = current?.getBoundingClientRect();
+      if (!currentRect || !layerRect.height) return;
+      const lineHeight = parseFloat(getComputedStyle(elements.typewriterFocusCopy).lineHeight) || 38;
+      const context = TYPEWRITER_CONTEXT_LINES[normalizeTypewriterContextIndex(app.settings.typewriterContextIndex)];
+      const activeTop = clamp(currentRect.top - layerRect.top, 0, layerRect.height);
+      const depth = Number.isFinite(context) ? context * lineHeight : activeTop;
+      const maskStart = Math.max(0, activeTop - depth);
+      const maskEnd = context === 0
+        ? activeTop
+        : Math.max(maskStart, activeTop - Math.min(lineHeight * .72, Math.max(lineHeight * .35, depth * .18)));
+      elements.typewriterFocusLayer.style.setProperty('--typewriter-mask-start', maskStart + 'px');
+      elements.typewriterFocusLayer.style.setProperty('--typewriter-mask-end', maskEnd + 'px');
+      const composerRect = elements.composer.getBoundingClientRect();
+      const glassActiveTop = clamp(currentRect.top - composerRect.top, 0, composerRect.height);
+      const glassStart = Number.isFinite(context)
+        ? Math.max(0, glassActiveTop - context * lineHeight - lineHeight * .35)
+        : 0;
+      const glassSolid = context === 0
+        ? glassActiveTop
+        : Math.max(glassStart, glassActiveTop - lineHeight * .45);
+      elements.composer.style.setProperty('--typewriter-glass-start', glassStart + 'px');
+      elements.composer.style.setProperty('--typewriter-glass-solid', glassSolid + 'px');
+
+      const previous = $$('.typewriter-sentence.previous', elements.typewriterFocusCopy);
+      const maximumDistance = Math.max(lineHeight, activeTop - maskStart);
+      previous.forEach(span => {
+        const rect = span.getBoundingClientRect();
+        const distance = Math.max(0, currentRect.top - rect.bottom + lineHeight * .35);
+        let opacity = 0;
+        if (context === Infinity) {
+          opacity = .07 + .4 * (1 - clamp(distance / Math.max(lineHeight, activeTop), 0, 1));
+        } else if (context > 0 && distance <= maximumDistance + lineHeight) {
+          opacity = .06 + .42 * (1 - clamp(distance / (maximumDistance + lineHeight), 0, 1));
+        }
+        span.style.setProperty('--sentence-opacity', opacity.toFixed(3));
+      });
+    }
+
+    function syncTypewriterScroll() {
+      elements.typewriterFocusCopy.style.transform = `translateY(${-elements.draft.scrollTop}px)`;
+      updateTypewriterFade();
+    }
+
+    function renderTypewriterFocus() {
+      cancelAnimationFrame(typewriterRenderFrame);
+      typewriterRenderFrame = null;
+      const raw = elements.draft.value || '';
+      const parsed = parseDraft(raw);
+      const heading = parsed.kind === 'heading';
+      elements.typewriterFocusLayer.dataset.heading = String(heading);
+      if (!app.settings.typewriterView || heading) {
+        elements.typewriterFocusCopy.replaceChildren();
+        return;
+      }
+
+      const selectionStart = elements.draft.selectionStart ?? raw.length;
+      const selectionEnd = elements.draft.selectionEnd ?? selectionStart;
+      const collapsed = selectionStart === selectionEnd;
+      const freshBoundary = collapsed && isFreshSentenceBoundary(raw, selectionStart);
+      const ranges = sentenceRanges(raw);
+      elements.typewriterFocusCopy.replaceChildren();
+      if (elements.draft.clientWidth) {
+        elements.typewriterFocusCopy.style.width = elements.draft.clientWidth + 'px';
+      }
+
+      if (!raw) {
+        appendTypewriterSentence('', 'current');
+      } else if (freshBoundary) {
+        let markerInserted = false;
+        ranges.forEach(range => {
+          if (!markerInserted && selectionStart >= range.start && selectionStart <= range.end) {
+            const offset = clamp(selectionStart - range.start, 0, range.text.length);
+            appendTypewriterSentence(range.text.slice(0, offset), 'previous');
+            appendTypewriterSentence('', 'current');
+            appendTypewriterSentence(range.text.slice(offset), 'future');
+            markerInserted = true;
+          } else {
+            appendTypewriterSentence(
+              range.text,
+              range.end <= selectionStart ? 'previous' : 'future'
+            );
+          }
+        });
+        if (!markerInserted) appendTypewriterSentence('', 'current');
+      } else {
+        let currentFound = false;
+        ranges.forEach((range, index) => {
+          const selected = collapsed
+            ? selectionStart >= range.start && (
+              selectionStart < range.end ||
+              (selectionStart === range.end && index === ranges.length - 1)
+            )
+            : selectionEnd > range.start && selectionStart < range.end;
+          const state = selected
+            ? 'current'
+            : (range.end <= selectionStart ? 'previous' : 'future');
+          if (selected) currentFound = true;
+          appendTypewriterSentence(range.text, state);
+        });
+        if (!currentFound) appendTypewriterSentence('', 'current');
+      }
+
+      syncTypewriterScroll();
+      typewriterRenderFrame = requestAnimationFrame(() => {
+        typewriterRenderFrame = null;
+        updateTypewriterFade();
+      });
+    }
+
+    function hideCommitReceipt() {
+      clearTimeout(receiptTimer);
+      receiptTimer = null;
+      elements.commitReceipt.dataset.visible = 'false';
+    }
+
+    function dismissCommitReceiptForTyping() {
+      if (elements.commitReceipt.dataset.visible !== 'true') return;
+      const remaining = Math.max(0, 650 - (performance.now() - receiptShownAt));
+      clearTimeout(receiptTimer);
+      receiptTimer = setTimeout(hideCommitReceipt, remaining);
+    }
+
+    function commitReceiptParts(snapshot) {
+      if (!snapshot) return [];
+      const selected = new Set(normalizeCommitReceipts(snapshot.options));
+      const parts = new Map();
+      if (selected.has('clock')) {
+        parts.set('clock', new Date(snapshot.at).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }));
+      }
+      if (selected.has('timer') && snapshot.timer.state !== 'idle') {
+        if (snapshot.timer.state === 'finished') {
+          parts.set('timer', snapshot.timer.mode === 'break' ? 'Pausen är slut' : 'Passet är slut');
+        } else {
+          const suffix = snapshot.timer.state === 'paused' ? ' · pausad' : ' kvar';
+          const prefix = snapshot.timer.mode === 'break' ? 'Paus ' : '';
+          parts.set('timer', prefix + formatClock(snapshot.timer.remainingSec) + suffix);
+        }
+      }
+      if (selected.has('blockWords')) {
+        parts.set(
+          'blockWords',
+          `${formatNumber(snapshot.blockWords)} ord i ${snapshot.kind === 'heading' ? 'rubriken' : 'stycket'}`
+        );
+      }
+      if (
+        selected.has('passWords') &&
+        snapshot.timer.mode === 'focus' &&
+        snapshot.timer.state !== 'idle' &&
+        snapshot.timer.baselineWords != null
+      ) {
+        const net = snapshot.totalWords - snapshot.timer.baselineWords;
+        parts.set('passWords', `${formatNumber(net)} nettoord under passet`);
+      }
+      if (selected.has('documentWords')) {
+        parts.set('documentWords', `${formatNumber(snapshot.documentWords)} ord i dokumentet`);
+      }
+      if (selected.has('goal') && snapshot.goal.enabled) {
+        const unit = goalUnit(snapshot.goal.metric, snapshot.goal.target);
+        parts.set(
+          'goal',
+          snapshot.goal.count >= snapshot.goal.target
+            ? `Mål nått · ${formatNumber(snapshot.goal.count)}/${formatNumber(snapshot.goal.target)} ${unit}`
+            : `${Math.round(snapshot.goal.count / Math.max(1, snapshot.goal.target) * 100)} % av ${formatNumber(snapshot.goal.target)} ${unit}`
+        );
+      }
+      return ['blockWords', 'timer', 'goal', 'clock', 'passWords', 'documentWords']
+        .map(key => parts.get(key))
+        .filter(Boolean);
+    }
+
+    function captureCommitReceipt(block) {
+      finishTimer(false);
+      const document = activeDocument();
+      const metrics = documentMetrics(document);
+      const goal = normalizeGoal(document.goal);
+      return {
+        at: Date.now(),
+        kind: block.kind,
+        blockWords: wordCount(block.text),
+        documentWords: metrics.words,
+        totalWords: totalCommittedWords(app.documents),
+        timer: {
+          mode: app.timer.mode,
+          state: app.timer.state,
+          remainingSec: timerRemainingSeconds(app.timer),
+          baselineWords: app.timer.baselineWords
+        },
+        goal: {
+          enabled: goal.enabled,
+          metric: goal.metric,
+          target: goal.target,
+          count: metrics[goal.metric]
+        },
+        options: [...normalizeCommitReceipts(app.settings.commitReceipts)]
+      };
+    }
+
+    function showCommitReceipt(snapshot) {
+      if (!app.settings.typewriterView) return;
+      const parts = commitReceiptParts(snapshot);
+      if (!parts.length) return hideCommitReceipt();
+      elements.commitReceipt.innerHTML = parts
+        .map(part => `<span class="commit-receipt-item">${escapeHtml(part)}</span>`)
+        .join('');
+      elements.commitReceipt.dataset.visible = 'true';
+      receiptShownAt = performance.now();
+      clearTimeout(receiptTimer);
+      receiptTimer = setTimeout(hideCommitReceipt, 2800);
+    }
+
     function draftHistory(documentId = app.activeId) {
       if (!draftHistories.has(documentId)) {
         const document = app.documents.find(item => item.id === documentId);
@@ -8940,6 +9780,7 @@
 
     function handleDraftInput() {
       recordDraftChange(elements.draft.value);
+      dismissCommitReceiptForTyping();
       updateDraftMeta();
     }
 
@@ -8959,6 +9800,7 @@
       }
       scheduleSoundTextUpdate();
       autoSizeDraft();
+      renderTypewriterFocus();
       clearTimeout(draftSaveTimer);
       draftSaveTimer = setTimeout(() => {
         const document = app.documents.find(item => item.id === documentId);
@@ -8978,6 +9820,7 @@
     function commitDraft() {
       const parsed = parseDraft(elements.draft.value);
       if (!parsed.text) return;
+      const commitOrigin = captureCommitOrigin();
       pushHistory(recalledBlock ? 'Återta och ändra block' : 'Väv in block');
       const document = activeDocument();
 
@@ -9015,6 +9858,7 @@
       }
       document.lastCommittedBlockId = block.id;
       document.lastCommittedBlockUnavailable = false;
+      const receiptSnapshot = captureCommitReceipt(block);
 
       const ghostText = elements.draft.value;
       document.draft = '';
@@ -9024,9 +9868,14 @@
       saveState();
       commitsThisSession += 1;
       recalculate(block.id);
-      animateCommit(block.id, ghostText);
+      animateCommit(block.id, ghostText, commitOrigin, receiptSnapshot);
       Soundscape.commit(block.kind, soundBlockProfile(block));
-      announce((block.kind === 'heading' ? 'Rubrik' : 'Stycke') + ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.');
+      const receiptSpeech = app.settings.typewriterView ? commitReceiptParts(receiptSnapshot).join(', ') : '';
+      announce(
+        (block.kind === 'heading' ? 'Rubrik' : 'Stycke') +
+        ' invävt. Dokumentet har ' + activeDocument().blocks.length + ' block.' +
+        (receiptSpeech ? ' ' + receiptSpeech + '.' : '')
+      );
     }
 
     function recallLatestBlock() {
@@ -9077,25 +9926,208 @@
       announce('Senast invävda blocket togs tillbaka till skrivfältet');
     }
 
-    function animateCommit(id, text) {
+    function captureCommitOrigin() {
+      if (app.settings.typewriterView) {
+        const current = $('.typewriter-sentence.current', elements.typewriterFocusCopy);
+        const rects = current ? [...current.getClientRects()].filter(rect => rect.width || rect.height) : [];
+        const caretRect = rects[rects.length - 1];
+        if (caretRect) {
+          return {
+            x: clamp(caretRect.right, 12, innerWidth - 12),
+            y: clamp(caretRect.top + caretRect.height * .58, 12, innerHeight - 12)
+          };
+        }
+      }
+      const rect = elements.draft.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + Math.min(rect.height * .62, rect.height - 24)
+      };
+    }
+
+    function effectTimer(effect, callback, delay) {
+      const timer = setTimeout(() => {
+        effect.timers.delete(timer);
+        if (!effect.done) callback();
+      }, delay);
+      effect.timers.add(timer);
+      return timer;
+    }
+
+    function trackCommitOrb(effect) {
+      if (effect.done || !effect.orb) return;
+      const node = nodeStates.get(effect.id);
+      if (!node) return finishCommitEffect(effect.id, effect.token);
+      effect.orb.style.left = node.x + 'px';
+      effect.orb.style.top = node.y + 'px';
+      effect.frame = requestAnimationFrame(() => trackCommitOrb(effect));
+    }
+
+    function revealCommitNode(effect, decorate = true) {
+      if (!effect || effect.done || effect.released) return;
+      effect.released = true;
+      const node = nodeStates.get(effect.id);
+      if (node) {
+        node.birthLocked = false;
+        node.element.classList.remove('is-awaiting-birth');
+        if (decorate && !REDUCED_MOTION) {
+          node.element.classList.add('is-born', 'is-golden-born');
+          effectTimer(effect, () => node.element.classList.remove('is-born'), 650);
+          effectTimer(effect, () => node.element.classList.remove('is-golden-born'), 760);
+
+          const orb = document.createElement('span');
+          orb.className = 'commit-node-orb';
+          orb.setAttribute('aria-hidden', 'true');
+          const finalColor = node.data?.kind === 'heading'
+            ? '#17130b'
+            : (node.data?.lonely ? '#e85d4a' : '#59c2ff');
+          orb.style.setProperty('--orb-final-color', finalColor);
+          document.body.appendChild(orb);
+          effect.elements.add(orb);
+          effect.orb = orb;
+          trackCommitOrb(effect);
+          requestAnimationFrame(() => {
+            if (!effect.done) orb.dataset.visible = 'true';
+          });
+          effectTimer(effect, () => { orb.dataset.settling = 'true'; }, 360);
+        }
+        startSimulation('commit');
+      }
+      showCommitReceipt(effect.receiptSnapshot);
+    }
+
+    function finishCommitEffect(id, token, { reveal = true } = {}) {
+      const effect = activeCommitEffects.get(id);
+      if (!effect || effect.token !== token || effect.done) return;
+      effect.done = true;
+      try {
+        if (reveal && !effect.released) {
+          const node = nodeStates.get(id);
+          if (node) {
+            node.birthLocked = false;
+            node.element.classList.remove('is-awaiting-birth');
+            startSimulation('commit');
+          }
+        }
+      } finally {
+        effect.timers.forEach(timer => clearTimeout(timer));
+        effect.animations.forEach(animation => {
+          try { animation.cancel(); } catch (error) { /* redan avslutad */ }
+        });
+        if (effect.frame) cancelAnimationFrame(effect.frame);
+        effect.elements.forEach(element => element.remove());
+        const node = nodeStates.get(id);
+        if (node) {
+          node.birthLocked = false;
+          node.element.classList.remove('is-awaiting-birth', 'is-born', 'is-golden-born');
+        }
+        if (activeCommitEffects.get(id)?.token === token) activeCommitEffects.delete(id);
+      }
+    }
+
+    function cancelAllCommitEffects() {
+      [...activeCommitEffects.values()].forEach(effect => finishCommitEffect(effect.id, effect.token));
+    }
+
+    function animateCommit(id, text, origin, receiptSnapshot) {
       const node = nodeStates.get(id);
-      if (!node || REDUCED_MOTION) return;
-      const rect = elements.composer.getBoundingClientRect();
-      const ghost = document.createElement('div');
-      ghost.className = 'commit-ghost';
-      ghost.setAttribute('aria-hidden', 'true');
-      ghost.textContent = snippet(text, 52);
-      ghost.style.left = rect.left + rect.width / 2 + 'px';
-      ghost.style.top = rect.top + rect.height / 2 + 'px';
-      ghost.style.transform = 'translate(-50%, -50%)';
-      document.body.appendChild(ghost);
-      const dx = node.x - (rect.left + rect.width / 2);
-      const dy = node.y - (rect.top + rect.height / 2);
-      ghost.animate([
-        { transform: 'translate(-50%, -50%) scale(1)', opacity: .78, filter: 'blur(0)' },
-        { offset: .65, opacity: .36 },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.12)`, opacity: 0, filter: 'blur(2px)' }
-      ], { duration: 520, easing: 'cubic-bezier(.22,1,.36,1)' }).finished.finally(() => ghost.remove());
+      if (!node) {
+        showCommitReceipt(receiptSnapshot);
+        return;
+      }
+
+      while (activeCommitEffects.size >= MAX_COMMIT_EFFECTS) {
+        const oldest = activeCommitEffects.values().next().value;
+        if (!oldest) break;
+        finishCommitEffect(oldest.id, oldest.token);
+      }
+
+      const effect = {
+        id,
+        token: ++commitEffectSequence,
+        receiptSnapshot,
+        elements: new Set(),
+        animations: new Set(),
+        timers: new Set(),
+        frame: null,
+        orb: null,
+        released: false,
+        done: false
+      };
+      activeCommitEffects.set(id, effect);
+
+      if (REDUCED_MOTION || typeof Element.prototype.animate !== 'function') {
+        revealCommitNode(effect, false);
+        finishCommitEffect(id, effect.token, { reveal: false });
+        return;
+      }
+
+      const visual = window.visualViewport;
+      const visualLeft = visual?.offsetLeft || 0;
+      const visualTop = visual?.offsetTop || 0;
+      const visualRight = visualLeft + (visual?.width || innerWidth);
+      const visualBottom = visualTop + (visual?.height || innerHeight);
+      const target = {
+        x: clamp(node.x, visualLeft + 16, visualRight - 16),
+        y: clamp(node.y, visualTop + 16, visualBottom - 16)
+      };
+      node.x = target.x;
+      node.y = target.y;
+      node.vx = 0;
+      node.vy = 0;
+      node.birthLocked = true;
+      updateNodePositions();
+
+      const start = origin || captureCommitOrigin();
+      const dx = target.x - start.x;
+      const dy = target.y - start.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      try {
+        const ray = document.createElement('span');
+        ray.className = 'commit-ray';
+        ray.setAttribute('aria-hidden', 'true');
+        ray.style.left = start.x + 'px';
+        ray.style.top = start.y + 'px';
+        ray.style.width = distance + 'px';
+        ray.style.transform = `translateY(-50%) rotate(${angle}deg)`;
+        ray.innerHTML = '<span class="commit-ray-halo"></span><span class="commit-ray-core"></span>';
+
+        const ghost = document.createElement('span');
+        ghost.className = 'commit-ghost';
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.textContent = snippet(text, 72);
+        ghost.style.left = start.x + 'px';
+        ghost.style.top = start.y + 'px';
+        ghost.style.transform = 'translate(-50%, -50%)';
+
+        document.body.append(ray, ghost);
+        effect.elements.add(ray);
+        effect.elements.add(ghost);
+
+        const core = $('.commit-ray-core', ray);
+        const halo = $('.commit-ray-halo', ray);
+        const rayFrames = [
+          { transform: 'translateY(-50%) scaleX(0)', opacity: 0, offset: 0 },
+          { transform: 'translateY(-50%) scaleX(0)', opacity: 0, offset: .18 },
+          { transform: 'translateY(-50%) scaleX(1)', opacity: 1, offset: .76 },
+          { transform: 'translateY(-50%) scaleX(1)', opacity: 0, offset: 1 }
+        ];
+        effect.animations.add(core.animate(rayFrames, { duration: 620, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' }));
+        effect.animations.add(halo.animate(rayFrames, { duration: 690, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' }));
+        effect.animations.add(ghost.animate([
+          { transform: 'translate(-50%, -50%) scale(1)', opacity: .92, filter: 'blur(0)', offset: 0 },
+          { transform: 'translate(-50%, -50%) scale(.74)', opacity: 1, filter: 'blur(.2px)', offset: .2 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.08)`, opacity: .08, filter: 'blur(4px)', offset: 1 }
+        ], { duration: 460, easing: 'cubic-bezier(.2,.82,.24,1)', fill: 'both' }));
+
+        effectTimer(effect, () => revealCommitNode(effect, true), 460);
+        effectTimer(effect, () => finishCommitEffect(id, effect.token, { reveal: false }), 1320);
+      } catch (error) {
+        finishCommitEffect(id, effect.token);
+        showCommitReceipt(receiptSnapshot);
+      }
     }
 
     function diameterFor(node) {
@@ -9222,6 +10254,8 @@
       const ids = new Set(analysis.nodes.map(node => node.id));
       for (const [id, state] of nodeStates) {
         if (!ids.has(id)) {
+          const effect = activeCommitEffects.get(id);
+          if (effect) finishCommitEffect(id, effect.token, { reveal: false });
           state.element.remove();
           nodeStates.delete(id);
         }
@@ -9240,7 +10274,8 @@
             vy: 0,
             radius: diameterFor(node) / 2,
             element: createNodeElement(node),
-            manual: false
+            manual: false,
+            birthLocked: node.id === bornId
           };
           nodeStates.set(node.id, state);
         }
@@ -9261,8 +10296,7 @@
         const status = node.lonely ? ', saknar mätbar lexikal återkoppling' : (node.flow ? ', spänning mot ett starkare samband på annan plats' : '');
         element.setAttribute('aria-label', (node.kind === 'heading' ? 'Rubrik nivå ' + node.level : 'Stycke ' + (node.index + 1)) + ': ' + snippet(block?.text, 80) + status);
         if (isNew && node.id === bornId) {
-          element.classList.add('is-born');
-          setTimeout(() => element.classList.remove('is-born'), 700);
+          element.classList.add('is-awaiting-birth');
         }
       });
       updateNodePositions();
@@ -9542,8 +10576,8 @@
         const distance = Math.hypot(dx, dy) || .1;
         const nx = dx / distance;
         const ny = dy / distance;
-        const movableA = !a.manual && dragState?.id !== a.id;
-        const movableB = !b.manual && dragState?.id !== b.id;
+        const movableA = !a.manual && !a.birthLocked && dragState?.id !== a.id;
+        const movableB = !b.manual && !b.birthLocked && dragState?.id !== b.id;
         const collision = a.radius + b.radius + 10 - distance;
         if (collision > 0) {
           const impulse = collision * .18 * alpha;
@@ -9605,15 +10639,15 @@
           stiffness = .006;
         }
         const impulse = (distance - target) * stiffness * alpha;
-        if (!a.manual && dragState?.id !== a.id) { a.vx += nx * impulse; a.vy += ny * impulse; }
-        if (!b.manual && dragState?.id !== b.id) { b.vx -= nx * impulse; b.vy -= ny * impulse; }
+        if (!a.manual && !a.birthLocked && dragState?.id !== a.id) { a.vx += nx * impulse; a.vy += ny * impulse; }
+        if (!b.manual && !b.birthLocked && dragState?.id !== b.id) { b.vx -= nx * impulse; b.vy -= ny * impulse; }
       }
 
       const exclusion = view === 'write' ? elements.composer.getBoundingClientRect() : null;
       const canExclude = exclusion && (exclusion.left > 64 || viewport.width - exclusion.right > 64 || exclusion.top > 64 || viewport.height - exclusion.bottom > 64);
 
       for (const node of nodes) {
-        if (dragState?.id === node.id || node.manual) {
+        if (dragState?.id === node.id || node.manual || node.birthLocked) {
           node.vx = 0;
           node.vy = 0;
           continue;
@@ -9696,7 +10730,7 @@
       }
       const targetAlpha = kind === 'commit' ? .75 : (kind === 'drag' ? .3 : 1);
       simulationAlpha = Math.max(simulationAlpha, targetAlpha);
-      if (view === 'write') writeStopAt = performance.now() + 700;
+      if (view === 'write') writeStopAt = performance.now() + (kind === 'commit' ? 1300 : 700);
       if (!animationFrame) {
         lastFrame = performance.now();
         animationFrame = requestAnimationFrame(simulationLoop);
@@ -9745,11 +10779,13 @@
     }
 
     function scheduleResize() {
+      if (activeCommitEffects.size) cancelAllCommitEffects();
       if (resizeFrame) return;
       resizeFrame = requestAnimationFrame(() => {
         resizeFrame = null;
         updateVisualViewport();
         resizeCanvas();
+        renderTypewriterFocus();
       });
     }
 
@@ -11346,7 +12382,7 @@
       } else if (selectedId && !analysis.nodesById.has(selectedId)) {
         closeInspector();
       }
-      if (bornId) startSimulation('commit');
+      if (bornId) drawGraph();
       else if (view === 'graph') startSimulation('graph');
       else drawGraph();
     }
@@ -11390,6 +12426,7 @@
     function switchView(nextView) {
       if (!['write', 'graph', 'structure', 'echo', 'fulltext'].includes(nextView)) return;
       if (nextView !== view && !guardActiveEdit()) return;
+      if (nextView !== view && activeCommitEffects.size) cancelAllCommitEffects();
       if (nextView !== 'structure') {
         liftedMove = null;
         draggedBlockId = null;
@@ -11413,6 +12450,7 @@
         for (let i = 0; i < 32; i++) physicsStep(1);
         updateNodePositions();
         drawGraph();
+        renderTypewriterFocus();
         requestAnimationFrame(() => elements.draft.focus());
       } else if (nextView === 'graph') {
         renderOutline();
@@ -11486,6 +12524,7 @@
       if (!relayout) return;
       requestAnimationFrame(() => {
         autoSizeDraft();
+        renderTypewriterFocus();
         resizeCanvas(true);
         if (view === 'structure' || view === 'graph') renderOutline();
         if (view === 'echo') renderEcho();
@@ -11584,6 +12623,7 @@
       renderDocumentControls();
       renderGoal();
       renderTimer();
+      renderTypewriterControls();
       renderSound();
       configureInstallUI();
       utilityReturnFocus = document.activeElement;
@@ -11680,6 +12720,8 @@
     }
 
     function restoreBackupData(payload) {
+      cancelAllCommitEffects();
+      hideCommitReceipt();
       const source = payload?.format === 'vavr-backup' ? payload.app : payload;
       if (!source || !Array.isArray(source.documents) || !source.documents.length) {
         throw new Error('Filen innehåller inga VävR-dokument.');
@@ -11715,6 +12757,9 @@
         : 'words';
       settings.fontProfile = normalizeFontProfile(settings.fontProfile);
       settings.showCountdown = settings.showCountdown !== false;
+      settings.typewriterView = settings.typewriterView === true;
+      settings.typewriterContextIndex = normalizeTypewriterContextIndex(settings.typewriterContextIndex);
+      settings.commitReceipts = normalizeCommitReceipts(settings.commitReceipts);
       settings.soundTheme = SOUND_THEMES[settings.soundTheme] ? settings.soundTheme : 'none';
       settings.soundVolume = clamp(
         Number.isFinite(Number(settings.soundVolume)) ? Math.round(Number(settings.soundVolume)) : 24,
@@ -11737,7 +12782,7 @@
       app = {
         ...defaults,
         ...source,
-        version: 12,
+        version: 13,
         documents,
         settings,
         timer: normalizeTimer(source.timer, settings.focusMinutes)
@@ -11745,6 +12790,7 @@
       if (!documents.some(document => document.id === app.activeId)) app.activeId = documents[0].id;
       applyFontProfile(settings.fontProfile, true);
       applyWidth(settings.widthIndex);
+      renderTypewriterControls();
       changeActiveDocument(app.activeId, false);
       renderTimer();
       renderSound();
@@ -11905,6 +12951,8 @@
     function changeActiveDocument(id, persistCurrent = true) {
       if (!app.documents.some(document => document.id === id)) return;
       if (id !== app.activeId && !guardActiveEdit()) return false;
+      cancelAllCommitEffects();
+      hideCommitReceipt();
       clearTimeout(draftSaveTimer);
       clearTimeout(titleSaveTimer);
       if (persistCurrent) activeDocument().draft = elements.draft.value;
@@ -11947,12 +12995,28 @@
 
     function setupEvents() {
       elements.draft.addEventListener('input', handleDraftInput);
+      elements.draft.addEventListener('compositionstart', () => { isDraftComposing = true; });
+      elements.draft.addEventListener('compositionend', () => {
+        isDraftComposing = false;
+        renderTypewriterFocus();
+      });
+      elements.draft.addEventListener('scroll', syncTypewriterScroll, { passive: true });
+      elements.draft.addEventListener('select', renderTypewriterFocus);
+      elements.draft.addEventListener('click', renderTypewriterFocus);
+      elements.draft.addEventListener('keyup', event => {
+        if (event.key.startsWith('Arrow') || ['Home', 'End', 'PageUp', 'PageDown'].includes(event.key)) {
+          renderTypewriterFocus();
+        }
+      });
       elements.draftUndo.addEventListener('click', undoDraftChange);
       elements.draft.addEventListener('keydown', event => {
-        if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing) {
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.isComposing && !isDraftComposing) {
           sendDraftSound(event.key, 'keydown');
         }
-        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        if (event.key === 'Enter' && event.shiftKey && !event.isComposing && !isDraftComposing) {
+          allowDraftLineBreakUntil = performance.now() + 180;
+        }
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !isDraftComposing) {
           event.preventDefault();
           commitDraft();
           return;
@@ -11964,6 +13028,28 @@
           event.preventDefault();
           redoDocument();
         }
+      });
+
+      elements.typewriterModeToggle.addEventListener('click', () => {
+        setTypewriterView(!app.settings.typewriterView, true, true);
+      });
+      elements.typewriterViewEnabled.addEventListener('change', event => {
+        setTypewriterView(event.target.checked, true, false);
+      });
+      elements.typewriterContextSlider.addEventListener('input', event => {
+        applyTypewriterContext(event.target.value, false);
+      });
+      elements.typewriterContextSlider.addEventListener('change', event => {
+        applyTypewriterContext(event.target.value, true);
+        announce('Texttoning: ' + typewriterContextLabel(event.target.value));
+      });
+      elements.commitReceiptOptions.addEventListener('change', event => {
+        const input = event.target.closest('input[type="checkbox"]');
+        if (!input) return;
+        app.settings.commitReceipts = COMMIT_RECEIPT_OPTIONS.filter(option =>
+          $(`input[value="${option}"]`, elements.commitReceiptOptions)?.checked
+        );
+        saveState('Kvitton sparade');
       });
 
       $$('.mode-button').forEach(button => button.addEventListener('click', () => {
@@ -12257,6 +13343,7 @@
         event.returnValue = '';
       });
       window.addEventListener('pagehide', () => {
+        cancelAllCommitEffects();
         Soundscape.stop(true);
         Typewriter.stop(true);
       });
@@ -12275,7 +13362,10 @@
         announce('VävR installerades');
       });
       document.addEventListener('visibilitychange', () => {
-        if (document.hidden) stopSimulation();
+        if (document.hidden) {
+          cancelAllCommitEffects();
+          stopSimulation();
+        }
         else {
           drawGraph();
           renderTimer();
@@ -12286,13 +13376,18 @@
         }
       });
       elements.draft.addEventListener('beforeinput', event => {
-        if (event.isComposing) return;
+        if (event.isComposing || isDraftComposing) return;
         const inputKey = event.inputType === 'deleteContentBackward'
           ? 'Backspace'
-          : (event.inputType === 'insertParagraph'
+          : (['insertParagraph', 'insertLineBreak'].includes(event.inputType)
             ? 'Enter'
             : (event.inputType === 'insertText' && characterCount(event.data || '') === 1 ? event.data : ''));
         if (inputKey) sendDraftSound(inputKey, 'beforeinput');
+        if (['insertParagraph', 'insertLineBreak'].includes(event.inputType)) {
+          if (performance.now() < allowDraftLineBreakUntil) return;
+          event.preventDefault();
+          commitDraft();
+        }
       });
       navigator.serviceWorker?.addEventListener('controllerchange', () => {
         if (!reloadForUpdate) return;
@@ -12506,6 +13601,7 @@
     function initialize() {
       applyFontProfile(app.settings.fontProfile);
       applyWidth(app.settings.widthIndex);
+      renderTypewriterControls();
       updateVisualViewport();
       elements.draft.value = activeDocument().draft || '';
       syncDraftHistory(app.activeId, elements.draft.value);

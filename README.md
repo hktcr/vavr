@@ -110,6 +110,29 @@ eller att avsluta. Ingenting startar automatiskt.
 Skrivfältets bredd kan ställas i åtta steg från 540 till 1 440 pixlar. På
 smalare skärmar anpassas fältet automatiskt till den tillgängliga ytan.
 
+Varje lyckad invävning har en sammanhängande visuell födelsekedja. Textens
+position fångas innan skrivfältet töms. Texten dras sedan ut till en varm
+guldfärgad tråd som träffar en gyllene nod. Först vid träffen släpps noden till
+den befintliga fysiken och söker sin plats i väven. Den gyllene färgen tonar
+över till nodens vanliga semantiska utseende. Dokumentet sparas omedelbart och
+väntar aldrig på animationen. Reducerad rörelse visar noden direkt utan
+transportanimation.
+
+En valbar **Skrivmaskinsvy** är skild från skrivmaskinsljuden. Den vanliga
+textarean är fortfarande enda inmatningskälla, medan ett lokalt visuellt lager
+framhäver meningen vid caret eller markeringen. När en mening avslutas tonas
+tidigare meningar successivt uppåt till full transparens. Ett vertikalt
+reglage väljer ungefär 0, 2, 4, 6, 9, 13 eller 18 tidigare textrader, eller hela
+det aktuella stycket. Sex tidigare rader är standard. Skrivglasets yta följer
+samma toning och saknar yttre kant i denna vy.
+
+Efter invävning kan Skrivmaskinsvyn visa ett kort, layoutneutralt kvitto. Flera
+värden kan kombineras: klockslag, tid kvar i skrivpasset, ord i det invävda
+stycket, nettoord under skrivpasset, dokumentets ord och målstatus. Standard är
+styckets ord samt timer och mål när dessa är aktiva. Skrivhastighet används
+inte som standardmått, eftersom pauser och redigering gör det lätt att
+misstolka och det inte säger något om textens kvalitet.
+
 ## Ljudrum
 
 Nio frivilliga ljudlandskap kan skapas direkt i webbläsaren. Fyra är stilla:

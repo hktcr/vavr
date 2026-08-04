@@ -35,7 +35,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `vavr-kohesion.js` | Fristående tokenisering och kohesionsanalys |
 | `vavr-textcontext.js` | Fristående textstatistik för äldre motorintegrationer |
 | `vavr-test.mjs` | 87 tester av dokumentmodell, tokenisering och kohesion |
-| `vavr-shell-test.mjs` | 249 kontroller av appskal, dokumentyta, Heltext, dokumentskydd, typografi, Vävbord, Ordekon, nodlayout, strukturflytt, PWA, skrivstöd och ljudintegration |
+| `vavr-shell-test.mjs` | 282 kontroller av appskal, dokumentyta, Heltext, dokumentskydd, typografi, Vävbord, Ordekon, nodlayout, strukturflytt, PWA, skrivstöd, Skrivmaskinsvy, Enterfödelse och ljudintegration |
 | `vavr-audio-test.mjs` | Web Audio-mock som startar, påverkar och stänger nio ljudlandskap och fyra skrivmaskinsteman samt verifierar SkrivR-motorernas produktionskedjor, deterministiska blocksvar, resursgränser vid 120 täta commits, direktanslag, förberedda bufferter, soft clipper och återväckning efter ljudavbrott |
 | `vavr-ordekon-test.mjs` | 23 tester av frekvensviktning, formordsskydd, böjningsnormalisering, förekomstpositioner, maximala fraser, meningsstarter, anhopningstak och determinism |
 
@@ -89,7 +89,8 @@ Timer = {
   durationSec,
   remainingSec,
   endAt,
-  announced
+  announced,
+  baselineWords
 }
 ```
 
@@ -97,7 +98,7 @@ Körande tid räknas från absoluta `endAt`. Timern behöver därför inte skriv
 till lagringen varje sekund och återhämtar rätt återstående tid efter
 bakgrundsläge eller omladdning.
 
-Ljudinställningarna är också appövergripande:
+Skrivvyns och ljudrummens inställningar är appövergripande:
 
 ```js
 settings = {
@@ -105,6 +106,12 @@ settings = {
   vavbordView: 'list' | 'nodes' | 'echo',
   echoMode: 'words' | 'phrases' | 'starters',
   fontProfile: 'vav' | 'bok' | 'ren' | 'klar',
+  typewriterView: boolean,
+  typewriterContextIndex: 0..7,
+  commitReceipts: [
+    'clock' | 'timer' | 'blockWords' | 'passWords' |
+    'documentWords' | 'goal'
+  ],
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
     'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
@@ -122,7 +129,7 @@ status och startar därför aldrig automatiskt efter omladdning.
 ## Lokal lagring och säkerhetskopiering
 
 Applikationstillståndet sparas i `localStorage` under nyckeln
-`vavr-weaver-v5`. Den interna tillståndsversionen är 12. Äldre VävR-data kan
+`vavr-weaver-v5`. Den interna tillståndsversionen är 13. Äldre VävR-data kan
 migreras vid inläsning.
 
 ### Typografi
@@ -234,6 +241,41 @@ på och tar bort ett annat block av misstag.
 
 Dokumentmål och timer sammanfattas i en diskret statusrad när de är aktiva.
 Målet räknar endast committad text.
+
+`commitDraft()` fångar textens startpunkt och en fryst kvittosnapshot före
+skrivfältet töms. Blocket muteras, sparas och analyseras omedelbart. Den nya
+noden skapas med `birthLocked`, vilket gör att kollisioner, kantkrafter och
+huvudloopen lämnar dess träffpunkt stilla medan guldtråden flyger. Vid träffen
+tar `revealCommitNode()` bort låset och startar det befintliga fysikfönstret.
+
+Nodlagret är avsiktligt nedtonat i Skriv. Därför visas den första gyllene
+födelsen som en separat `commit-node-orb` ovanför nodlagret. Orben följer
+nodens verkliga `nodeStates`-koordinater medan fysiken börjar arbeta och tonar
+sedan över till nodens stycke-, rubrik- eller varningsfärg. Den kan aldrig
+ändra dokumentdata.
+
+Dekorativa commiteffekter ligger i `activeCommitEffects` och begränsas till
+fyra samtidiga poster. `finishCommitEffect()` är idempotent och frigör alltid
+födelselåset, avbryter animationer och tidsstyrningar samt tar bort alla
+tillfälliga element. Samma städning används vid tät invävning, reducerad
+rörelse, animationsfel, viewportändring, dokument- eller vybyte,
+bakgrundsläge, återställning och `pagehide`.
+
+Skrivmaskinsvyn behåller `textarea` som enda sanningskälla för text, caret,
+markering, stavningskontroll, urklipp, native undo, IME och iOS-inmatning. Det
+`aria-hidden` spegellagret segmenterar svensk text med `Intl.Segmenter` och en
+lokal reservväg. Meningen vid caret eller en markering visas fullt. Tidigare
+meningar tonas med ett vertikalt maskdjup enligt den append-only tabellen
+`[0, 2, 4, 6, 9, 13, 18, Infinity]` tidigare rader. Textareas interna scroll
+och spegellagrets radbrytning synkas utan att spegellagret skriver tillbaka
+text.
+
+Kvitton är en absolut placerad singleton i skrivglaset och påverkar därför
+varken kompositörhöjd eller nodernas exklusionsyta. Värdena hämtas från
+commitens snapshot. `baselineWords` sparar alla dokuments sammanlagda
+invävda ord när ett fokuspass startar, så valbara passord blir ett nettomått
+även efter återtagning och redigering. Timer- och måldelar utelämnas när deras
+funktioner inte är aktiva.
 
 Skrivbredden lagras som ett normaliserat heltalsindex i den append-only
 breddstabellen `[540, 640, 720, 820, 940, 1080, 1240, 1440]`. Äldre index

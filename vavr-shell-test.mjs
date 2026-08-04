@@ -114,6 +114,12 @@ for (const id of [
   'goal-progress',
   'timer-display',
   'timer-primary',
+  'typewriter-mode-toggle',
+  'typewriter-focus-layer',
+  'typewriter-context-slider',
+  'commit-receipt',
+  'typewriter-view-enabled',
+  'commit-receipt-options',
   'writing-support-summary',
   'graph-lens',
   'graph-lens-status',
@@ -160,6 +166,115 @@ check(html.includes('removedCommentCount') && html.includes('Spara ändå?'), 'k
 check(html.includes('readingMinutes(metrics.words)'), 'Heltext visar uppskattad lästid');
 check(html.includes("event.key === '5'"), 'Heltext har kortkommandot Ctrl eller Cmd + 5');
 check(html.includes("window.addEventListener('beforeinstallprompt'"), 'Chromiums installationssignal hanteras');
+
+console.log('\nSkrivmaskinsvy och Enterfödelse');
+
+check(html.includes('TYPEWRITER_CONTEXT_LINES = [0, 2, 4, 6, 9, 13, 18, Infinity]'), 'texttoningen har åtta stabila djup och sex tidigare rader som standard');
+check(/id="typewriter-context-slider"[^>]+aria-orientation="vertical"/.test(html), 'texttoningens slider annonseras som vertikal');
+check(/\.typewriter-context-control\s*\{[\s\S]*?width:\s*44px/.test(html), 'den vertikala sliderns träffyta är minst 44 pixlar bred');
+check(html.includes('aria-hidden="true"><div id="typewriter-focus-copy"'), 'meningsspeglingen är dold för hjälpmedel');
+check(html.includes('<textarea id="draft-input"'), 'textarea förblir skrivandets enda inmatningskälla');
+check(html.includes("new Intl.Segmenter('sv', { granularity: 'sentence' })"), 'svensk meningssegmentering används när webbläsaren stöder den');
+check(html.includes("elements.draft.selectionStart") && html.includes("elements.draft.selectionEnd"), 'aktuell mening följer caret och markering');
+check(html.includes("body[data-typewriter-mode=\"true\"] #composer") && html.includes('border-color: transparent'), 'skrivmaskinsvyn tar bort skrivglasets yttre kant');
+check(html.includes('position: absolute !important') && html.includes('.commit-receipt'), 'invävningskvittot påverkar inte skrivglasets layout');
+check(html.includes("DEFAULT_COMMIT_RECEIPTS = Object.freeze(['timer', 'blockWords', 'goal'])"), 'standardkvittot visar styckets ord samt aktiva timer- och målvärden');
+check(
+  !/ord per minut/i.test(html) && !/value="(?:wpm|pace)"/i.test(html),
+  'missvisande hastighetsmått ingår inte'
+);
+check(
+  html.includes("['insertParagraph', 'insertLineBreak'].includes(event.inputType)") &&
+  html.includes('allowDraftLineBreakUntil'),
+  'virtuellt Enter på iPad committar utan att förstöra Shift + Enter'
+);
+check(html.includes('isDraftComposing') && html.includes("addEventListener('compositionstart'"), 'IME composition skyddas från commit');
+check(html.includes("ghost.className = 'commit-ghost'") && html.includes("ray.className = 'commit-ray'"), 'texten flyger genom ett gyllene strållager');
+check(html.includes("orb.className = 'commit-node-orb'"), 'den gyllene nodfödelsen ligger ovanför det nedtonade nodlagret');
+check(html.includes('node.birthLocked = true') && (html.match(/!\w+\.birthLocked/g) || []).length >= 4, 'den nya noden är fysiklåst tills strålen träffar');
+check(html.includes('MAX_COMMIT_EFFECTS = 4') && html.includes('activeCommitEffects = new Map()'), 'samtidiga dekorativa commiteffekter är begränsade');
+check(html.includes('function finishCommitEffect') && html.includes('function cancelAllCommitEffects'), 'commiteffekter har central och idempotent städning');
+check(html.includes("if (REDUCED_MOTION || typeof Element.prototype.animate !== 'function')"), 'reducerad rörelse avslöjar noden utan flykt');
+check(html.includes('visual?.offsetTop') && html.includes('visualBottom'), 'födelsemålet klampas mot synlig viewport på iPad');
+check(
+  html.includes('timer.baselineWords != null && Number.isFinite(Number(timer.baselineWords))') &&
+  html.includes("snapshot.timer.state !== 'idle'"),
+  'tom timerbaslinje kan inte bli ett falskt skrivpass efter omladdning'
+);
+
+const contextDepthSource = inlineScript?.match(
+  /const normalizeTypewriterContextIndex = value => \{[\s\S]*?^    \};/m
+)?.[0];
+const receiptNormalizeSource = inlineScript?.match(
+  /const normalizeCommitReceipts = value => \{[\s\S]*?^    \};/m
+)?.[0];
+if (contextDepthSource && receiptNormalizeSource) {
+  const typewriterSettingsSandbox = {};
+  vm.runInNewContext(`
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const TYPEWRITER_CONTEXT_LINES = [0, 2, 4, 6, 9, 13, 18, Infinity];
+    const COMMIT_RECEIPT_OPTIONS = Object.freeze(['clock', 'timer', 'blockWords', 'passWords', 'documentWords', 'goal']);
+    const DEFAULT_COMMIT_RECEIPTS = Object.freeze(['timer', 'blockWords', 'goal']);
+    ${contextDepthSource}
+    ${receiptNormalizeSource}
+    globalThis.depths = [
+      normalizeTypewriterContextIndex(undefined),
+      normalizeTypewriterContextIndex(null),
+      normalizeTypewriterContextIndex(''),
+      normalizeTypewriterContextIndex('   '),
+      normalizeTypewriterContextIndex(-1),
+      normalizeTypewriterContextIndex(999)
+    ];
+    globalThis.defaultReceipts = normalizeCommitReceipts(undefined);
+    globalThis.emptyReceipts = normalizeCommitReceipts([]);
+  `, typewriterSettingsSandbox);
+  check(
+    JSON.stringify(typewriterSettingsSandbox.depths) === JSON.stringify([3, 3, 3, 3, 0, 7]),
+    'textdjup normaliserar tomma, gamla och extrema värden säkert'
+  );
+  check(
+    JSON.stringify(typewriterSettingsSandbox.defaultReceipts) === JSON.stringify(['timer', 'blockWords', 'goal']) &&
+    typewriterSettingsSandbox.emptyReceipts.length === 0,
+    'kvitton får lugna standardval men kan också väljas bort helt'
+  );
+} else {
+  check(false, 'textdjupets normalisering kunde testas');
+  check(false, 'kvittovalens normalisering kunde testas');
+}
+
+const sentenceBoundarySource = inlineScript?.match(
+  /function isFreshSentenceBoundary\([^\n]*\) \{[\s\S]*?^    \}/m
+)?.[0];
+const sentenceRangesSource = inlineScript?.match(
+  /function sentenceRanges\([^\n]*\) \{[\s\S]*?^    \}/m
+)?.[0];
+if (sentenceBoundarySource && sentenceRangesSource) {
+  const sentenceSandbox = { Intl };
+  vm.runInNewContext(`
+    const sentenceSegmenter = new Intl.Segmenter('sv', { granularity: 'sentence' });
+    ${sentenceBoundarySource}
+    ${sentenceRangesSource}
+    globalThis.period = isFreshSentenceBoundary('En mening.', 10);
+    globalThis.question = isFreshSentenceBoundary('Är det så?', 10);
+    globalThis.abbreviation = isFreshSentenceBoundary('Det är t.ex.', 12);
+    globalThis.decimal = isFreshSentenceBoundary('Värdet är 3.14', 14);
+    globalThis.ranges = sentenceRanges('Första meningen. Andra meningen?');
+  `, sentenceSandbox);
+  check(sentenceSandbox.period && sentenceSandbox.question, 'punkt och frågetecken startar en ny aktuell mening');
+  check(!sentenceSandbox.abbreviation && !sentenceSandbox.decimal, 'vanlig svensk förkortning och färdigt decimaltal ger ingen falsk meningsstart');
+  check(sentenceSandbox.ranges.length === 2, 'två svenska meningar segmenteras till två stabila intervall');
+} else {
+  check(false, 'meningsgränser kunde testas');
+  check(false, 'förkortningar och decimaler kunde testas');
+  check(false, 'meningsintervall kunde testas');
+}
+
+const commitDraftSource = inlineScript?.match(/function commitDraft\(\) \{[\s\S]*?^    \}/m)?.[0] || '';
+check(
+  commitDraftSource.indexOf('captureCommitOrigin()') >= 0 &&
+  commitDraftSource.indexOf('captureCommitOrigin()') < commitDraftSource.indexOf("elements.draft.value = ''"),
+  'strålens startpunkt fångas innan skrivfältet töms'
+);
 
 const widthsSource = inlineScript?.match(/const WIDTHS = \[[^\n]+\];/)?.[0];
 const normalizeWidthSource = inlineScript?.match(
@@ -577,7 +692,7 @@ check((html.match(/<input type="radio" name="font-profile"/g) || []).length === 
 check(html.includes("fontProfile: 'vav'") && html.includes('Charter'), 'Väv med Charter är standardprofil');
 check(!/fonts\.googleapis|use\.typekit|@font-face\s*\{[^}]*url\(/s.test(html), 'typografin kräver inga externa typsnitt');
 check(html.includes("document.documentElement.dataset.fontProfile = safeProfile"), 'vald profil appliceras på hela dokumentytan');
-check(/version:\s*12/.test(html), 'tillståndsversion 12 används för dokumentskyddet');
+check(/version:\s*13/.test(html), 'tillståndsversion 13 används för dokumentskydd och skrivmaskinsvy');
 check(html.includes('id="draft-undo"'), 'skrivfältet har en synlig ångraknapp');
 check(html.includes('draftHistories = new Map()'), 'utkasthistorik hålls separat per dokument');
 check(html.includes("elements.draft.addEventListener('input', handleDraftInput)"), 'varje skrivfältsändring registreras före sparning');
