@@ -10,6 +10,12 @@ window.HardForkEngine = (function() {
     const SIXTEENTH_DUR = 60 / BPM / 4;
     const LOOKAHEAD = 0.12;
     const MAX_COMMIT_SOLO_PLANS = 2;
+    const GROOVE_PATTERNS = [
+        { bass: [0, 3, 8, 11], warmBass: [3, 11], extraKick: [4, 12], hats: [2, 10], warmHats: [6, 14], ostinato: [0, 2, 4, 6, 8, 10, 12, 14] },
+        { bass: [0, 5, 8, 11], warmBass: [5, 11], extraKick: [5, 12], hats: [2, 10], warmHats: [6, 13], ostinato: [0, 2, 4, 7, 8, 10, 12, 15] },
+        { bass: [0, 3, 8, 14], warmBass: [3, 14], extraKick: [4, 11], hats: [2, 9], warmHats: [6, 14], ostinato: [0, 3, 4, 6, 8, 11, 12, 14] },
+        { bass: [0, 6, 8, 11], warmBass: [6, 11], extraKick: [6, 12], hats: [2, 10], warmHats: [7, 14], ostinato: [0, 2, 5, 6, 8, 10, 13, 14] }
+    ];
 
     // Scale
     const scale = [0, 3, 5, 7, 10]; // Minor pentatonic
@@ -20,6 +26,13 @@ window.HardForkEngine = (function() {
     let delayL, delayR, delayFB_L, delayFB_R, delayPanL, delayPanR;
     let masterFilter;
     let noiseBuffer = null;
+    let atmosphereBus = null;
+    let atmosphereFilter = null;
+    let atmosphereNoise = null;
+    let atmosphereLfo = null;
+    let atmosphereLfoDepth = null;
+    let atmosphereOscillators = [];
+    let atmosphereLevels = [];
 
     // State
     let traces = [];
@@ -62,6 +75,9 @@ window.HardForkEngine = (function() {
     let pendingCommitSolos = [];
     let activeCommitSolo = null;
     let supersededCommitSolos = 0;
+    let commitSequence = 0;
+    let gestureSequence = 0;
+    let sustainedGestureCount = 0;
 
     // Sentence Memory (Part C)
     let lastHeadingCount = 0;
@@ -70,7 +86,6 @@ window.HardForkEngine = (function() {
     let sentenceMelody = [];
 
     // PRNG
-    let prngState = 0;
     function mulberry32(a) {
         return function() {
             var t = a += 0x6D2B79F5;
@@ -80,6 +95,12 @@ window.HardForkEngine = (function() {
         }
     }
     let prng = Math.random;
+    let sessionSeed = 0;
+    let documentSeed = 0;
+    let contentSeed = 0;
+    let currentGrooveFamily = 0;
+    let currentTextureFamily = 0;
+    let currentSwing = 0.56;
     let contextStats = {
         words: 0,
         paragraphs: 0,
@@ -92,6 +113,23 @@ window.HardForkEngine = (function() {
     };
 
     function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+    function mixSeeds(...values) {
+        let hash = 2166136261;
+        for (const value of values) {
+            hash ^= Number(value) >>> 0;
+            hash = Math.imul(hash, 16777619);
+            hash ^= hash >>> 13;
+        }
+        return hash >>> 0;
+    }
+    function createSessionSeed() {
+        const randomPart = Math.floor(Math.random() * 0xFFFFFFFF) >>> 0;
+        const clockPart = Date.now() >>> 0;
+        const performancePart = typeof performance !== 'undefined'
+            ? Math.floor(performance.now() * 1000) >>> 0
+            : 0;
+        return mixSeeds(randomPart, clockPart, performancePart || 1);
+    }
     function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
     function degreeToMidi(degree, root) {
         const octave = Math.floor(degree / scale.length);
@@ -104,6 +142,7 @@ window.HardForkEngine = (function() {
     }
 
     function setContext(profile = {}) {
+        const previousDocumentSeed = documentSeed;
         const words = Math.max(0, Number(profile.words) || 0);
         const averageWordLength = clamp(Number(profile.averageWordLength) || 5, 2, 12);
         const N = Math.max(0, Number(profile.characters) || words * averageWordLength);
@@ -119,8 +158,29 @@ window.HardForkEngine = (function() {
             g: 40 / (40 + N),
             cohesion: clamp(Number(profile.cohesion) || 0, 0, 1),
             connectedness: clamp(Number(profile.connectedness) || 0, 0, 1),
+            characters: N,
+            averageWordLength,
+            averageSentenceWords: clamp(Number(profile.averageSentenceWords) || 12, 2, 60),
+            documentId: String(profile.documentId || ''),
             documentTitle: String(profile.documentTitle || '')
         };
+        documentSeed = mixSeeds(
+            textSignature(contextStats.documentId),
+            textSignature(contextStats.documentTitle),
+            0x444F4355
+        );
+        contentSeed = mixSeeds(
+            Number(profile.contentFingerprint) || 0,
+            Math.round(contextStats.vowelRatio * 1000),
+            Math.round(averageWordLength * 100),
+            Math.round(contextStats.averageSentenceWords * 10),
+            contextStats.characters,
+            contextStats.paragraphs,
+            contextStats.headings
+        );
+        if (!previousDocumentSeed || previousDocumentSeed !== documentSeed) {
+            morphAtmosphere(2.6);
+        }
     }
 
     function createNoiseBuffer() {
@@ -128,9 +188,119 @@ window.HardForkEngine = (function() {
         const size = ctx.sampleRate * 1.0; // 1s
         noiseBuffer = ctx.createBuffer(1, size, ctx.sampleRate);
         const output = noiseBuffer.getChannelData(0);
+        const noiseRandom = mulberry32(mixSeeds(sessionSeed, 0x4E4F4953));
         for (let i = 0; i < size; i++) {
-            output[i] = Math.random() * 2 - 1;
+            output[i] = noiseRandom() * 2 - 1;
         }
+    }
+
+    function createAtmosphere() {
+        const identityRandom = mulberry32(mixSeeds(sessionSeed, 0x41544D4F));
+        atmosphereBus = ctx.createGain();
+        atmosphereBus.gain.value = 0.0001;
+        atmosphereFilter = ctx.createBiquadFilter();
+        atmosphereFilter.type = 'lowpass';
+        atmosphereFilter.frequency.value = 260;
+        atmosphereFilter.Q.value = 0.7;
+        atmosphereBus.connect(atmosphereFilter);
+        atmosphereFilter.connect(synthBus);
+
+        atmosphereOscillators = [0, 1, 2].map((index) => {
+            const oscillator = ctx.createOscillator();
+            const level = ctx.createGain();
+            oscillator.type = index === 0 ? 'sine' : 'triangle';
+            oscillator.frequency.value = 38 * [1, 1.5, 2][index];
+            oscillator.detune.value = (identityRandom() - .5) * 9;
+            level.gain.value = [0.34, 0.17, 0.09][index];
+            oscillator.connect(level);
+            level.connect(atmosphereBus);
+            oscillator.start();
+            atmosphereLevels.push(level);
+            return oscillator;
+        });
+
+        atmosphereNoise = ctx.createBufferSource();
+        const noiseFilter = ctx.createBiquadFilter();
+        const noiseLevel = ctx.createGain();
+        atmosphereNoise.buffer = noiseBuffer;
+        atmosphereNoise.loop = true;
+        atmosphereNoise.playbackRate.value = .31 + identityRandom() * .18;
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.value = 118 + identityRandom() * 90;
+        noiseFilter.Q.value = 1.2;
+        noiseLevel.gain.value = .065;
+        atmosphereNoise.connect(noiseFilter);
+        noiseFilter.connect(noiseLevel);
+        noiseLevel.connect(atmosphereBus);
+        atmosphereNoise.start();
+
+        atmosphereLfo = ctx.createOscillator();
+        atmosphereLfoDepth = ctx.createGain();
+        atmosphereLfo.type = 'sine';
+        atmosphereLfo.frequency.value = .018 + identityRandom() * .024;
+        atmosphereLfoDepth.gain.value = 46 + identityRandom() * 54;
+        atmosphereLfo.connect(atmosphereLfoDepth);
+        atmosphereLfoDepth.connect(atmosphereFilter.frequency);
+        atmosphereLfo.start();
+    }
+
+    function morphAtmosphere(seconds = 1.6) {
+        if (!ctx || !atmosphereFilter || !atmosphereOscillators.length) return;
+        const growthBand = Math.floor((contextStats.words || 0) / 24);
+        const morphRandom = mulberry32(mixSeeds(
+            sessionSeed,
+            documentSeed,
+            contentSeed,
+            growthBand,
+            currentGrooveFamily,
+            currentTextureFamily
+        ));
+        const now = ctx.currentTime;
+        const root = 34 + (documentSeed % 9) + morphRandom() * 4;
+        const ratios = currentTextureFamily % 3 === 0
+            ? [1, 1.5, 2]
+            : currentTextureFamily % 3 === 1 ? [1, 1.6, 2.12] : [1, 1.42, 1.92];
+        atmosphereOscillators.forEach((oscillator, index) => {
+            oscillator.frequency.setTargetAtTime(root * ratios[index], now, Math.max(.18, seconds / 3));
+        });
+        atmosphereFilter.frequency.setTargetAtTime(
+            205 + morphRandom() * 150 + contextStats.vowelRatio * 120,
+            now,
+            Math.max(.2, seconds / 3)
+        );
+        if (atmosphereLfo) {
+            atmosphereLfo.frequency.setTargetAtTime(.014 + morphRandom() * .035, now, .8);
+        }
+    }
+
+    function wakeAtmosphere() {
+        if (!atmosphereBus || !ctx) return;
+        const target = (.016 + Math.min(1, typeHeat) * .011) * effectDepth;
+        atmosphereBus.gain.setTargetAtTime(target, ctx.currentTime, .45);
+    }
+
+    function restAtmosphere() {
+        if (!atmosphereBus || !ctx) return;
+        atmosphereBus.gain.setTargetAtTime(.0001, ctx.currentTime, 2.4);
+    }
+
+    function destroyAtmosphere() {
+        for (const source of [...atmosphereOscillators, atmosphereNoise, atmosphereLfo]) {
+            if (!source) continue;
+            try { source.stop(); } catch (error) {}
+            try { source.disconnect(); } catch (error) {}
+        }
+        for (const node of [...atmosphereLevels, atmosphereLfoDepth, atmosphereFilter, atmosphereBus]) {
+            if (!node) continue;
+            try { node.disconnect(); } catch (error) {}
+        }
+        atmosphereOscillators = [];
+        atmosphereLevels = [];
+        atmosphereNoise = null;
+        atmosphereLfo = null;
+        atmosphereLfoDepth = null;
+        atmosphereFilter = null;
+        atmosphereBus = null;
     }
 
     function makeDistortionCurve(amount) {
@@ -146,6 +316,11 @@ window.HardForkEngine = (function() {
         ctx = audioContext || ctx || new (window.AudioContext || window.webkitAudioContext)();
         if (masterGain) return; // Already initialized
 
+        sessionSeed = createSessionSeed();
+        prng = mulberry32(sessionSeed);
+        commitSequence = 0;
+        gestureSequence = 0;
+
         createNoiseBuffer();
 
         masterGain = ctx.createGain();
@@ -153,6 +328,7 @@ window.HardForkEngine = (function() {
 
         synthBus = ctx.createGain();
         synthBus.gain.value = 1.0;
+        createAtmosphere();
         
         masterFilter = ctx.createBiquadFilter();
         masterFilter.type = 'lowpass';
@@ -205,6 +381,8 @@ window.HardForkEngine = (function() {
                 if (isTyping) {
                     isTyping = false;
                     isOutro = true;
+                    sustainedGestureCount = 0;
+                    restAtmosphere();
                 }
             }
         }, 100);
@@ -266,6 +444,10 @@ window.HardForkEngine = (function() {
         pendingCommitSolos = [];
         activeCommitSolo = null;
         supersededCommitSolos = 0;
+        currentGrooveFamily = 0;
+        currentTextureFamily = 0;
+        currentSwing = 0.56;
+        sustainedGestureCount = 0;
     }
 
     function destroy() {
@@ -274,6 +456,7 @@ window.HardForkEngine = (function() {
         if (typeof document !== 'undefined') {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         }
+        destroyAtmosphere();
         if (masterGain) {
             const oldGain = masterGain;
             oldGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
@@ -284,6 +467,9 @@ window.HardForkEngine = (function() {
         noiseBuffer = null;
         heatInterval = null;
         schedulerInterval = null;
+        sessionSeed = 0;
+        documentSeed = 0;
+        contentSeed = 0;
         ctx = null;
     }
 
@@ -408,13 +594,21 @@ window.HardForkEngine = (function() {
         for (const d of [0, 1, 3]) playPluck(time, d, 1.0, 0.15, 1.2);
     }
 
-    function playPluck(time, degree, velocity, duration = 0.3, volMod = 1.0) {
-        const osc = ctx.createOscillator(); osc.type = 'sawtooth';
-        const osc2 = ctx.createOscillator(); osc2.type = 'sawtooth';
-        osc.detune.value = -7; osc2.detune.value = 7;
+    function playPluck(time, degree, velocity, duration = 0.3, volMod = 1.0, character = {}) {
+        const timbres = [
+            ['sawtooth', 'sawtooth'],
+            ['triangle', 'sawtooth'],
+            ['square', 'triangle']
+        ];
+        const timbre = timbres[Math.abs(Number(character.timbre) || 0) % timbres.length];
+        const osc = ctx.createOscillator(); osc.type = timbre[0];
+        const osc2 = ctx.createOscillator(); osc2.type = timbre[1];
+        const detune = clamp(Number(character.detune) || 7, 2, 14);
+        osc.detune.value = -detune; osc2.detune.value = detune;
         
         const filter = ctx.createBiquadFilter(); filter.type = 'lowpass';
-        const filterMax = 1000 + (3000 * Math.min(1, typeHeat));
+        const brightness = clamp(Number(character.brightness) || 1, .72, 1.24);
+        const filterMax = (1000 + (3000 * Math.min(1, typeHeat))) * brightness;
         filter.frequency.setValueAtTime(400, time);
         filter.frequency.exponentialRampToValueAtTime(filterMax * effectDepth, time + 0.05);
         filter.frequency.exponentialRampToValueAtTime(400, time + duration);
@@ -429,13 +623,20 @@ window.HardForkEngine = (function() {
         
         const oscGain = ctx.createGain(); oscGain.gain.value = 0.35;
         const osc2Gain = ctx.createGain(); osc2Gain.gain.value = 0.35 * Math.min(1, typeHeat);
+        const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
+        if (panner) panner.pan.value = clamp(Number(character.pan) || 0, -.42, .42);
         
         osc.connect(oscGain); osc2.connect(osc2Gain);
-        oscGain.connect(filter); osc2Gain.connect(filter); filter.connect(gain); gain.connect(synthBus);
+        oscGain.connect(filter); osc2Gain.connect(filter); filter.connect(gain);
+        if (panner) {
+            gain.connect(panner); panner.connect(synthBus);
+        } else {
+            gain.connect(synthBus);
+        }
         
         osc.start(time); osc2.start(time);
         osc.stop(time + duration); osc2.stop(time + duration);
-        osc.onended = () => { try { filter.disconnect(); gain.disconnect(); oscGain.disconnect(); osc2Gain.disconnect(); } catch(e){} };
+        osc.onended = () => { try { filter.disconnect(); gain.disconnect(); oscGain.disconnect(); osc2Gain.disconnect(); panner?.disconnect(); } catch(e){} };
     }
 
     function snapToChord(degree) {
@@ -501,11 +702,19 @@ window.HardForkEngine = (function() {
             1
         );
         const localVowelRatio = clamp(Number(blockProfile.vowelRatio) || contextStats.vowelRatio, .2, .65);
-        const signature = (
-            textSignature(text) ^
-            textSignature(contextStats.documentTitle) ^
+        const identitySignature = mixSeeds(
+            textSignature(text),
+            textSignature(blockProfile.id || ''),
+            documentSeed,
             Math.imul(heading ? 31 : 17, Math.max(1, Number(blockProfile.level) || 1))
-        ) >>> 0;
+        );
+        const signature = mixSeeds(
+            identitySignature,
+            contentSeed,
+            sessionSeed,
+            Math.imul(commitSequence, 0x9E3779B1)
+        );
+        const soloRandom = mulberry32(signature);
         const letterCount = Array.from(text.toLowerCase()).filter(character => ALPHABET.includes(character)).length;
         const micro = !heading && (words <= 2 || letterCount < 10);
         const noteCount = heading
@@ -515,9 +724,14 @@ window.HardForkEngine = (function() {
         const sampled = sampleContour(sourceContour, noteCount);
         const memory = melodyBuffer.length ? sampleContour(melodyBuffer, noteCount) : sampled;
         const inheritance = .18 + similarity * .34;
-        const degrees = sampled.map((degree, index) => clamp(Math.round(
-            degree * (1 - inheritance) + memory[index] * inheritance
-        ), 0, 9));
+        const degrees = sampled.map((degree, index) => {
+            const inheritedDegree = Math.round(degree * (1 - inheritance) + memory[index] * inheritance);
+            const innerNote = index > 0 && index < sampled.length - 1;
+            const mutation = innerNote && soloRandom() < .34
+                ? (soloRandom() < .5 ? -1 : 1)
+                : 0;
+            return clamp(inheritedDegree + mutation, 0, 9);
+        });
 
         const ending = text.trim().slice(-1);
         const cadence = heading
@@ -542,7 +756,7 @@ window.HardForkEngine = (function() {
         const rhythm = rhythmFamilies[signature % rhythmFamilies.length];
         const steps = rhythm.slice(0, noteCount);
         const velocities = degrees.map((degree, index) => clamp(
-            .52 + ((signature >>> (index % 16)) & 3) * .08 + localVowelRatio * .18 + (degree / 9) * .07,
+            .5 + ((signature >>> (index % 16)) & 3) * .07 + localVowelRatio * .18 + (degree / 9) * .07 + soloRandom() * .04,
             .5,
             .94
         ));
@@ -550,18 +764,31 @@ window.HardForkEngine = (function() {
             const nextStep = steps[index + 1] ?? step + (heading ? 4 : 3);
             return clamp((nextStep - step) * SIXTEENTH_DUR * .72, .12, heading ? .46 : .34);
         });
+        const timbres = degrees.map(() => Math.floor(soloRandom() * 3));
+        const pans = degrees.map((degree, index) => clamp(
+            (index - (degrees.length - 1) / 2) / Math.max(4, degrees.length) + (soloRandom() - .5) * .16,
+            -.34,
+            .34
+        ));
 
         return {
             kind: heading ? 'heading' : 'paragraph',
             role: heading ? 'theme-sting' : micro ? 'microfill' : 'paragraph-solo',
             cadence,
             signature,
+            identitySignature,
+            sessionSeed,
+            documentSeed,
+            contentSeed,
+            variationGeneration: commitSequence,
             similarity,
             vowelRatio: localVowelRatio,
             degrees,
             steps,
             velocities,
             durations,
+            timbres,
+            pans,
             intensity: micro ? .68 : 1,
             durationSeconds: steps[steps.length - 1] * SIXTEENTH_DUR + durations[durations.length - 1]
         };
@@ -570,6 +797,7 @@ window.HardForkEngine = (function() {
     function commit(kind = 'paragraph', blockProfile = {}) {
         if (!ctx || !synthBus) return null;
         if (!String(blockProfile.text || '').trim()) return null;
+        commitSequence += 1;
         const solo = buildCommitSolo(kind, blockProfile);
         const punctuationFillOverlap = fillScheduledForNextBar && kind !== 'heading';
         const leadSteps = punctuationFillOverlap ? 2 : 0;
@@ -583,6 +811,8 @@ window.HardForkEngine = (function() {
             steps: [...solo.steps],
             velocities: [...solo.velocities],
             durations: [...solo.durations],
+            timbres: [...solo.timbres],
+            pans: [...solo.pans],
             startsOnGrid: true,
             delayedForSentenceFill: punctuationFillOverlap,
             maxConcurrentPlans: MAX_COMMIT_SOLO_PLANS
@@ -637,7 +867,13 @@ window.HardForkEngine = (function() {
                 ),
                 plan.velocities[noteIndex],
                 plan.durations[noteIndex],
-                (.56 + effectDepth * .22) * accent * plan.intensity
+                (.56 + effectDepth * .22) * accent * plan.intensity,
+                {
+                    timbre: plan.timbres[noteIndex],
+                    pan: plan.pans[noteIndex],
+                    brightness: .9 + plan.velocities[noteIndex] * .22,
+                    detune: 5 + plan.timbres[noteIndex] * 2
+                }
             );
             active.noteIndex += 1;
         }
@@ -658,21 +894,31 @@ window.HardForkEngine = (function() {
         
         if (step === 0) {
             const stats = getStats();
-            
-            // 1. Skapa en unik "fingeravtrycks-seed" baserad på dokumentets titel
-            let docSeed = 0;
-            const title = String(stats.documentTitle || '');
-            for(let i = 0; i < title.length; i++) {
-                docSeed += title.charCodeAt(i) * Math.pow(7, i % 5);
+            const growthBand = Math.floor((stats.words ?? stats.wordCount ?? 0) / 24);
+            const phraseNumber = Math.floor(barNumber / 4);
+            if (barNumber % 4 === 0) {
+                const identityRandom = mulberry32(mixSeeds(
+                    documentSeed,
+                    contentSeed,
+                    growthBand,
+                    phraseNumber
+                ));
+                const sessionRandom = mulberry32(mixSeeds(sessionSeed, phraseNumber, 0x50455246));
+                currentGrooveFamily = Math.floor(identityRandom() * GROOVE_PATTERNS.length);
+                const baseTexture = Math.floor(identityRandom() * 6);
+                currentTextureFamily = (baseTexture + Math.floor(sessionRandom() * 3) - 1 + 6) % 6;
+                currentSwing = .535 + sessionRandom() * .04;
+                morphAtmosphere(3.2);
             }
-            
-            // 2. Låt groovet utvecklas beroende på ordmängd (ändrar mönster var 30:e ord)
-            const wordEvolSeed = Math.floor((stats.words ?? stats.wordCount ?? 0) / 30) * 113;
-            
-            prng = mulberry32(Math.floor(docSeed) + wordEvolSeed + stats.paragraphs * 1000 + barNumber);
-            
-            const prog = (stats.vowelRatio > 0.42) ? [0, -2, -4, -5] : [0, -4, 3, -2];
-            currentChordOffset = prog[barNumber % 4];
+            prng = mulberry32(mixSeeds(sessionSeed, documentSeed, contentSeed, phraseNumber, barNumber));
+
+            const darkProgression = [0, -4, 3, -2];
+            const openProgression = [0, -2, -4, -5];
+            const vowelBlend = clamp((stats.vowelRatio - .35) / .15, 0, 1);
+            currentChordOffset = Math.round(
+                darkProgression[barNumber % 4] * (1 - vowelBlend) +
+                openProgression[barNumber % 4] * vowelBlend
+            );
             
             // Företrädesregel B3: synka inte fb om delay bloom är aktivt
             if (delayFB_L && delayFB_R && barNumber >= delayBloomUntilBar) {
@@ -693,23 +939,25 @@ window.HardForkEngine = (function() {
         }
         
         const effectiveHeat = (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
+        const concentrationGuard = sustainedGestureCount > 180;
+        const groove = GROOVE_PATTERNS[currentGrooveFamily] || GROOVE_PATTERNS[0];
         
         // Layer 0: Bass
-        if (step === 0 || step === 3 || step === 8 || step === 11) {
+        if (groove.bass.includes(step)) {
             if (step === 0 || step === 8 || effectiveHeat > 0.1) playBass(time, false);
-            if (effectiveHeat > 0.95 && (step === 3 || step === 11)) playBass(time, true);
+            if (effectiveHeat > 0.95 && groove.warmBass.includes(step)) playBass(time, true);
         }
         
         // Layer 1: Kick
         // Spela alltid baskagge på slag 1 och 3 (step 0 och 8) för hjärtslag, fyll i slag 2 och 4 när heat ökar
-        if (step === 0 || step === 8 || (effectiveHeat > 0.25 && (step === 4 || step === 12))) {
+        if (step === 0 || step === 8 || (effectiveHeat > 0.25 && groove.extraKick.includes(step))) {
             playKick(time);
         }
         
         // Layer 2: Hats
         // Spela alltid hi-hat på 2 och 10 (offbeat) svagt, fyll i mer vid mer heat
-        if (step === 2 || step === 10 || (effectiveHeat > 0.2 && (step === 6 || step === 14))) {
-            const isOpen = (effectiveHeat > 0.95 && step === 14);
+        if (groove.hats.includes(step) || (effectiveHeat > 0.2 && groove.warmHats.includes(step))) {
+            const isOpen = (effectiveHeat > 0.95 && step === groove.warmHats.at(-1));
             const pan = step % 4 === 2 ? -0.3 : 0.3;
             const volMod = effectiveHeat < 0.2 ? 0.3 : 1.0;
             playHat(time, pan, isOpen, volMod);
@@ -717,17 +965,23 @@ window.HardForkEngine = (function() {
 
         // Layer 2b: Ostinato (Sentence Memory)
         // Spela ostinatot svagt i bakgrunden även när man pausar
-        if (step % 2 === 0) {
-            let od = Math.round(M[step / 2]);
+        if (groove.ostinato.includes(step)) {
+            const memoryIndex = Math.floor(step / 2) % M.length;
+            let od = Math.round(M[memoryIndex]);
             if (step % 4 === 0) od = snapToChord(od);
             const ostinatoVol = Math.max(0.15, effectiveHeat * 0.5);
-            playPluck(time, od, ostinatoVol, 0.12, 0.5); // background layer
+            playPluck(time, od, ostinatoVol, 0.12, 0.5, {
+                timbre: currentTextureFamily % 3,
+                pan: (memoryIndex - 3.5) * .035,
+                brightness: .82 + (currentTextureFamily % 3) * .08,
+                detune: 4 + currentTextureFamily
+            }); // background layer
         }
         
         // Layer 3: Snare & extra hats
         if (effectiveHeat > 0.6) {
             if (step === 4 || step === 12) playSnare(time);
-            if (step % 2 !== 0 && prng() < 0.4 && step !== 14) playHat(time, 0, false, 0.8);
+            if (step % 2 !== 0 && prng() < (concentrationGuard ? .16 : .4) && step !== 14) playHat(time, 0, false, 0.8);
         }
         
         // Fill logic (B4)
@@ -741,8 +995,8 @@ window.HardForkEngine = (function() {
                 if (step === 8) playRiser(time, SIXTEENTH_DUR * 8, 0.04);
                 if (step === 14) playHat(time, 0, true);
             } else {
-                if (step === 0) playCrash(time, activeFillVariant === 'exclaim' ? 1.3 : 1.0);
-                if (activeFillVariant === 'exclaim' && (step === 0 || step === 8)) playStab(time);
+                if (step === 0 && !activeCommitSolo && !concentrationGuard) playCrash(time, activeFillVariant === 'exclaim' ? 1.15 : .9);
+                if (activeFillVariant === 'exclaim' && !activeCommitSolo && !concentrationGuard && (step === 0 || step === 8)) playStab(time);
             }
         }
         
@@ -761,7 +1015,7 @@ window.HardForkEngine = (function() {
         while (nextNoteTime < now + LOOKAHEAD) {
             scheduleStep(step16, nextNoteTime);
             
-            const swingRatio = typeHeat < 0.5 ? 0.56 : 0.50;
+            const swingRatio = currentSwing + (0.50 - currentSwing) * clamp(typeHeat, 0, 1);
             const isOdd = (step16 % 2 === 1);
             const stepDur = SIXTEENTH_DUR * 2 * (isOdd ? (1 - swingRatio) : swingRatio);
             
@@ -798,6 +1052,22 @@ window.HardForkEngine = (function() {
         if (key === 'Enter') key = '\n';
         
         const lowKey = key.toLowerCase();
+        gestureSequence += 1;
+        sustainedGestureCount += 1;
+        const gestureRandom = mulberry32(mixSeeds(
+            sessionSeed,
+            documentSeed,
+            contentSeed,
+            gestureSequence,
+            textSignature(key)
+        ));
+        const gestureCharacter = {
+            timbre: Math.floor(gestureRandom() * 3),
+            pan: (gestureRandom() - .5) * .28,
+            brightness: .88 + gestureRandom() * .25,
+            detune: 4 + gestureRandom() * 7
+        };
+        wakeAtmosphere();
         
         if (!isTyping) {
             isTyping = true;
@@ -812,10 +1082,10 @@ window.HardForkEngine = (function() {
         const quantTime = nextNoteTime;
         
         if (key === '\b' || key === 'Delete') {
-            playPluck(now, Math.max(0, currentMelDegree - 2), 0.32, 0.08, 0.34);
+            playPluck(now, Math.max(0, currentMelDegree - 2), 0.32, 0.08, 0.34, gestureCharacter);
             if (now - lastGlitchTime > 0.4) {
                 lastGlitchTime = now;
-                const r = Math.random();
+                const r = gestureRandom();
                 if (r > 0.7) {
                     playGlitch(quantTime, 0.15); // Lägre volym
                 } else if (r > 0.3) {
@@ -823,11 +1093,11 @@ window.HardForkEngine = (function() {
                     playRiser(quantTime, 0.05, 0.03); 
                 } else {
                     // Dovt "kluck"
-                    playPluck(quantTime, 0, 0.2, 0.05, 0.2);
+                    playPluck(quantTime, 0, 0.2, 0.05, 0.2, gestureCharacter);
                 }
             }
         } else if (key === '\n') {
-            playPluck(now, 0, 0.42, 0.1, 0.42);
+            playPluck(now, 0, 0.42, 0.1, 0.42, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             
@@ -843,7 +1113,7 @@ window.HardForkEngine = (function() {
                 sweepUntilTime = now + SIXTEENTH_DUR * 16;
             }
         } else if (key === '#') {
-            playPluck(now, currentMelDegree + 5, 0.45, 0.09, 0.46);
+            playPluck(now, currentMelDegree + 5, 0.45, 0.09, 0.46, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             const s = getStats();
@@ -871,7 +1141,7 @@ window.HardForkEngine = (function() {
                     playBass(now, true, 0.2); 
                 } else {
                     // H3+ (subtilt färgskifte)
-                    playPluck(now, currentMelDegree - 12, 0.5, 0.05, 0.8);
+                    playPluck(now, currentMelDegree - 12, 0.5, 0.05, 0.8, gestureCharacter);
                 }
                 
                 const harmonicShiftCount = s.harmonicShiftCount || 0;
@@ -879,13 +1149,13 @@ window.HardForkEngine = (function() {
             }
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('char', 14);
         } else if (key === ' ') {
-            playPluck(now, 0, 0.34, 0.075, 0.32);
+            playPluck(now, 0, 0.34, 0.075, 0.32, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             addTrace(40, now);
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('space', 0);
         } else if (/[.,;:!?]/.test(key)) {
-            playPluck(now, currentMelDegree + (key === '?' ? 2 : 0), 0.4, 0.085, 0.4);
+            playPluck(now, currentMelDegree + (key === '?' ? 2 : 0), 0.4, 0.085, 0.4, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             addTrace(90, now);
@@ -942,15 +1212,22 @@ window.HardForkEngine = (function() {
             }
             
             let octaveOffset = 0;
-            if ((step16 === 6 || step16 === 14) && prng() < typeHeat * 0.5) octaveOffset = 12; // A2
+            if ((step16 === 6 || step16 === 14) && prng() < typeHeat * (sustainedGestureCount > 180 ? .16 : .5)) octaveOffset = 12; // A2
             
             // Direktansatsen tar bort upplevd tangentfördröjning. Det starkare
             // huvudplucket ligger kvar på sextondelsnätet och bevarar groovet.
-            playPluck(now, currentMelDegree + octaveOffset/12*5, 0.38, 0.075, 0.4);
-            playPluck(quantTime, currentMelDegree + octaveOffset/12*5, 1.0);
+            playPluck(now, currentMelDegree + octaveOffset/12*5, .35 + gestureRandom() * .08, .068 + gestureRandom() * .018, 0.4, gestureCharacter);
+            playPluck(quantTime, currentMelDegree + octaveOffset/12*5, .9 + gestureRandom() * .1, .3, 1, {
+                ...gestureCharacter,
+                pan: -gestureCharacter.pan * .72,
+                timbre: (gestureCharacter.timbre + currentTextureFamily) % 3
+            });
             
-            if (typeHeat > 0.5) {
-                playPluck(quantTime + SIXTEENTH_DUR, currentMelDegree + 1, 0.4, 0.15, 0.6);
+            if (typeHeat > 0.5 && sustainedGestureCount <= 180) {
+                playPluck(quantTime + SIXTEENTH_DUR, currentMelDegree + 1, 0.4, 0.15, 0.6, {
+                    ...gestureCharacter,
+                    pan: gestureCharacter.pan * .5
+                });
             }
             
             melodyBuffer.push(currentMelDegree);
@@ -984,19 +1261,31 @@ window.HardForkEngine = (function() {
             commitSoloActive: Boolean(activeCommitSolo),
             supersededCommitSolos,
             maxCommitSoloPlans: MAX_COMMIT_SOLO_PLANS,
+            sessionSeed,
+            documentSeed,
+            contentSeed,
+            variationGeneration: commitSequence,
+            grooveFamily: currentGrooveFamily,
+            textureFamily: currentTextureFamily,
+            concentrationGuardActive: sustainedGestureCount > 180,
+            atmosphereSourceCount: atmosphereOscillators.length + Number(Boolean(atmosphereNoise)) + Number(Boolean(atmosphereLfo)),
             lastBlockResponse: lastBlockResponse ? {
                 ...lastBlockResponse,
                 degrees: [...lastBlockResponse.degrees],
                 steps: [...lastBlockResponse.steps],
                 velocities: [...lastBlockResponse.velocities],
-                durations: [...lastBlockResponse.durations]
+                durations: [...lastBlockResponse.durations],
+                timbres: [...lastBlockResponse.timbres],
+                pans: [...lastBlockResponse.pans]
             } : null,
             lastParagraphSolo: lastParagraphSolo ? {
                 ...lastParagraphSolo,
                 degrees: [...lastParagraphSolo.degrees],
                 steps: [...lastParagraphSolo.steps],
                 velocities: [...lastParagraphSolo.velocities],
-                durations: [...lastParagraphSolo.durations]
+                durations: [...lastParagraphSolo.durations],
+                timbres: [...lastParagraphSolo.timbres],
+                pans: [...lastParagraphSolo.pans]
             } : null
         };
     }

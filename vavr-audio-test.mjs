@@ -389,9 +389,15 @@ await engine.start('hardfork', 24, {
   paragraphs: 8,
   headings: 3,
   headingDepth: 2,
+  documentId: 'doc-grenverk',
+  contentFingerprint: 284772901,
   documentTitle: 'Grenverk'
 });
 const hardForkContext = FakeAudioContext.instances.at(-1);
+const hardForkInitialState = sandbox.window.HardForkEngine.getState();
+if (hardForkInitialState.atmosphereSourceCount !== 5 || !hardForkInitialState.sessionSeed) {
+  throw new Error('Hard Fork byggde inte sitt återanvända bakgrundslager eller sessionsfrö.');
+}
 hardForkContext.currentTime = 10;
 FakeAudioContext.startTimes = [];
 engine.handleKey('a');
@@ -420,6 +426,7 @@ if (
   throw new Error('Hard Fork svarade musikaliskt på ett tomt block.');
 }
 const soloProfile = {
+  id: 'block-grenverk-1',
   text: 'Koden delar sig, men styckets motiv lever vidare genom grenen.',
   words: 11,
   vowelRatio: .41,
@@ -436,6 +443,8 @@ if (
   firstSolo?.role !== 'paragraph-solo' ||
   firstSolo?.degrees.length < 6 ||
   firstSolo?.degrees.length > 10 ||
+  firstSolo?.timbres.length !== firstSolo?.degrees.length ||
+  firstSolo?.pans.length !== firstSolo?.degrees.length ||
   firstSolo?.steps.some((step, index) => index > 0 && step <= firstSolo.steps[index - 1]) ||
   !firstSolo?.startsOnGrid ||
   firstSolo?.durationSeconds > 3.2 ||
@@ -450,11 +459,11 @@ engine.commit('paragraph', soloProfile);
 hardForkState = hardForkEngine.getState();
 const repeatedSolo = hardForkState.lastParagraphSolo;
 if (
-  repeatedSolo.signature !== firstSolo.signature ||
-  JSON.stringify(repeatedSolo.degrees) !== JSON.stringify(firstSolo.degrees) ||
-  JSON.stringify(repeatedSolo.steps) !== JSON.stringify(firstSolo.steps)
+  repeatedSolo.identitySignature !== firstSolo.identitySignature ||
+  repeatedSolo.signature === firstSolo.signature ||
+  repeatedSolo.variationGeneration <= firstSolo.variationGeneration
 ) {
-  throw new Error('Hard Fork gav inte samma stycke samma solo från samma musikaliska utgångsläge.');
+  throw new Error('Hard Fork behöll inte textidentiteten samtidigt som ett nytt framförande varierades.');
 }
 hardForkEngine.resetMemory();
 engine.commit('paragraph', {
@@ -542,7 +551,34 @@ if (
 ) {
   throw new Error('Hard Fork tömde inte solo-lane och väntande svar vid stopp.');
 }
-console.log('  ok   Hard Fork kombinerar direktansats och full produktion med ett deterministiskt styckessolo');
+await engine.start('hardfork', 24, {
+  words: 420,
+  characters: 2410,
+  averageWordLength: 5.7,
+  vowelRatio: .39,
+  paragraphs: 8,
+  headings: 3,
+  headingDepth: 2,
+  documentId: 'doc-grenverk',
+  contentFingerprint: 284772901,
+  documentTitle: 'Grenverk'
+});
+engine.commit('paragraph', soloProfile);
+const newSessionSolo = hardForkEngine.getState().lastParagraphSolo;
+if (
+  newSessionSolo.identitySignature !== firstSolo.identitySignature ||
+  newSessionSolo.documentSeed !== firstSolo.documentSeed ||
+  newSessionSolo.sessionSeed === firstSolo.sessionSeed ||
+  newSessionSolo.signature === firstSolo.signature
+) {
+  throw new Error('Hard Fork gav inte samma dokument en stabil identitet och ett nytt framförande i en ny session.');
+}
+for (let index = 0; index < 181; index++) engine.handleKey('a');
+if (!hardForkEngine.getState().concentrationGuardActive) {
+  throw new Error('Hard Fork aktiverade inte koncentrationsvakten efter ett långt sammanhängande skrivflöde.');
+}
+engine.stop(true);
+console.log('  ok   Hard Fork kombinerar ett fylligt bakgrundslager med textidentitet och unik sessionsvariation');
 
 const typewriter = sandbox.testTypewriter;
 const typewriterThemes = ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad'];

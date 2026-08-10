@@ -5954,7 +5954,7 @@
         name: 'Hard Fork',
         adaptive: true,
         dynamic: true,
-        description: 'SkrivR:s generativa 125 BPM-produktion, vidareutvecklad för VävR. Direkt tangentansats kombineras med bas, trummor, swing, ostinato, fills, textminne och ett kort solo av varje invävt stycke.'
+        description: 'Ett fylligt generativt skrivrum där dokumentet ger ljudidentiteten och varje skrivpass blir en ny tolkning. Maskinluft, groove, klang, textminne och styckessolon utvecklas utan att upprepas exakt.'
       }
     };
 
@@ -9056,6 +9056,15 @@
       }
     }
 
+    function soundTextFingerprint(text) {
+      let hash = 2166136261;
+      for (const character of Array.from(String(text || '').toLowerCase())) {
+        hash ^= character.codePointAt(0);
+        hash = Math.imul(hash, 16777619);
+      }
+      return hash >>> 0;
+    }
+
     function soundTextProfile() {
       const document = activeDocument();
       const draftBlock = parseDraft(elements.draft.value || '');
@@ -9104,7 +9113,9 @@
         headings: headingLevels.length,
         headingDepth: headingLevels[headingLevels.length - 1] || 0,
         harmonicShiftCount,
+        documentId: document.id || '',
         documentTitle: document.title || '',
+        contentFingerprint: soundTextFingerprint(text),
         cohesion: cohesionScores.length
           ? clamp(cohesionScores.reduce((sum, score) => sum + score, 0) / cohesionScores.length * 1.6, 0, 1)
           : 0,

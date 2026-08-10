@@ -421,6 +421,19 @@ check(
   hardForkEngine.includes('Direktansatsen tar bort upplevd tangentfördröjning'),
   'Hard Fork har direkt tangentansats ovanpå rytmnätet'
 );
+check(
+  hardForkEngine.includes('const GROOVE_PATTERNS =') &&
+  hardForkEngine.includes('function createAtmosphere()') &&
+  hardForkEngine.includes('function createSessionSeed()') &&
+  hardForkEngine.includes('concentrationGuardActive'),
+  'Hard Fork har groovevariation, återanvänt bakgrundslager, sessionsvariation och koncentrationsvakt'
+);
+check(
+  html.includes('function soundTextFingerprint(text)') &&
+  html.includes("documentId: document.id || ''") &&
+  html.includes('contentFingerprint: soundTextFingerprint(text)'),
+  'Hard Fork får lokala dokument- och innehållsfingeravtryck'
+);
 
 const sendSoundSource = inlineScript?.match(
   /function sendDraftSound\(key, origin = 'direct'\) \{[\s\S]*?^    \}/m

@@ -165,13 +165,20 @@ sammanlagda form:
   samma tre röster och skapar inga ytterligare oscillatorer vid commit.
 - **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
   bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
+  Ett återanvänt, lågmält lager av maskinluft och tre mörka röster gör rummet
+  fylligare utan att skapa nya oscillatorer för varje tangent. Dokumentets id,
+  titel och lokala textfingeravtryck ger en igenkännbar ljudidentitet. Ett nytt
+  sessionsfrö varierar framförandet varsamt varje gång temat startas.
   Ett nytt direktanslag hörs vid själva tangenten, medan det fylligare lagret
   fortfarande placeras på sequencerns rytmnät. När ett stycke vävs in görs
-  dess bokstavskontur om till ett deterministiskt solo på tre till tio toner.
+  dess bokstavskontur om till ett textbundet men sessionsvarierat solo på tre
+  till tio toner.
   Ett mycket kort block får ett mikrofill. Solot går sedan vidare som nytt
   ostinatominne. Högst två soloplaner får finnas samtidigt. Vid tätare commits
   ersätter det senaste stycket det senaste väntande svaret, så ljudnoder inte
-  kan staplas utan gräns.
+  kan staplas utan gräns. Fyra groovefamiljer och sex klangfamiljer byts bara
+  vid fyrtaktsgränser. Efter lång intensiv skrivning minskar en
+  koncentrationsvakt ornament och starka accenter.
 
 Tomma block ger inget musikaliskt svar i något av de två dynamiska temana.
 Rubriker behåller sina tydligare temaväxlingar.

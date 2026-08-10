@@ -340,7 +340,15 @@ ett kort okvantiserat pluck vid själva tangentgesten, medan det starkare
 musikaliska svaret ligger kvar på rytmnätet. Därmed bevaras Hard Fork-känslan
 utan den upplevda tangentfördröjningen.
 
-Ett styckecommit bygger dessutom en deterministisk soloplan från blocktextens
+Hard Fork har dessutom ett permanent, återanvänt bakgrundslager med tre mörka
+röster, filtrerad maskinluft och mycket långsam filterdrift. Lagret vaknar
+varsamt när skrivandet börjar och tonar ned efter en paus. Det gör ljudrummet
+fylligare utan att öka antalet oscillatorer per tangent. Fyra groovefamiljer
+och sex klangfamiljer väljs vid fyrtaktsgränser. Växlingen sker därför aldrig
+plötsligt mitt i en fras. Vokalandelen blandar nu mjukt mellan två harmoniska
+förlopp i stället för att passera en hård tröskel.
+
+Ett styckecommit bygger dessutom en textbunden soloplan från blocktextens
 bokstavsrörelser, textlängd, vokalandel, sluttecken, lokal likhet och det
 senaste melodiminnet. Mycket kort text ger ett tretons mikrofill. Längre text
 ger fem till tio toner under högst ungefär tre sekunder. Planen skapar inga
@@ -352,13 +360,21 @@ normala svaret får därmed avslutas utan att hundratals schemalagda oscillatore
 kan byggas upp. Solots komprimerade kontur blir sedan nästa ostinatominne.
 Rubrikcommit använder samma begränsade lane men får ett tydligare temasting.
 
-Den lokala textprofilen innehåller också teckenmängd, alfabetiskt
-tyngdcentrum, rubrikskiften och dokumenttitel. Titeln och textens tillväxt
-ger Hard Fork ett deterministiskt musikaliskt fingeravtryck. Vid stopp
+Den lokala textprofilen innehåller också dokument-id, ett lokalt beräknat
+textfingeravtryck, teckenmängd, alfabetiskt tyngdcentrum, rubrikskiften och
+dokumenttitel. Dokumentets id och titel ger en stabil palett. Textens
+fingeravtryck formar utvecklingen och ett nytt sessionsfrö varierar
+artikulation, groove, klang och panorering inom samma ram. Samma dokument känns
+därför igen, men två framföranden blir inte bitidentiska. Vid stopp
 återställs sequencer, fill, skrivstatus och vilomodulation så att en ny
 session aldrig ärver ett gammalt rytmläge. Även aktiv soloplan, väntande
 planer och blocksvarsräknare töms. Tomma block lämnar båda dynamiska motorerna
 helt oförändrade.
+
+Efter 180 sammanhängande tangentgester aktiveras en koncentrationsvakt. Den
+minskar slumpmässiga hi-hats, oktavsprång, extra svar och starka crashaccenter
+tills skrivandet har vilat. Fylligheten kommer därmed främst från långsamma
+lager och klangvariation, inte från fler överraskningar eller högre nivå.
 
 `Typewriter` är en separat Web Audio-motor för direkt tangentfeedback.
 Mekanisk, Reseskrivare, Elektrisk och Dämpad använder olika kombinationer av
