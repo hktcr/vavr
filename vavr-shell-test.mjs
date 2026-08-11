@@ -115,6 +115,8 @@ for (const id of [
   'timer-display',
   'timer-primary',
   'timer-focus-cue',
+  'custom-minutes',
+  'break-minutes',
   'typewriter-mode-toggle',
   'typewriter-focus-layer',
   'typewriter-context-slider',
@@ -151,6 +153,14 @@ for (const id of [
 check(html.includes("metric: 'words'"), 'ordmål finns i datamodellen');
 check(html.includes("source.metric === 'characters'"), 'teckenmål normaliseras');
 check(html.includes("endAt: Date.now() + durationSec * 1000"), 'timern använder absolut sluttid');
+check(
+  /id="custom-minutes"[^>]+min="1"[^>]+max="180"[^>]+step="1"/.test(html) &&
+  /id="break-minutes"[^>]+min="1"[^>]+max="60"[^>]+step="1"/.test(html) &&
+  html.includes("elements.customMinutesField.hidden = false") &&
+  html.includes("elements.breakMinutes.addEventListener('change'") &&
+  html.includes('function setBreakMinutes(value)'),
+  'skrivpass och pauser kan ställas i exakta hela minuter'
+);
 check(html.includes('function buildStructureTree'), 'sektionsträdet härleds');
 check(html.includes('function beginContextualWriting'), 'kontextuell infogning finns');
 check(html.includes('function beginWritingAt'), 'Skrivsömmen kan placera nästa block exakt');
