@@ -1,5 +1,5 @@
 /**
- * ValsangEngine (BYGGSPEC v5)
+ * ValsangEngine (BYGGSPEC v6)
  * 
  * En ljudmotor för SkrivR baserad på Web Audio API. 
  * Skapar ett dynamiskt fokusljud där fraser, andning och en fast flock av
@@ -29,6 +29,70 @@ window.ValsangEngine = (() => {
         moll: [0, 3, 5, 7, 10],   // moll-pentatonisk
         dur: [0, 2, 5, 7, 9]      // dur/sus-pentatonisk
     };
+    const CALL_PROFILES = {
+        deepMoan: {
+            type: 'deep-moan',
+            family: 'tonal-moan',
+            degreeBias: -2,
+            durationScale: 1.08,
+            spacingScale: .58,
+            startDelay: .52,
+            fundamental: .75,
+            overtone: .11,
+            sub: .14,
+            lowpass: 1120,
+            formantBias: -90,
+            songDepth: 8
+        },
+        upcall: {
+            type: 'upcall',
+            family: 'frequency-sweep',
+            degreeBias: -1,
+            durationScale: .86,
+            spacingScale: .64,
+            startDelay: .38,
+            fundamental: .69,
+            overtone: .19,
+            sub: .12,
+            lowpass: 1480,
+            formantBias: 40,
+            songDepth: 11
+        },
+        warble: {
+            type: 'warble',
+            family: 'modulated-call',
+            degreeBias: 0,
+            durationScale: .76,
+            spacingScale: .55,
+            startDelay: .34,
+            fundamental: .62,
+            overtone: .26,
+            sub: .12,
+            lowpass: 1760,
+            formantBias: 130,
+            songDepth: 19
+        },
+        pulseTrain: {
+            type: 'pulse-train',
+            family: 'rhythmic-pulse',
+            degreeBias: -1,
+            durationScale: .58,
+            spacingScale: .44,
+            startDelay: .28,
+            fundamental: .66,
+            overtone: .14,
+            sub: .20,
+            lowpass: 1240,
+            formantBias: -30,
+            songDepth: 6
+        }
+    };
+    const CALL_REPERTOIRE = [
+        CALL_PROFILES.deepMoan,
+        CALL_PROFILES.upcall,
+        CALL_PROFILES.warble,
+        CALL_PROFILES.pulseTrain
+    ];
     
     let rootMidi = 43; // G2
     let degreeFloat = 4.0;
@@ -182,6 +246,9 @@ window.ValsangEngine = (() => {
             osc1,
             osc2,
             sub,
+            fundamentalLevel,
+            overtoneLevel,
+            subLevel,
             gain,
             lowpass,
             formant,
@@ -735,6 +802,16 @@ window.ValsangEngine = (() => {
         const words = Math.max(0, Number(blockProfile.words) || text.trim().split(/\s+/).filter(Boolean).length);
         const letterCount = Array.from(text.toLowerCase()).filter(character => ALPHABET.includes(character)).length;
         const micro = !heading && (words <= 2 || letterCount < 10);
+        const ending = text.trim().slice(-1);
+        const profileIndex = (
+            musicalContext.signature +
+            (heading ? 2 : 0) +
+            (ending === '?' ? 1 : 0) +
+            Math.round(musicalContext.similarity * 3)
+        ) % CALL_REPERTOIRE.length;
+        const callProfile = micro
+            ? CALL_PROFILES.upcall
+            : CALL_REPERTOIRE[profileIndex];
         const noteCount = heading ? 4 : micro ? 2 : words <= 8 ? 3 : clamp(4 + Math.floor(words / 34), 4, 7);
         const typedContour = blockBuffer.map(point => point.deg);
         const source = typedContour.length >= 3
@@ -751,7 +828,6 @@ window.ValsangEngine = (() => {
             degrees.push(clamp(degrees[index - 1] + interval, 0, 15));
         }
 
-        const ending = text.trim().slice(-1);
         if (heading) {
             degrees[degrees.length - 1] = clamp(degrees[0] + 3, 0, 15);
         } else if (ending === '?') {
@@ -766,13 +842,29 @@ window.ValsangEngine = (() => {
             );
         }
 
+        for (let index = 0; index < degrees.length; index++) {
+            let shapedDegree = degrees[index] + callProfile.degreeBias;
+            if (callProfile.type === 'deep-moan') {
+                shapedDegree -= Math.floor(index / 2);
+            } else if (callProfile.type === 'upcall') {
+                shapedDegree += Math.round(index * 2 / Math.max(1, degrees.length - 1));
+            } else if (callProfile.type === 'warble') {
+                shapedDegree += index % 2 ? 1 : index ? -1 : 0;
+            } else if (callProfile.type === 'pulse-train' && index > 0) {
+                shapedDegree = degrees[index - 1] + callProfile.degreeBias + (index % 3 === 0 ? -1 : 0);
+            }
+            degrees[index] = clamp(Math.round(shapedDegree), 0, 15);
+        }
+
         const noteSeconds = clamp(
             .46 + musicalContext.localSentenceWords * .012 + musicalContext.localVowelRatio * .22,
             .54,
             .96
-        );
-        const offsets = degrees.map((_, index) => index * noteSeconds * (heading ? .64 : .72));
-        const startDelay = heading ? .32 : .48 + musicalContext.similarity * .24;
+        ) * callProfile.durationScale;
+        const offsets = degrees.map((_, index) => index * noteSeconds * callProfile.spacingScale);
+        const startDelay = heading
+            ? Math.min(.4, callProfile.startDelay)
+            : callProfile.startDelay + musicalContext.similarity * .12;
         const durationSeconds = startDelay + offsets[offsets.length - 1] + noteSeconds * 1.18;
         return {
             kind: heading ? 'heading' : 'paragraph',
@@ -783,6 +875,8 @@ window.ValsangEngine = (() => {
             cadence: heading
                 ? 'section'
                 : ending === '?' ? 'question' : ending === '!' ? 'exclamation' : 'resolution',
+            callType: callProfile.type,
+            callFamily: callProfile.family,
             signature: musicalContext.signature,
             source: typedContour.length >= 3 ? 'typed-contour' : 'block-text',
             similarity: musicalContext.similarity,
@@ -793,7 +887,15 @@ window.ValsangEngine = (() => {
             startDelay,
             durationSeconds,
             pan: clamp(((musicalContext.signature % 201) - 100) / 260, -.38, .38),
-            words
+            words,
+            timbre: {
+                fundamental: callProfile.fundamental,
+                overtone: callProfile.overtone,
+                sub: callProfile.sub,
+                lowpass: callProfile.lowpass,
+                formantBias: callProfile.formantBias,
+                songDepth: callProfile.songDepth
+            }
         };
     }
 
@@ -894,9 +996,33 @@ window.ValsangEngine = (() => {
         }
         nextVoice.osc1.detune.setValueAtTime(detuneBias, now);
         nextVoice.osc2.detune.setValueAtTime(detuneBias + 5 + nextIndex * 1.5, now);
-        nextVoice.lowpass.frequency.setTargetAtTime(1050 + localVowelRatio * 980, now, .7);
-        nextVoice.formant.frequency.setTargetAtTime(430 + localVowelRatio * 520, now, .55);
-        nextVoice.upperFormant.frequency.setTargetAtTime(900 + localVowelRatio * 760, now, .7);
+        nextVoice.fundamentalLevel.gain.setTargetAtTime(responseSong.timbre.fundamental, now, .7);
+        nextVoice.overtoneLevel.gain.setTargetAtTime(responseSong.timbre.overtone, now, .7);
+        nextVoice.subLevel.gain.setTargetAtTime(responseSong.timbre.sub, now, .7);
+        nextVoice.lowpass.frequency.setTargetAtTime(
+            responseSong.timbre.lowpass + localVowelRatio * 260,
+            now,
+            .7
+        );
+        nextVoice.formant.frequency.setTargetAtTime(
+            430 + localVowelRatio * 520 + responseSong.timbre.formantBias,
+            now,
+            .55
+        );
+        nextVoice.upperFormant.frequency.setTargetAtTime(
+            900 + localVowelRatio * 760 + responseSong.timbre.formantBias * .7,
+            now,
+            .7
+        );
+        songGain.gain.setTargetAtTime(responseSong.timbre.songDepth, now, 1.4);
+        if (responseSong.callType === 'pulse-train') {
+            responseSong.offsets.forEach((offset, index) => {
+                const pulseTime = now + responseSong.startDelay + offset;
+                nextVoice.gain.gain.setTargetAtTime(targetGain * (index % 3 === 2 ? .72 : 1), pulseTime, .045);
+                nextVoice.gain.gain.setTargetAtTime(targetGain * .34, pulseTime + responseSong.noteSeconds * .48, .08);
+            });
+            nextVoice.gain.gain.setTargetAtTime(targetGain * .62, now + responseSong.durationSeconds, .5);
+        }
         if (nextVoice.panner) {
             const spread = .08 + (1 - similarity) * .22;
             nextVoice.panner.pan.setTargetAtTime(
