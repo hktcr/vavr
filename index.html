@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 125041)
-Total output lines: 13750
+Warning: truncated output (original token count: 125227)
+Total output lines: 13764
 
 <!DOCTYPE html>
 <html lang="sv">
@@ -4970,7 +4970,7 @@ Total output lines: 13750
       overflow: hidden;
     }
 
-    .vavbord-toolbar-label…65041 tokens truncated…"status-chip ${node.lonely ? 'lonely' : (node.flow ? 'flow' : '')}">${escapeHtml(statusLabel(node))}</span>
+    .vavbord-toolbar-label…65227 tokens truncated…ow ? 'flow' : '')}">${escapeHtml(statusLabel(node))}</span>
           <span class="status-chip">${wordCount(block.text)} ord</span>
         </div>
         <section class="inspector-section">
@@ -7115,7 +7115,6 @@ Total output lines: 13750
 
       elements.focusDuration.addEventListener('change', event => {
         if (event.target.value === 'custom') {
-          elements.customMinutesField.hidden = false;
           elements.customMinutes.value = app.settings.focusMinutes;
           requestAnimationFrame(() => elements.customMinutes.focus());
         } else {
@@ -7123,6 +7122,7 @@ Total output lines: 13750
         }
       });
       elements.customMinutes.addEventListener('change', event => setFocusMinutes(event.target.value));
+      elements.breakMinutes.addEventListener('change', event => setBreakMinutes(event.target.value));
       elements.showCountdown.addEventListener('change', event => {
         app.settings.showCountdown = event.target.checked;
         saveState('Timerinställning sparad');
