@@ -38,9 +38,11 @@ window.HardForkEngine = (function() {
     let traces = [];
     let activeAckordDegrees = [];
     let isTyping = false;
+    let beatActive = false;
     let typeHeat = 0;
     let lastKeyTime = 0;
     let heatInterval = null;
+    const TYPING_PAUSE_THRESHOLD = 0.45;
 
     // Sequencer State
     let schedulerInterval = null;
@@ -374,16 +376,14 @@ window.HardForkEngine = (function() {
         ctx.synthBus = synthBus;
 
         heatInterval = setInterval(() => {
-            if (typeHeat > 0) {
-                typeHeat = Math.max(0, typeHeat - 0.05);
-            }
-            if (ctx && ctx.currentTime - lastKeyTime > 2.0) {
-                if (isTyping) {
-                    isTyping = false;
-                    isOutro = true;
-                    sustainedGestureCount = 0;
-                    restAtmosphere();
-                }
+            if (
+                ctx &&
+                isTyping &&
+                ctx.currentTime - lastKeyTime > TYPING_PAUSE_THRESHOLD
+            ) {
+                // En tankepaus fryser den musikaliska intensiteten. Rytmklockan
+                // fortsätter i samma fas och återstartas därför inte vid nästa tecken.
+                isTyping = false;
             }
         }, 100);
 
@@ -406,8 +406,10 @@ window.HardForkEngine = (function() {
     function handleVisibilityChange() {
         if (document.hidden) {
             isTyping = false;
-        } else {
-            nextNoteTime = ctx ? ctx.currentTime + 0.05 : 0;
+        } else if (ctx && nextNoteTime < ctx.currentTime) {
+            // Behåll aktuellt rytmsteg. Flytta bara fram klockan om webbläsaren
+            // faktiskt har lämnat den efter sig under avbrottet.
+            nextNoteTime = ctx.currentTime + 0.05;
         }
     }
 
@@ -417,6 +419,7 @@ window.HardForkEngine = (function() {
         sentenceMelody = [];
         melodyBuffer = [];
         isTyping = false;
+        beatActive = false;
         isOutro = false;
         isFillBar = false;
         fillScheduledForNextBar = false;
@@ -1004,7 +1007,7 @@ window.HardForkEngine = (function() {
     }
 
     function schedule() {
-        if (!isTyping && !isOutro && !activeCommitSolo && !pendingCommitSolos.length) return;
+        if (!beatActive && !activeCommitSolo && !pendingCommitSolos.length) return;
         if (!ctx) return;
         
         if (ctx.state === 'suspended') ctx.resume();
@@ -1032,11 +1035,6 @@ window.HardForkEngine = (function() {
                     isFillBar = false;
                 }
                 
-                // Outro stops the clock here (A3)
-                if (isOutro) {
-                    isOutro = false;
-                    isTyping = false;
-                }
             }
         }
     }
@@ -1050,6 +1048,16 @@ window.HardForkEngine = (function() {
         if (stats) setContext(stats);
         if (key === 'Backspace' || key === 'Delete') key = '\b';
         if (key === 'Enter') key = '\n';
+
+        const now = ctx.currentTime;
+        const resumedFromPause = beatActive && !isTyping;
+        if (resumedFromPause) sustainedGestureCount = 0;
+        if (isTyping && lastKeyTime > 0) {
+            const keyGap = now - lastKeyTime;
+            if (keyGap <= TYPING_PAUSE_THRESHOLD) {
+                typeHeat = Math.max(0, typeHeat - keyGap * 0.5);
+            }
+        }
         
         const lowKey = key.toLowerCase();
         gestureSequence += 1;
@@ -1069,16 +1077,21 @@ window.HardForkEngine = (function() {
         };
         wakeAtmosphere();
         
-        if (!isTyping) {
+        if (!beatActive) {
+            beatActive = true;
             isTyping = true;
             isOutro = false;
             nextNoteTime = Math.ceil((ctx.currentTime + 0.02) / SIXTEENTH_DUR) * SIXTEENTH_DUR;
-            step16 = 0; 
+            step16 = 0;
             playBass(ctx.currentTime, false, 0.1);
+        } else if (!isTyping) {
+            // Återuppta skrivresponsen utan att nollställa rytmfasen eller lägga
+            // ett extra basslag ovanpå den redan löpande takten.
+            isTyping = true;
+            isOutro = false;
         }
         
         lastKeyTime = ctx.currentTime;
-        const now = ctx.currentTime;
         const quantTime = nextNoteTime;
         
         if (key === '\b' || key === 'Delete') {
@@ -1268,6 +1281,11 @@ window.HardForkEngine = (function() {
             grooveFamily: currentGrooveFamily,
             textureFamily: currentTextureFamily,
             concentrationGuardActive: sustainedGestureCount > 180,
+            beatActive,
+            isTyping,
+            typeHeat,
+            step16,
+            nextNoteTime,
             atmosphereSourceCount: atmosphereOscillators.length + Number(Boolean(atmosphereNoise)) + Number(Boolean(atmosphereLfo)),
             lastBlockResponse: lastBlockResponse ? {
                 ...lastBlockResponse,
