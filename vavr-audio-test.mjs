@@ -318,6 +318,42 @@ if (
 ) {
   throw new Error('Valsång lät inte textlängd och sluttecken forma en begränsad svarssång.');
 }
+const whaleCallTypes = new Set();
+const whaleCallFamilies = new Set();
+for (let index = 0; index < 32; index++) {
+  engine.commit('paragraph', {
+    text: `Havets röst nummer ${index} rör sig genom vattnet i en egen harmonisk fras.`,
+    words: 13,
+    vowelRatio: .38 + (index % 7) * .025,
+    averageSentenceWords: 8 + index % 13,
+    similarityToPrevious: (index % 9) / 8
+  });
+  const call = valsangEngine.getState().lastResponseSong;
+  whaleCallTypes.add(call?.callType);
+  whaleCallFamilies.add(call?.callFamily);
+  const timbreSum = (call?.timbre?.fundamental || 0) +
+    (call?.timbre?.overtone || 0) +
+    (call?.timbre?.sub || 0);
+  if (
+    !call?.callType ||
+    !call?.callFamily ||
+    call.degrees.some(degree => !Number.isInteger(degree) || degree < 0 || degree > 15) ||
+    call.durationSeconds > 6.2 ||
+    Math.abs(timbreSum - 1) > .0001
+  ) {
+    throw new Error('Valsångens lätesregister lämnade det harmoniska eller nivåmässiga säkerhetsområdet.');
+  }
+}
+if (
+  whaleCallTypes.size !== 4 ||
+  whaleCallFamilies.size !== 4 ||
+  !whaleCallTypes.has('deep-moan') ||
+  !whaleCallTypes.has('upcall') ||
+  !whaleCallTypes.has('warble') ||
+  !whaleCallTypes.has('pulse-train')
+) {
+  throw new Error('Valsång använde inte hela registret av moans, kontaktläten, warbles och pulssviter.');
+}
 for (let index = 0; index < 120; index++) {
   engine.commit('paragraph', {
     text: 'Stycke ' + index + ' återkommer med en gradvis förändrad kontur.',
