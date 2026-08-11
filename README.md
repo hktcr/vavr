@@ -154,6 +154,9 @@ sammanlagda form:
 - **Valsång** formar melodisk riktning av bokstavsföljder, låter vokaler
   andas längre och bygger fraser av skrivtempo, ordform och meningar. En fast
   pool med tre röster gör styckesväxlingen tydlig utan växande resursbruk.
+  Ett textstyrt register växlar mellan djupa rop, stigande svep,
+  böljande drillar och mjuka pulssviter. Alla läten hålls inom ett gemensamt
+  pentatoniskt tonmaterial och en kontrollerad övertonsbalans.
   När ett nytt stycke vävs in växer nästa röst fram under ungefär två till
   tre sekunder medan den föregående tonar bort under åtta till fjorton
   sekunder. Rubriknivå, lokal likhet med föregående stycke, vokalandel och
