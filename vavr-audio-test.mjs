@@ -577,6 +577,24 @@ for (let index = 0; index < 181; index++) engine.handleKey('a');
 if (!hardForkEngine.getState().concentrationGuardActive) {
   throw new Error('Hard Fork aktiverade inte koncentrationsvakten efter ett långt sammanhängande skrivflöde.');
 }
+const timerHeatBeforeFinish = hardForkEngine.getState().typeHeat;
+engine.setTimerState('finished', 'focus');
+const timerFinishedState = hardForkEngine.getState();
+if (
+  !timerFinishedState.timerResting ||
+  timerFinishedState.typeHeat >= timerHeatBeforeFinish
+) {
+  throw new Error('Hard Fork gav inte ett lugnare musikaliskt läge när skrivtimern tog slut.');
+}
+engine.setTimerState('running', 'focus');
+const timerRestartedState = hardForkEngine.getState();
+if (
+  timerRestartedState.timerResting ||
+  timerRestartedState.typeHeat < timerHeatBeforeFinish ||
+  !timerRestartedState.beatActive
+) {
+  throw new Error('Hard Fork återställde inte beatets energi när ett nytt skrivpass startade.');
+}
 const resumedHardForkContext = FakeAudioContext.instances.at(-1);
 const heatBeforePause = hardForkEngine.getState().typeHeat;
 resumedHardForkContext.currentTime = 3;
@@ -605,6 +623,7 @@ if (
   throw new Error('Hard Fork tappade rytmfasen eller lade ett dubbelslag när skrivandet återupptogs.');
 }
 engine.stop(true);
+console.log('  ok   Hard Fork lugnar beatet vid timerslut och återväcker det vid nästa skrivpass');
 console.log('  ok   Hard Fork behåller beat och rytmfas genom tankepauser utan dubbelslag');
 console.log('  ok   Hard Fork kombinerar ett fylligt bakgrundslager med textidentitet och unik sessionsvariation');
 
