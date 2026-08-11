@@ -339,6 +339,16 @@ skapar därför inga nya oscillatorer. Röstpoolen återanvänds cirkulärt,
 masterkedjan har kompressor och reverbet använder en kortare 3,8 sekunders
 impulsrespons för lägre startkostnad på mobil.
 
+Både Valsång och Hard Fork har en intern accentdirigent. Terminalt
+skiljetecken och Enter hålls kort i väntan på ett eventuellt blockcommit. Om
+ett commit följer samlas händelserna i blockets musikaliska svar i stället för
+att tre effekter staplas. Rubrik och block har högre prioritet än radbrytning
+och enskilda tecken. Citattecken, parenteser och hakparenteser får lågmälda
+öppnings- och slutljud med motsatt panorering. Ett aktivt ord- eller teckenmål
+ger en harmoniskt integrerad accent när 25, 50, 75 eller 100 procent passeras.
+Ett rullande accentfönster dämpar eller utelämnar mikroaccenter vid hög täthet,
+medan strukturella händelser alltid bevaras.
+
 Hard Fork är på motsvarande sätt SkrivR:s fullständiga 125 BPM-motor.
 En lookahead-scheduler driver ett swingande sextondelsnät med kick, bas,
 hi-hat, snare, ostinato, sidechain-liknande duckning, waveshaping och
