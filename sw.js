@@ -1,7 +1,7 @@
 'use strict';
 
 const CACHE_PREFIX = 'vavr-shell-';
-const CACHE_NAME = CACHE_PREFIX + '2026-08-11-01';
+const CACHE_NAME = CACHE_PREFIX + '2026-08-11-02';
 const SHELL_PATHS = [
   './',
   './index.html',
