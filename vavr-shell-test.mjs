@@ -114,6 +114,7 @@ for (const id of [
   'goal-progress',
   'timer-display',
   'timer-primary',
+  'timer-focus-cue',
   'typewriter-mode-toggle',
   'typewriter-focus-layer',
   'typewriter-context-slider',
@@ -177,7 +178,18 @@ check(html.includes('<textarea id="draft-input"'), 'textarea förblir skrivandet
 check(html.includes("new Intl.Segmenter('sv', { granularity: 'sentence' })"), 'svensk meningssegmentering används när webbläsaren stöder den');
 check(html.includes("elements.draft.selectionStart") && html.includes("elements.draft.selectionEnd"), 'aktuell mening följer caret och markering');
 check(html.includes("body[data-typewriter-mode=\"true\"] #composer") && html.includes('border-color: transparent'), 'skrivmaskinsvyn tar bort skrivglasets yttre kant');
-check(html.includes('position: absolute !important') && html.includes('.commit-receipt'), 'invävningskvittot påverkar inte skrivglasets layout');
+check(
+  /\.commit-receipt\s*\{[\s\S]*?position:\s*fixed\s*!important/.test(html) &&
+  html.indexOf('id="commit-receipt"') < html.indexOf('<main>'),
+  'invävningskvittot ligger som ett synligt lager ovanför fokusytan'
+);
+check(
+  /#timer-focus-cue\s*\{[\s\S]*?position:\s*fixed/.test(html) &&
+  html.includes('function timerFocusCueThreshold') &&
+  html.includes('remaining <= timerFocusCueThreshold(timer)') &&
+  html.includes("timer.mode === 'break' ? 'Pausen är slut' : 'Skrivpasset är slut'"),
+  'både skrivpass och pauser får en större guldfärgad slutsignal när nedräkningen visas'
+);
 check(html.includes("DEFAULT_COMMIT_RECEIPTS = Object.freeze(['timer', 'blockWords', 'goal'])"), 'standardkvittot visar styckets ord samt aktiva timer- och målvärden');
 check(
   !/ord per minut/i.test(html) && !/value="(?:wpm|pace)"/i.test(html),
@@ -427,6 +439,14 @@ check(
   hardForkEngine.includes('function createSessionSeed()') &&
   hardForkEngine.includes('concentrationGuardActive'),
   'Hard Fork har groovevariation, återanvänt bakgrundslager, sessionsvariation och koncentrationsvakt'
+);
+check(
+  hardForkEngine.includes('function setTimerState(state') &&
+  hardForkEngine.includes("state === 'finished'") &&
+  hardForkEngine.includes("state === 'running' && mode === 'focus'") &&
+  html.includes("Soundscape.setTimerState('finished', timer.mode)") &&
+  html.includes("Soundscape.setTimerState('running', mode)"),
+  'Hard Fork sänker nivån vid timerslut och återväcks när ett nytt skrivpass startar'
 );
 check(
   html.includes('function soundTextFingerprint(text)') &&
