@@ -315,6 +315,15 @@ formantfilter och egen panorering. Tre delade LFO:er ger vibrato, långsam
 tonkontur och vilodrift. Totalt finns högst tolv permanenta oscillatorer och
 inga nya skapas vid ett styckecommit.
 
+Motorn har fyra biologiskt inspirerade lätesfamiljer: djup tonal moan,
+stigande frekvenssvep, modulerad warble och rytmisk pulssvit. Valet är
+deterministiskt från textsignatur, struktur, sluttecken och lokal likhet.
+Lätestyperna förändrar kontur, tidsform, övertonsbalans, subton, formanter och
+långsam tonmodulation. Samtliga stannar i samma moll- eller durpentatoniska
+material, med kontrollerad nivåsumma och högst 6,2 sekunders svar, för att
+variation inte ska bryta det harmoniska fokusljudet. Det är en syntetisk
+tolkning av valars akustiska strategier, inte en imitation av en bestämd art.
+
 `Soundscape.commit(kind, blockProfile)` förmedlar den semantiska skillnaden
 mellan ett Enter och ett faktiskt invävt block. Enter avslutar en fras. Ett
 commit roterar exakt en gång till nästa röst. Den nya rösten växer fram under
@@ -325,7 +334,7 @@ stereobredd och fraslängd. Vid samma commit samplas blockets typade kontur,
 eller blocktexten efter en inklistring, till en kort svarssång. Hög likhet ger
 ett närmare eko och låg likhet ger ett motriktat svar. Textlängd bestämmer två
 till sju tonpunkter och sluttecknet bestämmer kadens. Mycket korta block får
-ett lägre mikrosvar. Svarskonturen automatiseras på den nya poolrösten och
+ett stigande och diskret kontaktläte. Svarskonturen automatiseras på den nya poolrösten och
 skapar därför inga nya oscillatorer. Röstpoolen återanvänds cirkulärt,
 masterkedjan har kompressor och reverbet använder en kortare 3,8 sekunders
 impulsrespons för lägre startkostnad på mobil.
