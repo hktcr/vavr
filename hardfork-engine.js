@@ -10,6 +10,9 @@ window.HardForkEngine = (function() {
     const SIXTEENTH_DUR = 60 / BPM / 4;
     const LOOKAHEAD = 0.12;
     const MAX_COMMIT_SOLO_PLANS = 2;
+    const PAUSE_PULSE_HEAT = 0.08;
+    const CORE_BASS_STEPS = [0, 8];
+    const CORE_HAT_STEPS = [2, 10];
     const GROOVE_PATTERNS = [
         { bass: [0, 3, 8, 11], warmBass: [3, 11], extraKick: [4, 12], hats: [2, 10], warmHats: [6, 14], ostinato: [0, 2, 4, 6, 8, 10, 12, 14] },
         { bass: [0, 5, 8, 11], warmBass: [5, 11], extraKick: [5, 12], hats: [2, 10], warmHats: [6, 13], ostinato: [0, 2, 4, 7, 8, 10, 12, 15] },
@@ -297,6 +300,11 @@ window.HardForkEngine = (function() {
         atmosphereBus.gain.setTargetAtTime(.0001, ctx.currentTime, 2.4);
     }
 
+    function settleAtmosphere() {
+        if (!atmosphereBus || !ctx) return;
+        atmosphereBus.gain.setTargetAtTime(.0055 * effectDepth, ctx.currentTime, 1.2);
+    }
+
     function destroyAtmosphere() {
         for (const source of [...atmosphereOscillators, atmosphereNoise, atmosphereLfo]) {
             if (!source) continue;
@@ -393,8 +401,10 @@ window.HardForkEngine = (function() {
                 ctx.currentTime - lastKeyTime > TYPING_PAUSE_THRESHOLD
             ) {
                 // En tankepaus fryser den musikaliska intensiteten. Rytmklockan
-                // fortsätter i samma fas och återstartas därför inte vid nästa tecken.
+                // fortsätter i samma fas, men arrangemanget går ned till en ren
+                // grundpuls och återstartas därför inte vid nästa tecken.
                 isTyping = false;
+                settleAtmosphere();
             }
         }, 100);
 
@@ -1107,13 +1117,16 @@ window.HardForkEngine = (function() {
             }
         }
         
-        const effectiveHeat = (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
+        const pausePulseActive = beatActive && !isTyping && !timerResting;
+        const effectiveHeat = pausePulseActive
+            ? PAUSE_PULSE_HEAT
+            : (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
         const concentrationGuard = sustainedGestureCount > 180;
         const groove = GROOVE_PATTERNS[currentGrooveFamily] || GROOVE_PATTERNS[0];
         
         // Layer 0: Bass
-        if (groove.bass.includes(step)) {
-            if (step === 0 || step === 8 || effectiveHeat > 0.1) playBass(time, false);
+        if (CORE_BASS_STEPS.includes(step) || (!pausePulseActive && groove.bass.includes(step))) {
+            if (CORE_BASS_STEPS.includes(step) || effectiveHeat > 0.1) playBass(time, false);
             if (effectiveHeat > 0.95 && groove.warmBass.includes(step)) playBass(time, true);
         }
         
@@ -1125,7 +1138,7 @@ window.HardForkEngine = (function() {
         
         // Layer 2: Hats
         // Spela alltid hi-hat på 2 och 10 (offbeat) svagt, fyll i mer vid mer heat
-        if (groove.hats.includes(step) || (effectiveHeat > 0.2 && groove.warmHats.includes(step))) {
+        if (CORE_HAT_STEPS.includes(step) || (!pausePulseActive && effectiveHeat > 0.2 && groove.warmHats.includes(step))) {
             const isOpen = (effectiveHeat > 0.95 && step === groove.warmHats.at(-1));
             const pan = step % 4 === 2 ? -0.3 : 0.3;
             const volMod = effectiveHeat < 0.2 ? 0.3 : 1.0;
@@ -1133,18 +1146,15 @@ window.HardForkEngine = (function() {
         }
 
         // Layer 2b: Ostinato (Sentence Memory)
-        // Spela ostinatot svagt i bakgrunden även när man pausar
-        if (groove.ostinato.includes(step)) {
+        // Spela ostinatot svagt i bakgrunden under aktivt skrivande
+        if (!pausePulseActive && groove.ostinato.includes(step)) {
             const memoryIndex = Math.floor(step / 2) % M.length;
             let od = Math.round(M[memoryIndex]);
             if (step % 4 === 0) od = snapToChord(od);
             const ostinatoVol = Math.max(0.15, effectiveHeat * 0.5);
-            playPluck(time, od, ostinatoVol, 0.12, 0.5, {
-                timbre: currentTextureFamily % 3,
-                pan: (memoryIndex - 3.5) * .035,
-                brightness: .82 + (currentTextureFamily % 3) * .08,
-                detune: 4 + currentTextureFamily
-            }); // background layer
+            // Grundostinatot behåller den tidigare fasta och rena klangen.
+            // Textvariationerna ligger i teckenrespons, fraser och solon.
+            playPluck(time, od, ostinatoVol, 0.12, 0.5); // background layer
         }
         
         // Layer 3: Snare & extra hats
@@ -1460,6 +1470,9 @@ window.HardForkEngine = (function() {
             typeHeat,
             timerResting,
             heatBeforeTimerRest,
+            pausePulseActive: beatActive && !isTyping && !timerResting,
+            pausePulseHeat: PAUSE_PULSE_HEAT,
+            atmosphereGain: atmosphereBus?.gain?.value ?? 0,
             step16,
             nextNoteTime,
             atmosphereSourceCount: atmosphereOscillators.length + Number(Boolean(atmosphereNoise)) + Number(Boolean(atmosphereLfo)),

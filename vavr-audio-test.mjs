@@ -712,9 +712,12 @@ const pausedHardForkState = hardForkEngine.getState();
 if (
   !pausedHardForkState.beatActive ||
   pausedHardForkState.isTyping ||
-  pausedHardForkState.typeHeat !== heatBeforePause
+  pausedHardForkState.typeHeat !== heatBeforePause ||
+  !pausedHardForkState.pausePulseActive ||
+  pausedHardForkState.pausePulseHeat !== .08 ||
+  pausedHardForkState.atmosphereGain > .006
 ) {
-  throw new Error('Hard Fork frös inte den aktuella ljudbilden under en tankepaus.');
+  throw new Error('Hard Fork gick inte ned till en ren, fasbevarande grundpuls under tankepausen.');
 }
 resumedHardForkContext.currentTime = pausedHardForkState.nextNoteTime - .01;
 FakeAudioContext.startTimes = [];
@@ -733,7 +736,7 @@ if (
 }
 engine.stop(true);
 console.log('  ok   Hard Fork lugnar beatet vid timerslut och återväcker det vid nästa skrivpass');
-console.log('  ok   Hard Fork behåller beat och rytmfas genom tankepauser utan dubbelslag');
+console.log('  ok   Hard Fork behåller en ren grundpuls och rytmfas genom tankepauser utan dubbelslag');
 console.log('  ok   Hard Fork kombinerar ett fylligt bakgrundslager med textidentitet och unik sessionsvariation');
 
 const typewriter = sandbox.testTypewriter;

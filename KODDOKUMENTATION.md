@@ -352,7 +352,11 @@ medan strukturella händelser alltid bevaras.
 Hard Fork är på motsvarande sätt SkrivR:s fullständiga 125 BPM-motor.
 En lookahead-scheduler driver ett swingande sextondelsnät med kick, bas,
 hi-hat, snare, ostinato, sidechain-liknande duckning, waveshaping och
-korskopplad stereodelay. Skrivintensitet bygger lagren. Meningsmelodin
+korskopplad stereodelay. Vid en tankepaus fortsätter klockan utan fasbrott men
+motorn begränsas till fast kick, bas och hi-hat med låg intensitet. Ostinato,
+extrabeat och rikare atmosfär återkommer först när skrivandet fortsätter.
+Det förhindrar både omstartens dubbelslag och att vilopulsen blir grumlig.
+Skrivintensitet bygger lagren. Meningsmelodin
 komprimeras till ett åttastegsminne, skiljetecken bestämmer filltyp och
 rubriknivåer kan ge filtersvep och harmoniska skiften. VävR-förfiningen lägger
 ett kort okvantiserat pluck vid själva tangentgesten, medan det starkare
