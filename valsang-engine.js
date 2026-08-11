@@ -19,6 +19,17 @@ window.ValsangEngine = (() => {
     let commitCount = 0;
     let responseSongCount = 0;
     let lastResponseSong = null;
+    let pendingEnterAccentTimer = null;
+    let pendingEnterAccent = false;
+    let pendingSentenceAccentTimer = null;
+    let pendingSentenceAccent = null;
+    let accentTimes = [];
+    let pairedAccentCount = 0;
+    let composedAccentCount = 0;
+    let suppressedAccentCount = 0;
+    let lastAccentKind = null;
+    let straightDoubleQuoteOpen = false;
+    let straightSingleQuoteOpen = false;
 
     let noiseBuffer = null;
     let irBuffer = null;
@@ -359,6 +370,15 @@ window.ValsangEngine = (() => {
         commitCount = 0;
         responseSongCount = 0;
         lastResponseSong = null;
+        pendingEnterAccent = false;
+        pendingSentenceAccent = null;
+        accentTimes = [];
+        pairedAccentCount = 0;
+        composedAccentCount = 0;
+        suppressedAccentCount = 0;
+        lastAccentKind = null;
+        straightDoubleQuoteOpen = false;
+        straightSingleQuoteOpen = false;
         blockBuffer = [];
         lastKeyTime = performance.now();
     }
@@ -366,6 +386,8 @@ window.ValsangEngine = (() => {
     function destroy() {
         if (!ctx) return;
         clearTimeout(idleTimer);
+        if (pendingEnterAccentTimer) clearTimeout(pendingEnterAccentTimer);
+        if (pendingSentenceAccentTimer) clearTimeout(pendingSentenceAccentTimer);
         try {
             voices.forEach(voice => {
                 voice.osc1.stop();
@@ -389,6 +411,15 @@ window.ValsangEngine = (() => {
         commitCount = 0;
         responseSongCount = 0;
         lastResponseSong = null;
+        pendingEnterAccentTimer = null;
+        pendingEnterAccent = false;
+        pendingSentenceAccentTimer = null;
+        pendingSentenceAccent = null;
+        accentTimes = [];
+        pairedAccentCount = 0;
+        composedAccentCount = 0;
+        suppressedAccentCount = 0;
+        lastAccentKind = null;
         stateObj.voicePoolSize = 0;
         stateObj.activeVoices = 0;
         stateObj.voiceGeneration = 0;
@@ -398,6 +429,13 @@ window.ValsangEngine = (() => {
         stateObj.responseSongCount = 0;
         stateObj.responseUsesVoicePool = true;
         stateObj.lastResponseSong = null;
+        stateObj.pairedAccentCount = 0;
+        stateObj.composedAccentCount = 0;
+        stateObj.suppressedAccentCount = 0;
+        stateObj.lastAccentKind = null;
+        stateObj.pendingEnterAccent = false;
+        stateObj.pendingSentenceAccent = null;
+        stateObj.accentWindowSize = 0;
         isIdle = true;
         ctx = null;
     }
@@ -489,6 +527,112 @@ window.ValsangEngine = (() => {
         echoOsc.stop(t + 1.0);
     }
 
+    function accentGain(kind, priority = 'micro') {
+        if (!ctx) return 0;
+        const now = ctx.currentTime;
+        accentTimes = accentTimes.filter(time => now - time <= 7);
+        if (priority === 'micro' && accentTimes.length >= 5) {
+            suppressedAccentCount += 1;
+            lastAccentKind = 'suppressed:' + kind;
+            return 0;
+        }
+        accentTimes.push(now);
+        lastAccentKind = kind;
+        if (priority === 'structural') return .92;
+        return clamp(1 - Math.max(0, accentTimes.length - 2) * .11, .46, 1);
+    }
+
+    function pairedSymbolDirection(key) {
+        if ('([{“‘'.includes(key)) return 1;
+        if (')]}”’'.includes(key)) return -1;
+        if (key === '"') {
+            straightDoubleQuoteOpen = !straightDoubleQuoteOpen;
+            return straightDoubleQuoteOpen ? 1 : -1;
+        }
+        if (key === "'") {
+            straightSingleQuoteOpen = !straightSingleQuoteOpen;
+            return straightSingleQuoteOpen ? 1 : -1;
+        }
+        return 0;
+    }
+
+    function playPairedAccent(key) {
+        const direction = pairedSymbolDirection(key);
+        if (!direction) return false;
+        const gainScale = accentGain(direction > 0 ? 'pair-open' : 'pair-close');
+        if (!gainScale) return true;
+        const degree = clamp(currentDegree + (direction > 0 ? 2 : 0), 0, 15);
+        const frequency = midiToFreq(degreeToMidi(degree, rootMidi));
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const panner = typeof ctx.createStereoPanner === 'function' ? ctx.createStereoPanner() : null;
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(
+            frequency * (direction > 0 ? 1.06 : .96),
+            ctx.currentTime + .34
+        );
+        gain.gain.setValueAtTime(.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.027 * gainScale, ctx.currentTime + .035);
+        gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .52);
+        oscillator.connect(gain);
+        if (panner) {
+            panner.pan.value = direction > 0 ? -.3 : .3;
+            gain.connect(panner).connect(wetGain);
+        } else {
+            gain.connect(wetGain);
+        }
+        oscillator.start(ctx.currentTime);
+        oscillator.stop(ctx.currentTime + .56);
+        pairedAccentCount += 1;
+        return true;
+    }
+
+    function cancelPendingStructuralAccents() {
+        const sources = [];
+        if (pendingSentenceAccentTimer) clearTimeout(pendingSentenceAccentTimer);
+        if (pendingSentenceAccent) sources.push('sentence-' + pendingSentenceAccent.key);
+        pendingSentenceAccentTimer = null;
+        pendingSentenceAccent = null;
+        if (pendingEnterAccentTimer) clearTimeout(pendingEnterAccentTimer);
+        if (pendingEnterAccent) sources.push('enter');
+        pendingEnterAccentTimer = null;
+        pendingEnterAccent = false;
+        return sources;
+    }
+
+    function queueSentenceAccent(key, phrasePoints) {
+        if (pendingSentenceAccentTimer) clearTimeout(pendingSentenceAccentTimer);
+        pendingSentenceAccent = { key, phrasePoints: phrasePoints.map(point => ({ ...point })) };
+        pendingSentenceAccentTimer = setTimeout(() => {
+            pendingSentenceAccentTimer = null;
+            if (!ctx || !pendingSentenceAccent) return;
+            const accent = pendingSentenceAccent;
+            pendingSentenceAccent = null;
+            accentGain('sentence-' + accent.key, 'phrase');
+            playEchoPhrase(accent.phrasePoints, accent.key === '!');
+        }, 34);
+    }
+
+    function queueEnterAccent() {
+        if (pendingEnterAccentTimer) clearTimeout(pendingEnterAccentTimer);
+        if (pendingSentenceAccent) {
+            pendingEnterAccent = false;
+            composedAccentCount += 1;
+            lastAccentKind = 'composed:sentence-enter';
+            return;
+        }
+        pendingEnterAccent = true;
+        pendingEnterAccentTimer = setTimeout(() => {
+            pendingEnterAccentTimer = null;
+            if (!ctx || !pendingEnterAccent) return;
+            pendingEnterAccent = false;
+            const gainScale = accentGain('line-break', 'phrase');
+            voiceGain.gain.setTargetAtTime(.19 * gainScale, ctx.currentTime, .1);
+            voiceGain.gain.setTargetAtTime(0, ctx.currentTime + .2, 2.5);
+        }, 28);
+    }
+
     function emitTrace(midi, type, durMs) {
         if (onTraceCallback) {
             onTraceCallback({ midi, type, durMs });
@@ -526,6 +670,13 @@ window.ValsangEngine = (() => {
         ).length;
         stateObj.responseSongCount = responseSongCount;
         stateObj.responseUsesVoicePool = true;
+        stateObj.pairedAccentCount = pairedAccentCount;
+        stateObj.composedAccentCount = composedAccentCount;
+        stateObj.suppressedAccentCount = suppressedAccentCount;
+        stateObj.lastAccentKind = lastAccentKind;
+        stateObj.pendingEnterAccent = pendingEnterAccent;
+        stateObj.pendingSentenceAccent = pendingSentenceAccent?.key || null;
+        stateObj.accentWindowSize = accentTimes.length;
         stateObj.lastResponseSong = lastResponseSong ? {
             ...lastResponseSong,
             degrees: [...lastResponseSong.degrees],
@@ -622,8 +773,7 @@ window.ValsangEngine = (() => {
             voiceOsc2.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.9);
             subOsc.frequency.setTargetAtTime(targetFreq/2, ctx.currentTime, 0.9);
             
-            voiceGain.gain.setTargetAtTime(0.22, ctx.currentTime, 0.1);
-            voiceGain.gain.setTargetAtTime(0, ctx.currentTime + 0.2, 2.5);
+            queueEnterAccent();
             
             emitTrace(degreeToMidi(currentDegree, rootMidi), 'dive', 900);
             prevAlphaIdx = null;
@@ -665,7 +815,7 @@ window.ValsangEngine = (() => {
                 else if (key === '!') { phrasePoints.push(sentenceBuffer[sentenceBuffer.length-1] || {deg: currentDegree}); phrasePoints.push({deg: currentDegree}); }
                 else phrasePoints.push({deg: currentDegree});
                 
-                playEchoPhrase(phrasePoints, key === '!');
+                queueSentenceAccent(key, phrasePoints);
                 
                 const fadeDur = clamp(sentenceBuffer.length * 0.09, 1.5, 8);
                 voiceGain.gain.setTargetAtTime(0.02, ctx.currentTime + 0.5, fadeDur / 3);
@@ -682,6 +832,9 @@ window.ValsangEngine = (() => {
                 voiceGain.gain.setTargetAtTime(0.10, ctx.currentTime, 0.1);
             }
             
+        } else if (playPairedAccent(key)) {
+            sentenceBuffer.push({deg: currentDegree});
+            blockBuffer.push({deg: currentDegree, vowel: false, ix: -1});
         } else if (/[0-9]/.test(key)) {
             const num = parseInt(key);
             const freq = 1200 + num * 130;
@@ -802,6 +955,9 @@ window.ValsangEngine = (() => {
         const words = Math.max(0, Number(blockProfile.words) || text.trim().split(/\s+/).filter(Boolean).length);
         const letterCount = Array.from(text.toLowerCase()).filter(character => ALPHABET.includes(character)).length;
         const micro = !heading && (words <= 2 || letterCount < 10);
+        const goalMilestone = [25, 50, 75, 100].includes(Number(blockProfile.goalMilestone))
+            ? Number(blockProfile.goalMilestone)
+            : null;
         const ending = text.trim().slice(-1);
         const profileIndex = (
             musicalContext.signature +
@@ -855,6 +1011,13 @@ window.ValsangEngine = (() => {
             }
             degrees[index] = clamp(Math.round(shapedDegree), 0, 15);
         }
+        if (goalMilestone) {
+            degrees[degrees.length - 1] = clamp(
+                degrees[degrees.length - 1] + (goalMilestone >= 75 ? 2 : 1),
+                0,
+                15
+            );
+        }
 
         const noteSeconds = clamp(
             .46 + musicalContext.localSentenceWords * .012 + musicalContext.localVowelRatio * .22,
@@ -877,6 +1040,7 @@ window.ValsangEngine = (() => {
                 : ending === '?' ? 'question' : ending === '!' ? 'exclamation' : 'resolution',
             callType: callProfile.type,
             callFamily: callProfile.family,
+            goalMilestone,
             signature: musicalContext.signature,
             source: typedContour.length >= 3 ? 'typed-contour' : 'block-text',
             similarity: musicalContext.similarity,
@@ -894,7 +1058,7 @@ window.ValsangEngine = (() => {
                 sub: callProfile.sub,
                 lowpass: callProfile.lowpass,
                 formantBias: callProfile.formantBias,
-                songDepth: callProfile.songDepth
+                songDepth: callProfile.songDepth + (goalMilestone ? goalMilestone * .035 : 0)
             }
         };
     }
@@ -903,6 +1067,7 @@ window.ValsangEngine = (() => {
         if (!ctx || !voices.length) return;
         if (!String(blockProfile.text || '').trim()) return;
         const now = ctx.currentTime;
+        const pendingAccentSources = cancelPendingStructuralAccents();
         const heading = kind === 'heading';
         const headingLevel = clamp(Number(blockProfile.level) || contextStats.lastHeadingLevel || 1, 1, 3);
         const similarity = clamp(
@@ -944,7 +1109,8 @@ window.ValsangEngine = (() => {
             0,
             Number(blockProfile.words) || String(blockProfile.text || '').trim().split(/\s+/).filter(Boolean).length
         );
-        const targetGain = heading ? .145 : localWords <= 2 ? .09 : .125;
+        const targetGain = (heading ? .145 : localWords <= 2 ? .09 : .125) *
+            ([25, 50, 75, 100].includes(Number(blockProfile.goalMilestone)) ? 1.06 : 1);
 
         oldVoice.gain.gain.cancelScheduledValues(now);
         oldVoice.gain.gain.setValueAtTime(clamp(oldVoice.gain.gain.value || .12, .0001, .2), now);
@@ -1045,8 +1211,16 @@ window.ValsangEngine = (() => {
             ...responseSong,
             degrees: [...responseSong.degrees],
             offsets: [...responseSong.offsets],
+            accentComposition: [
+                ...pendingAccentSources,
+                heading ? 'heading' : 'commit',
+                responseSong.goalMilestone ? 'goal-' + responseSong.goalMilestone : null
+            ].filter(Boolean),
             poolVoice: nextIndex
         };
+        if (lastResponseSong.accentComposition.length > 1) composedAccentCount += 1;
+        accentGain(heading ? 'heading' : 'commit', 'structural');
+        if (responseSong.goalMilestone) accentGain('goal-' + responseSong.goalMilestone, 'structural');
         playTransient('noise', 310 + localVowelRatio * 260, .72, heading ? .036 : .025, 1.15, 'wet');
         emitTrace(degreeToMidi(startDegree, rootMidi), heading ? 'theme' : 'voice', attackSeconds * 1000);
         sentenceBuffer = [];
