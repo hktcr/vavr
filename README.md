@@ -171,10 +171,10 @@ sammanlagda form:
   100 procent av aktiva skrivmål och dämpar mikroaccenter när de blir täta.
 - **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
   bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
-  Under en tankepaus fortsätter rytmklockan i samma fas men arrangemanget går
-  ned till en ren grundpuls. Nästa tecken återför variationen utan dubbelslag.
-  Grundostinatot har en fast klang medan textstyrd variation ligger i
-  teckenrespons, frasslut, accenter och styckessolon.
+  Under en tankepaus fortsätter hela det rådande beatet med samma rytmfas,
+  groove, melodiska ostinato och ljudidentitet, även om pausen varar en minut.
+  Nästa tecken fortsätter utan omstart eller dubbelslag. Mjukare oscillatorer
+  och säkra ljudenvelopes håller korta anslag rena utan att ta bort variation.
   Ett återanvänt, lågmält lager av maskinluft och tre mörka röster gör rummet
   fylligare utan att skapa nya oscillatorer för varje tangent. Dokumentets id,
   titel och lokala textfingeravtryck ger en igenkännbar ljudidentitet. Ett nytt

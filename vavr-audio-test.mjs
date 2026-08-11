@@ -706,6 +706,7 @@ if (
 }
 const resumedHardForkContext = FakeAudioContext.instances.at(-1);
 const heatBeforePause = hardForkEngine.getState().typeHeat;
+const atmosphereBeforePause = hardForkEngine.getState().atmosphereGain;
 resumedHardForkContext.currentTime = 3;
 await new Promise(resolve => setTimeout(resolve, 140));
 const pausedHardForkState = hardForkEngine.getState();
@@ -713,13 +714,24 @@ if (
   !pausedHardForkState.beatActive ||
   pausedHardForkState.isTyping ||
   pausedHardForkState.typeHeat !== heatBeforePause ||
-  !pausedHardForkState.pausePulseActive ||
-  pausedHardForkState.pausePulseHeat !== .08 ||
-  pausedHardForkState.atmosphereGain > .006
+  !pausedHardForkState.thinkingPauseActive ||
+  !pausedHardForkState.thinkingBeatHeld ||
+  pausedHardForkState.atmosphereGain !== atmosphereBeforePause
 ) {
-  throw new Error('Hard Fork gick inte ned till en ren, fasbevarande grundpuls under tankepausen.');
+  throw new Error('Hard Fork bevarade inte hela det rådande beatet under tankepausen.');
 }
-resumedHardForkContext.currentTime = pausedHardForkState.nextNoteTime - .01;
+resumedHardForkContext.currentTime = 63;
+await new Promise(resolve => setTimeout(resolve, 140));
+const minutePauseState = hardForkEngine.getState();
+if (
+  !minutePauseState.beatActive ||
+  !minutePauseState.thinkingBeatHeld ||
+  minutePauseState.typeHeat !== heatBeforePause ||
+  minutePauseState.atmosphereGain !== atmosphereBeforePause
+) {
+  throw new Error('Hard Fork förändrade det rådande beatet under en minuts tankepaus.');
+}
+resumedHardForkContext.currentTime = minutePauseState.nextNoteTime - .01;
 FakeAudioContext.startTimes = [];
 engine.handleKey('a');
 const resumedHardForkState = hardForkEngine.getState();
@@ -728,15 +740,15 @@ const immediateResumeStarts = FakeAudioContext.startTimes.filter(
 ).length;
 if (
   !resumedHardForkState.isTyping ||
-  resumedHardForkState.step16 !== pausedHardForkState.step16 ||
-  resumedHardForkState.nextNoteTime !== pausedHardForkState.nextNoteTime ||
+  resumedHardForkState.step16 !== minutePauseState.step16 ||
+  resumedHardForkState.nextNoteTime !== minutePauseState.nextNoteTime ||
   immediateResumeStarts !== 2
 ) {
   throw new Error('Hard Fork tappade rytmfasen eller lade ett dubbelslag när skrivandet återupptogs.');
 }
 engine.stop(true);
 console.log('  ok   Hard Fork lugnar beatet vid timerslut och återväcker det vid nästa skrivpass');
-console.log('  ok   Hard Fork behåller en ren grundpuls och rytmfas genom tankepauser utan dubbelslag');
+console.log('  ok   Hard Fork behåller hela det melodiska beatet genom en minuts tankepaus utan dubbelslag');
 console.log('  ok   Hard Fork kombinerar ett fylligt bakgrundslager med textidentitet och unik sessionsvariation');
 
 const typewriter = sandbox.testTypewriter;

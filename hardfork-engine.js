@@ -10,9 +10,6 @@ window.HardForkEngine = (function() {
     const SIXTEENTH_DUR = 60 / BPM / 4;
     const LOOKAHEAD = 0.12;
     const MAX_COMMIT_SOLO_PLANS = 2;
-    const PAUSE_PULSE_HEAT = 0.08;
-    const CORE_BASS_STEPS = [0, 8];
-    const CORE_HAT_STEPS = [2, 10];
     const GROOVE_PATTERNS = [
         { bass: [0, 3, 8, 11], warmBass: [3, 11], extraKick: [4, 12], hats: [2, 10], warmHats: [6, 14], ostinato: [0, 2, 4, 6, 8, 10, 12, 14] },
         { bass: [0, 5, 8, 11], warmBass: [5, 11], extraKick: [5, 12], hats: [2, 10], warmHats: [6, 13], ostinato: [0, 2, 4, 7, 8, 10, 12, 15] },
@@ -300,11 +297,6 @@ window.HardForkEngine = (function() {
         atmosphereBus.gain.setTargetAtTime(.0001, ctx.currentTime, 2.4);
     }
 
-    function settleAtmosphere() {
-        if (!atmosphereBus || !ctx) return;
-        atmosphereBus.gain.setTargetAtTime(.0055 * effectDepth, ctx.currentTime, 1.2);
-    }
-
     function destroyAtmosphere() {
         for (const source of [...atmosphereOscillators, atmosphereNoise, atmosphereLfo]) {
             if (!source) continue;
@@ -400,11 +392,9 @@ window.HardForkEngine = (function() {
                 isTyping &&
                 ctx.currentTime - lastKeyTime > TYPING_PAUSE_THRESHOLD
             ) {
-                // En tankepaus fryser den musikaliska intensiteten. Rytmklockan
-                // fortsätter i samma fas, men arrangemanget går ned till en ren
-                // grundpuls och återstartas därför inte vid nästa tecken.
+                // En tankepaus ändrar inte den rådande musiken. Flaggan används
+                // endast för att nästa tecken inte ska starta om rytmklockan.
                 isTyping = false;
-                settleAtmosphere();
             }
         }, 100);
 
@@ -581,7 +571,7 @@ window.HardForkEngine = (function() {
         const source = ctx.createBufferSource(); source.buffer = noiseBuffer;
         const filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 5000;
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.05 * volMod, time + 0.01);
+        gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(0.032 * volMod, time + 0.012);
         const dur = isOpen ? 0.2 : 0.05;
         gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
         
@@ -752,9 +742,9 @@ window.HardForkEngine = (function() {
 
     function playPluck(time, degree, velocity, duration = 0.3, volMod = 1.0, character = {}) {
         const timbres = [
-            ['sawtooth', 'sawtooth'],
             ['triangle', 'sawtooth'],
-            ['square', 'triangle']
+            ['triangle', 'sine'],
+            ['sine', 'triangle']
         ];
         const timbre = timbres[Math.abs(Number(character.timbre) || 0) % timbres.length];
         const osc = ctx.createOscillator(); osc.type = timbre[0];
@@ -764,15 +754,19 @@ window.HardForkEngine = (function() {
         
         const filter = ctx.createBiquadFilter(); filter.type = 'lowpass';
         const brightness = clamp(Number(character.brightness) || 1, .72, 1.24);
+        const safeDuration = Math.max(.045, Number(duration) || .3);
+        const attack = Math.min(.012, safeDuration * .22);
+        const releaseEnd = Math.max(attack + .018, safeDuration - .004);
+        const filterAttack = Math.min(.035, safeDuration * .35);
         const filterMax = (1000 + (3000 * Math.min(1, typeHeat))) * brightness;
         filter.frequency.setValueAtTime(400, time);
-        filter.frequency.exponentialRampToValueAtTime(filterMax * effectDepth, time + 0.05);
-        filter.frequency.exponentialRampToValueAtTime(400, time + duration);
+        filter.frequency.exponentialRampToValueAtTime(filterMax * effectDepth, time + filterAttack);
+        filter.frequency.exponentialRampToValueAtTime(400, time + releaseEnd);
         
         const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0, time);
-        gain.gain.linearRampToValueAtTime(0.1 * velocity * volMod, time + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, time + duration - 0.05);
+        gain.gain.setValueAtTime(0.0001, time);
+        gain.gain.linearRampToValueAtTime(0.1 * velocity * volMod, time + attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + releaseEnd);
         
         const freq = midiToFreq(degreeToMidi(degree, 48 + currentKeyShift));
         osc.frequency.setValueAtTime(freq, time); osc2.frequency.setValueAtTime(freq, time);
@@ -791,7 +785,7 @@ window.HardForkEngine = (function() {
         }
         
         osc.start(time); osc2.start(time);
-        osc.stop(time + duration); osc2.stop(time + duration);
+        osc.stop(time + safeDuration); osc2.stop(time + safeDuration);
         osc.onended = () => { try { filter.disconnect(); gain.disconnect(); oscGain.disconnect(); osc2Gain.disconnect(); panner?.disconnect(); } catch(e){} };
     }
 
@@ -1117,16 +1111,13 @@ window.HardForkEngine = (function() {
             }
         }
         
-        const pausePulseActive = beatActive && !isTyping && !timerResting;
-        const effectiveHeat = pausePulseActive
-            ? PAUSE_PULSE_HEAT
-            : (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
+        const effectiveHeat = (isOutro || isFillBar) ? Math.max(0, typeHeat - 0.5) : typeHeat;
         const concentrationGuard = sustainedGestureCount > 180;
         const groove = GROOVE_PATTERNS[currentGrooveFamily] || GROOVE_PATTERNS[0];
         
         // Layer 0: Bass
-        if (CORE_BASS_STEPS.includes(step) || (!pausePulseActive && groove.bass.includes(step))) {
-            if (CORE_BASS_STEPS.includes(step) || effectiveHeat > 0.1) playBass(time, false);
+        if (groove.bass.includes(step)) {
+            if (step === 0 || step === 8 || effectiveHeat > 0.1) playBass(time, false);
             if (effectiveHeat > 0.95 && groove.warmBass.includes(step)) playBass(time, true);
         }
         
@@ -1138,7 +1129,7 @@ window.HardForkEngine = (function() {
         
         // Layer 2: Hats
         // Spela alltid hi-hat på 2 och 10 (offbeat) svagt, fyll i mer vid mer heat
-        if (CORE_HAT_STEPS.includes(step) || (!pausePulseActive && effectiveHeat > 0.2 && groove.warmHats.includes(step))) {
+        if (groove.hats.includes(step) || (effectiveHeat > 0.2 && groove.warmHats.includes(step))) {
             const isOpen = (effectiveHeat > 0.95 && step === groove.warmHats.at(-1));
             const pan = step % 4 === 2 ? -0.3 : 0.3;
             const volMod = effectiveHeat < 0.2 ? 0.3 : 1.0;
@@ -1146,15 +1137,18 @@ window.HardForkEngine = (function() {
         }
 
         // Layer 2b: Ostinato (Sentence Memory)
-        // Spela ostinatot svagt i bakgrunden under aktivt skrivande
-        if (!pausePulseActive && groove.ostinato.includes(step)) {
+        // Ostinatot bär textens melodiska minne även under långa tankepauser.
+        if (groove.ostinato.includes(step)) {
             const memoryIndex = Math.floor(step / 2) % M.length;
             let od = Math.round(M[memoryIndex]);
             if (step % 4 === 0) od = snapToChord(od);
             const ostinatoVol = Math.max(0.15, effectiveHeat * 0.5);
-            // Grundostinatot behåller den tidigare fasta och rena klangen.
-            // Textvariationerna ligger i teckenrespons, fraser och solon.
-            playPluck(time, od, ostinatoVol, 0.12, 0.5); // background layer
+            playPluck(time, od, ostinatoVol, 0.12, 0.5, {
+                timbre: currentTextureFamily % 3,
+                pan: (memoryIndex - 3.5) * .025,
+                brightness: .78 + (currentTextureFamily % 3) * .055,
+                detune: 3 + (currentTextureFamily % 3)
+            }); // background layer
         }
         
         // Layer 3: Snare & extra hats
@@ -1470,8 +1464,8 @@ window.HardForkEngine = (function() {
             typeHeat,
             timerResting,
             heatBeforeTimerRest,
-            pausePulseActive: beatActive && !isTyping && !timerResting,
-            pausePulseHeat: PAUSE_PULSE_HEAT,
+            thinkingPauseActive: beatActive && !isTyping && !timerResting,
+            thinkingBeatHeld: beatActive && !timerResting,
             atmosphereGain: atmosphereBus?.gain?.value ?? 0,
             step16,
             nextNoteTime,
