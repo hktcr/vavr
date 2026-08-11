@@ -43,6 +43,8 @@ window.HardForkEngine = (function() {
     let lastKeyTime = 0;
     let heatInterval = null;
     const TYPING_PAUSE_THRESHOLD = 0.45;
+    let timerResting = false;
+    let heatBeforeTimerRest = 0;
 
     // Sequencer State
     let schedulerInterval = null;
@@ -403,6 +405,32 @@ window.HardForkEngine = (function() {
         if (sendGain) sendGain.gain.setTargetAtTime(0.2 + (0.4 * val), ctx.currentTime, 0.1);
     }
 
+    function setTimerState(state, mode = 'focus') {
+        if (!ctx) return;
+        if (state === 'finished') {
+            heatBeforeTimerRest = Math.max(heatBeforeTimerRest, typeHeat, .55);
+            timerResting = true;
+            typeHeat = Math.min(typeHeat, .16);
+            if (beatActive) wakeAtmosphere();
+            return;
+        }
+        if (state === 'running' && mode === 'focus') {
+            typeHeat = Math.max(typeHeat, heatBeforeTimerRest, .55);
+            heatBeforeTimerRest = 0;
+            timerResting = false;
+            if (!beatActive) {
+                beatActive = true;
+                nextNoteTime = Math.ceil((ctx.currentTime + 0.02) / SIXTEENTH_DUR) * SIXTEENTH_DUR;
+            }
+            wakeAtmosphere();
+            return;
+        }
+        if (state === 'idle') {
+            timerResting = false;
+            heatBeforeTimerRest = 0;
+        }
+    }
+
     function handleVisibilityChange() {
         if (document.hidden) {
             isTyping = false;
@@ -432,6 +460,8 @@ window.HardForkEngine = (function() {
         sweepUntilTime = 0;
         lastGlitchTime = 0;
         typeHeat = 0;
+        timerResting = false;
+        heatBeforeTimerRest = 0;
         lastHeadingCount = 0;
         step16 = 0;
         barNumber = 0;
@@ -1050,6 +1080,11 @@ window.HardForkEngine = (function() {
         if (key === 'Enter') key = '\n';
 
         const now = ctx.currentTime;
+        if (timerResting) {
+            typeHeat = Math.max(typeHeat, heatBeforeTimerRest, .55);
+            heatBeforeTimerRest = 0;
+            timerResting = false;
+        }
         const resumedFromPause = beatActive && !isTyping;
         if (resumedFromPause) sustainedGestureCount = 0;
         if (isTyping && lastKeyTime > 0) {
@@ -1284,6 +1319,8 @@ window.HardForkEngine = (function() {
             beatActive,
             isTyping,
             typeHeat,
+            timerResting,
+            heatBeforeTimerRest,
             step16,
             nextNoteTime,
             atmosphereSourceCount: atmosphereOscillators.length + Number(Boolean(atmosphereNoise)) + Number(Boolean(atmosphereLfo)),
@@ -1315,6 +1352,7 @@ window.HardForkEngine = (function() {
         init,
         setVolume,
         setDepth,
+        setTimerState,
         setContext,
         commit,
         destroy,
