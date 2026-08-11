@@ -5997,13 +5997,13 @@
         name: 'Valsång',
         adaptive: true,
         dynamic: true,
-        description: 'Ett harmoniskt och biologiskt inspirerat hav av djupa rop, stigande svep, böljande drillar och mjuka pulssviter. Texten väljer lätestyp och formar svaret inom ett gemensamt pentatoniskt tonmaterial.'
+        description: 'Ett harmoniskt och biologiskt inspirerat hav av djupa rop, stigande svep, böljande drillar och mjuka pulssviter. En accentdirigent samlar skiljetecken, parljud, stycken och målmilstolpar till sammanhängande fraser.'
       },
       hardfork: {
         name: 'Hard Fork',
         adaptive: true,
         dynamic: true,
-        description: 'Ett fylligt generativt skrivrum där dokumentet ger ljudidentiteten och varje skrivpass blir en ny tolkning. Maskinluft, groove, klang, textminne och styckessolon utvecklas utan att upprepas exakt.'
+        description: 'Ett fylligt generativt skrivrum där dokumentet ger ljudidentiteten och varje skrivpass blir en ny tolkning. En accentdirigent väver ihop skiljetecken, parljud, styckessolon och målmilstolpar utan konkurrerande effekter.'
       }
     };
 
@@ -9185,6 +9185,17 @@
         .split(/[.!?]+/)
         .map(sentence => wordCount(sentence))
         .filter(Boolean);
+      const goal = normalizeGoal(document.goal);
+      const metrics = documentMetrics(document);
+      const goalCount = metrics[goal.metric];
+      const blockContribution = goal.metric === 'characters' ? characterCount(text) : words.length;
+      const previousGoalCount = Math.max(0, goalCount - blockContribution);
+      const goalMilestone = goal.enabled
+        ? [25, 50, 75, 100].filter(milestone =>
+            previousGoalCount / goal.target < milestone / 100 &&
+            goalCount / goal.target >= milestone / 100
+          ).at(-1) || null
+        : null;
       const draftExists = Boolean(draftBlock.text);
       const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length
         + (draftExists && draftBlock.kind === 'paragraph' ? 1 : 0);
@@ -9259,7 +9270,9 @@
         similarityToPrevious: previousParagraph
           ? clamp(analysis?.scores?.get(pairKey(block.id, previousParagraph.id)) || 0, 0, 1)
           : 0,
-        sectionId: analysis?.owners?.get(block?.id) || null
+        sectionId: analysis?.owners?.get(block?.id) || null,
+        goalMilestone,
+        goalProgress: goal.enabled ? clamp(goalCount / goal.target, 0, 1) : null
       };
     }
 
