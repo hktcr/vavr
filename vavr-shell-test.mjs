@@ -431,6 +431,13 @@ check(
   'Valsång bevarar frasminnet och lägger till en fast tre-rösters styckespool'
 );
 check(
+  valsangEngine.includes('function cancelPendingStructuralAccents()') &&
+  valsangEngine.includes('function playPairedAccent(key)') &&
+  valsangEngine.includes('accentComposition') &&
+  valsangEngine.includes('suppressedAccentCount'),
+  'Valsång har en prioriterande dirigent för parljud, strukturella accenter och täthetskontroll'
+);
+check(
   hardForkEngine.includes('const BPM = 125') &&
   hardForkEngine.includes('function playKick') &&
   hardForkEngine.includes('function playBass') &&
@@ -449,6 +456,20 @@ check(
   hardForkEngine.includes('function createSessionSeed()') &&
   hardForkEngine.includes('concentrationGuardActive'),
   'Hard Fork har groovevariation, återanvänt bakgrundslager, sessionsvariation och koncentrationsvakt'
+);
+check(
+  hardForkEngine.includes('function cancelPendingEnterAccent()') &&
+  hardForkEngine.includes('function playPairedAccent(key, time, character)') &&
+  hardForkEngine.includes('accentComposition') &&
+  hardForkEngine.includes('suppressedAccentCount'),
+  'Hard Fork har en prioriterande dirigent för parljud, strukturella accenter och täthetskontroll'
+);
+check(
+  html.includes('const goalMilestone = goal.enabled') &&
+  html.includes('goalMilestone,') &&
+  hardForkEngine.includes("accentGain('goal-' + solo.goalMilestone") &&
+  valsangEngine.includes("accentGain('goal-' + responseSong.goalMilestone"),
+  'ordmål ger sparsamma musikaliska accenter vid fjärdedelar'
 );
 check(
   hardForkEngine.includes('function setTimerState(state') &&
