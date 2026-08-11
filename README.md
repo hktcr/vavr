@@ -166,6 +166,9 @@ sammanlagda form:
   block får ett diskret mikrosvar. Enter avslutar en fras men skapar inte en
   ny röst förrän blocket verkligen har vävts in. Svarssången återanvänder
   samma tre röster och skapar inga ytterligare oscillatorer vid commit.
+  En accentdirigent låter stycke och rubrik gå före Enter och meningsslut,
+  ger citattecken och parenteser diskreta parljud, markerar 25, 50, 75 och
+  100 procent av aktiva skrivmål och dämpar mikroaccenter när de blir täta.
 - **Hard Fork** bevarar SkrivR-originalets generativa 125 BPM-produktion med
   bas, kick, hi-hat, snare, swing, ostinato, stereodelay och textstyrda fills.
   Ett återanvänt, lågmält lager av maskinluft och tre mörka röster gör rummet
