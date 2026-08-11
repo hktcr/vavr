@@ -415,6 +415,43 @@ if (
 engine.stop(true);
 console.log('  ok   Valsångens blockmappning är deterministisk från samma utgångsläge');
 
+await engine.start('valsang', 24, deterministicValsangProfile);
+const valsangAccentContext = FakeAudioContext.instances.at(-1);
+valsangAccentContext.currentTime = 6;
+engine.handleKey('(');
+engine.handleKey(')');
+engine.handleKey('a');
+engine.handleKey('.');
+engine.handleKey('Enter');
+engine.commit('paragraph', {
+  text: 'En samlad fras når den första fjärdedelen.',
+  words: 8,
+  vowelRatio: .44,
+  averageSentenceWords: 8,
+  similarityToPrevious: .58,
+  goalMilestone: 25
+});
+const valsangAccentState = valsangEngine.getState();
+const valsangAccentPlan = valsangAccentState.lastResponseSong;
+if (
+  valsangAccentState.pairedAccentCount !== 2 ||
+  valsangAccentState.composedAccentCount < 1 ||
+  valsangAccentState.pendingEnterAccent ||
+  valsangAccentState.pendingSentenceAccent ||
+  valsangAccentPlan?.goalMilestone !== 25 ||
+  !valsangAccentPlan?.accentComposition?.includes('sentence-.') ||
+  !valsangAccentPlan?.accentComposition?.includes('commit') ||
+  !valsangAccentPlan?.accentComposition?.includes('goal-25')
+) {
+  throw new Error('Valsångsdirigenten samlade inte parl ljud, meningsslut, commit och målmilstolpe.');
+}
+for (let index = 0; index < 8; index++) engine.handleKey(index % 2 ? ')' : '(');
+if (valsangEngine.getState().suppressedAccentCount < 1) {
+  throw new Error('Valsång dämpade inte mikroaccenter när accentfönstret blev fullt.');
+}
+engine.stop(true);
+console.log('  ok   Valsångsdirigenten prioriterar strukturen och begränsar täta mikroaccenter');
+
 const hardForkDelaysBefore = FakeAudioContext.delayCreations;
 const hardForkShapersBefore = FakeAudioContext.waveShaperCreations;
 await engine.start('hardfork', 24, {
@@ -461,6 +498,42 @@ if (
 ) {
   throw new Error('Hard Fork svarade musikaliskt på ett tomt block.');
 }
+hardForkEngine.resetMemory();
+hardForkContext.currentTime = 14;
+engine.handleKey('(');
+engine.handleKey(')');
+engine.handleKey('a');
+engine.handleKey('.');
+engine.handleKey('Enter');
+engine.commit('paragraph', {
+  text: 'En samlad riffgest når halva målet.',
+  words: 7,
+  vowelRatio: .42,
+  averageSentenceWords: 7,
+  similarityToPrevious: .61,
+  goalMilestone: 50
+});
+const hardForkAccentState = hardForkEngine.getState();
+const hardForkAccentPlan = hardForkAccentState.lastParagraphSolo;
+if (
+  hardForkAccentState.pairedAccentCount !== 2 ||
+  hardForkAccentState.composedAccentCount !== 1 ||
+  hardForkAccentState.pendingEnterAccent ||
+  hardForkAccentPlan?.goalMilestone !== 50 ||
+  hardForkAccentPlan?.delayedForSentenceFill ||
+  !hardForkAccentPlan?.accentComposition?.includes('sentence-normal') ||
+  !hardForkAccentPlan?.accentComposition?.includes('enter') ||
+  !hardForkAccentPlan?.accentComposition?.includes('commit') ||
+  !hardForkAccentPlan?.accentComposition?.includes('goal-50')
+) {
+  throw new Error('Hard Fork-dirigenten slog inte samman parl ljud, fill, Enter, commit och målmilstolpe.');
+}
+for (let index = 0; index < 10; index++) engine.handleKey(index % 2 ? ')' : '(');
+if (hardForkEngine.getState().suppressedAccentCount < 1) {
+  throw new Error('Hard Fork dämpade inte mikroaccenter när accentfönstret blev fullt.');
+}
+hardForkEngine.resetMemory();
+console.log('  ok   Hard Fork-dirigenten prioriterar strukturen och begränsar täta mikroaccenter');
 const soloProfile = {
   id: 'block-grenverk-1',
   text: 'Koden delar sig, men styckets motiv lever vidare genom grenen.',
