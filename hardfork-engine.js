@@ -82,6 +82,15 @@ window.HardForkEngine = (function() {
     let commitSequence = 0;
     let gestureSequence = 0;
     let sustainedGestureCount = 0;
+    let pendingEnterAccentTimer = null;
+    let pendingEnterAccent = false;
+    let accentTimes = [];
+    let pairedAccentCount = 0;
+    let composedAccentCount = 0;
+    let suppressedAccentCount = 0;
+    let lastAccentKind = null;
+    let straightDoubleQuoteOpen = false;
+    let straightSingleQuoteOpen = false;
 
     // Sentence Memory (Part C)
     let lastHeadingCount = 0;
@@ -442,6 +451,9 @@ window.HardForkEngine = (function() {
     }
 
     function resetMemory() {
+        if (pendingEnterAccentTimer) clearTimeout(pendingEnterAccentTimer);
+        pendingEnterAccentTimer = null;
+        pendingEnterAccent = false;
         M = [0, 2, 4, 2, 0, 2, 4, 7].map(Number);
         M_pending = null;
         sentenceMelody = [];
@@ -481,6 +493,13 @@ window.HardForkEngine = (function() {
         currentTextureFamily = 0;
         currentSwing = 0.56;
         sustainedGestureCount = 0;
+        accentTimes = [];
+        pairedAccentCount = 0;
+        composedAccentCount = 0;
+        suppressedAccentCount = 0;
+        lastAccentKind = null;
+        straightDoubleQuoteOpen = false;
+        straightSingleQuoteOpen = false;
     }
 
     function destroy() {
@@ -627,6 +646,100 @@ window.HardForkEngine = (function() {
         for (const d of [0, 1, 3]) playPluck(time, d, 1.0, 0.15, 1.2);
     }
 
+    function accentGain(kind, priority = 'micro') {
+        if (!ctx) return 0;
+        const now = ctx.currentTime;
+        accentTimes = accentTimes.filter(time => now - time <= 6);
+        const limit = sustainedGestureCount > 180 ? 3 : 6;
+        if (priority === 'micro' && accentTimes.length >= limit) {
+            suppressedAccentCount += 1;
+            lastAccentKind = 'suppressed:' + kind;
+            return 0;
+        }
+        accentTimes.push(now);
+        lastAccentKind = kind;
+        if (priority === 'structural') return .9;
+        return clamp(1 - Math.max(0, accentTimes.length - 2) * .1, .48, 1);
+    }
+
+    function pairedSymbolDirection(key) {
+        if ('([{“‘'.includes(key)) return 1;
+        if (')]}”’'.includes(key)) return -1;
+        if (key === '"') {
+            straightDoubleQuoteOpen = !straightDoubleQuoteOpen;
+            return straightDoubleQuoteOpen ? 1 : -1;
+        }
+        if (key === "'") {
+            straightSingleQuoteOpen = !straightSingleQuoteOpen;
+            return straightSingleQuoteOpen ? 1 : -1;
+        }
+        return 0;
+    }
+
+    function playPairedAccent(key, time, character) {
+        const direction = pairedSymbolDirection(key);
+        if (!direction) return false;
+        const gainScale = accentGain(direction > 0 ? 'pair-open' : 'pair-close');
+        if (!gainScale) return true;
+        playPluck(
+            time,
+            clamp(currentMelDegree + (direction > 0 ? 2 : 0), 0, 9),
+            .3,
+            .12,
+            .34 * gainScale,
+            {
+                ...character,
+                pan: direction > 0 ? -.3 : .3,
+                brightness: direction > 0 ? .96 : .86,
+                detune: direction > 0 ? 7 : 4
+            }
+        );
+        pairedAccentCount += 1;
+        return true;
+    }
+
+    function cancelPendingEnterAccent() {
+        const wasPending = pendingEnterAccent;
+        if (pendingEnterAccentTimer) clearTimeout(pendingEnterAccentTimer);
+        pendingEnterAccentTimer = null;
+        pendingEnterAccent = false;
+        return wasPending;
+    }
+
+    function queueEnterAccent(character) {
+        cancelPendingEnterAccent();
+        pendingEnterAccent = true;
+        pendingEnterAccentTimer = setTimeout(() => {
+            pendingEnterAccentTimer = null;
+            if (!ctx || !pendingEnterAccent) return;
+            pendingEnterAccent = false;
+            const now = ctx.currentTime;
+            const gainScale = accentGain('line-break', 'phrase');
+            playPluck(now, 0, 0.42, 0.1, 0.42 * gainScale, character);
+            if (masterFilter) {
+                masterFilter.frequency.cancelScheduledValues(now);
+                masterFilter.frequency.setValueAtTime(18000, now);
+                masterFilter.frequency.exponentialRampToValueAtTime(300, now + SIXTEENTH_DUR * 4);
+                masterFilter.frequency.exponentialRampToValueAtTime(18000, now + SIXTEENTH_DUR * 16);
+                sweepUntilTime = now + SIXTEENTH_DUR * 16;
+            }
+        }, 28);
+    }
+
+    function playGoalMilestone(time, milestone, plan) {
+        if (!milestone) return;
+        const count = milestone >= 100 ? 3 : milestone >= 50 ? 2 : 1;
+        const degrees = sampleContour(plan.degrees, count);
+        degrees.forEach((degree, index) => playPluck(
+            time + index * SIXTEENTH_DUR,
+            snapToChord(degree + (milestone >= 75 ? 5 : 0)),
+            .42 + milestone / 500,
+            .18,
+            .34,
+            { timbre: index % 3, pan: count === 1 ? 0 : -.22 + index * .44 / (count - 1), brightness: 1.02 }
+        ));
+    }
+
     function playPluck(time, degree, velocity, duration = 0.3, volMod = 1.0, character = {}) {
         const timbres = [
             ['sawtooth', 'sawtooth'],
@@ -770,6 +883,9 @@ window.HardForkEngine = (function() {
         const cadence = heading
             ? 'section'
             : ending === '?' ? 'question' : ending === '!' ? 'exclamation' : 'resolution';
+        const goalMilestone = [25, 50, 75, 100].includes(Number(blockProfile.goalMilestone))
+            ? Number(blockProfile.goalMilestone)
+            : null;
         if (heading) {
             degrees[degrees.length - 1] = clamp(degrees[0] + 4, 0, 9);
         } else if (ending === '?') {
@@ -808,6 +924,7 @@ window.HardForkEngine = (function() {
             kind: heading ? 'heading' : 'paragraph',
             role: heading ? 'theme-sting' : micro ? 'microfill' : 'paragraph-solo',
             cadence,
+            goalMilestone,
             signature,
             identitySignature,
             sessionSeed,
@@ -822,7 +939,7 @@ window.HardForkEngine = (function() {
             durations,
             timbres,
             pans,
-            intensity: micro ? .68 : 1,
+            intensity: (micro ? .68 : 1) * (goalMilestone ? 1 + goalMilestone / 1000 : 1),
             durationSeconds: steps[steps.length - 1] * SIXTEENTH_DUR + durations[durations.length - 1]
         };
     }
@@ -833,7 +950,14 @@ window.HardForkEngine = (function() {
         commitSequence += 1;
         const solo = buildCommitSolo(kind, blockProfile);
         const punctuationFillOverlap = fillScheduledForNextBar && kind !== 'heading';
-        const leadSteps = punctuationFillOverlap ? 2 : 0;
+        const enterAccentOverlap = cancelPendingEnterAccent();
+        const punctuationAccent = punctuationFillOverlap ? pendingFillVariant : null;
+        const leadSteps = 0;
+        if (punctuationFillOverlap) {
+            fillScheduledForNextBar = false;
+            pendingFillVariant = 'normal';
+            delayBloomUntilBar = -1;
+        }
         const compressed = sampleContour(solo.degrees, 8);
         M_pending = compressed;
         melodyBuffer = solo.degrees.slice(-8);
@@ -847,9 +971,18 @@ window.HardForkEngine = (function() {
             timbres: [...solo.timbres],
             pans: [...solo.pans],
             startsOnGrid: true,
-            delayedForSentenceFill: punctuationFillOverlap,
+            delayedForSentenceFill: false,
+            accentComposition: [
+                punctuationAccent ? 'sentence-' + punctuationAccent : null,
+                enterAccentOverlap ? 'enter' : null,
+                kind === 'heading' ? 'heading' : 'commit',
+                solo.goalMilestone ? 'goal-' + solo.goalMilestone : null
+            ].filter(Boolean),
             maxConcurrentPlans: MAX_COMMIT_SOLO_PLANS
         };
+        if (response.accentComposition.length > 1) composedAccentCount += 1;
+        accentGain(kind === 'heading' ? 'heading' : 'commit', 'structural');
+        if (solo.goalMilestone) accentGain('goal-' + solo.goalMilestone, 'structural');
         lastBlockResponse = response;
         if (kind === 'heading') {
             headingStingCount += 1;
@@ -884,6 +1017,9 @@ window.HardForkEngine = (function() {
         if (!active) return;
 
         const { plan, scheduledSteps } = active;
+        if (active.position === scheduledSteps[0] && plan.goalMilestone) {
+            playGoalMilestone(time, plan.goalMilestone, plan);
+        }
         if (active.position === scheduledSteps[0] && plan.kind === 'heading') {
             playBass(time, true, .22);
         }
@@ -1145,7 +1281,7 @@ window.HardForkEngine = (function() {
                 }
             }
         } else if (key === '\n') {
-            playPluck(now, 0, 0.42, 0.1, 0.42, gestureCharacter);
+            queueEnterAccent(gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             
@@ -1153,13 +1289,6 @@ window.HardForkEngine = (function() {
             const verseSteps = [0, 7, -5, 2, -3, 4, 9, 5, -2, -7];
             currentKeyShift = verseSteps[(s.headings || 0) % verseSteps.length];
             
-            if (masterFilter) {
-                masterFilter.frequency.cancelScheduledValues(now);
-                masterFilter.frequency.setValueAtTime(18000, now);
-                masterFilter.frequency.exponentialRampToValueAtTime(300, now + SIXTEENTH_DUR * 4);
-                masterFilter.frequency.exponentialRampToValueAtTime(18000, now + SIXTEENTH_DUR * 16);
-                sweepUntilTime = now + SIXTEENTH_DUR * 16;
-            }
         } else if (key === '#') {
             playPluck(now, currentMelDegree + 5, 0.45, 0.09, 0.46, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
@@ -1196,6 +1325,9 @@ window.HardForkEngine = (function() {
                 currentKeyShift = [0, 7, -5, 2, -3, 4, 9, 5, -2, -7][harmonicShiftCount % 10];
             }
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('char', 14);
+        } else if (playPairedAccent(key, now, gestureCharacter)) {
+            typeHeat = Math.min(1.2, typeHeat + .04);
+            currentSentenceLen++;
         } else if (key === ' ') {
             playPluck(now, 0, 0.34, 0.075, 0.32, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
@@ -1203,7 +1335,8 @@ window.HardForkEngine = (function() {
             addTrace(40, now);
             if (window.VisualsEngine) window.VisualsEngine.spawnHardForkBlock('space', 0);
         } else if (/[.,;:!?]/.test(key)) {
-            playPluck(now, currentMelDegree + (key === '?' ? 2 : 0), 0.4, 0.085, 0.4, gestureCharacter);
+            const punctuationGain = accentGain('punctuation-' + key, 'phrase');
+            playPluck(now, currentMelDegree + (key === '?' ? 2 : 0), 0.4, 0.085, 0.4 * punctuationGain, gestureCharacter);
             typeHeat = Math.min(1.2, typeHeat + 0.1);
             currentSentenceLen++;
             addTrace(90, now);
@@ -1316,6 +1449,12 @@ window.HardForkEngine = (function() {
             grooveFamily: currentGrooveFamily,
             textureFamily: currentTextureFamily,
             concentrationGuardActive: sustainedGestureCount > 180,
+            pairedAccentCount,
+            composedAccentCount,
+            suppressedAccentCount,
+            lastAccentKind,
+            pendingEnterAccent,
+            accentWindowSize: accentTimes.length,
             beatActive,
             isTyping,
             typeHeat,
