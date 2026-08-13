@@ -464,12 +464,18 @@ check(
   hardForkEngine.includes('suppressedAccentCount'),
   'Hard Fork har en prioriterande dirigent för parljud, strukturella accenter och täthetskontroll'
 );
+const soundBlockProfileSource = inlineScript?.match(
+  /function soundBlockProfile\(block\) \{[\s\S]*?^    \}/m
+)?.[0] || '';
 check(
-  html.includes('const goalMilestone = goal.enabled') &&
-  html.includes('goalMilestone,') &&
+  soundBlockProfileSource.includes('const goal = normalizeGoal(document.goal)') &&
+  soundBlockProfileSource.includes('const goalCount = metrics[goal.metric]') &&
+  soundBlockProfileSource.includes('const goalMilestone = goal.enabled') &&
+  soundBlockProfileSource.includes('goalMilestone,') &&
+  soundBlockProfileSource.includes('goalProgress: goal.enabled') &&
   hardForkEngine.includes("accentGain('goal-' + solo.goalMilestone") &&
   valsangEngine.includes("accentGain('goal-' + responseSong.goalMilestone"),
-  'ordmål ger sparsamma musikaliska accenter vid fjärdedelar'
+  'blockprofilen beräknar ordmålets musikaliska accenter utan odefinierade variabler'
 );
 check(
   hardForkEngine.includes('function setTimerState(state') &&
