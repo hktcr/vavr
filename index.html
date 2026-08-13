@@ -9185,17 +9185,6 @@
         .split(/[.!?]+/)
         .map(sentence => wordCount(sentence))
         .filter(Boolean);
-      const goal = normalizeGoal(document.goal);
-      const metrics = documentMetrics(document);
-      const goalCount = metrics[goal.metric];
-      const blockContribution = goal.metric === 'characters' ? characterCount(text) : words.length;
-      const previousGoalCount = Math.max(0, goalCount - blockContribution);
-      const goalMilestone = goal.enabled
-        ? [25, 50, 75, 100].filter(milestone =>
-            previousGoalCount / goal.target < milestone / 100 &&
-            goalCount / goal.target >= milestone / 100
-          ).at(-1) || null
-        : null;
       const draftExists = Boolean(draftBlock.text);
       const paragraphs = document.blocks.filter(block => block.kind === 'paragraph').length
         + (draftExists && draftBlock.kind === 'paragraph' ? 1 : 0);
@@ -9245,6 +9234,17 @@
       const words = text.match(/[\p{L}\p{N}]+/gu) || [];
       const letters = text.toLowerCase().match(/[a-zåäö]/g) || [];
       const vowels = letters.filter(letter => 'aeiouyåäö'.includes(letter)).length;
+      const goal = normalizeGoal(document.goal);
+      const metrics = documentMetrics(document);
+      const goalCount = metrics[goal.metric];
+      const blockContribution = goal.metric === 'characters' ? characterCount(text) : words.length;
+      const previousGoalCount = Math.max(0, goalCount - blockContribution);
+      const goalMilestone = goal.enabled
+        ? [25, 50, 75, 100].filter(milestone =>
+            previousGoalCount / goal.target < milestone / 100 &&
+            goalCount / goal.target >= milestone / 100
+          ).at(-1) || null
+        : null;
       const sentenceWordCounts = text
         .split(/[.!?]+/)
         .map(sentence => wordCount(sentence))
