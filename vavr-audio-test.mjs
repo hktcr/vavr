@@ -4,6 +4,7 @@ import vm from 'node:vm';
 const html = readFileSync('index.html', 'utf8');
 const valsangSource = readFileSync('valsang-engine.js', 'utf8');
 const hardForkSource = readFileSync('hardfork-engine.js', 'utf8');
+const nebulapulsSource = readFileSync('nebulapuls-engine.js', 'utf8');
 const inlineScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '';
 const soundStart = inlineScript.indexOf('const SOUND_THEMES =');
 const soundEnd = inlineScript.indexOf('    const elements =', soundStart);
@@ -153,6 +154,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(valsangSource, sandbox);
 vm.runInContext(hardForkSource, sandbox);
+vm.runInContext(nebulapulsSource, sandbox);
 vm.runInContext(soundSource, sandbox);
 
 const engine = sandbox.testSoundscape;
@@ -165,7 +167,8 @@ const themes = [
   'sambandsvav',
   'strukturklang',
   'valsang',
-  'hardfork'
+  'hardfork',
+  'nebulapuls'
 ];
 let passed = 0;
 
@@ -750,6 +753,78 @@ engine.stop(true);
 console.log('  ok   Hard Fork lugnar beatet vid timerslut och återväcker det vid nästa skrivpass');
 console.log('  ok   Hard Fork behåller hela det melodiska beatet genom en minuts tankepaus utan dubbelslag');
 console.log('  ok   Hard Fork kombinerar ett fylligt bakgrundslager med textidentitet och unik sessionsvariation');
+
+const nebulapulsOscillatorsBefore = FakeAudioContext.oscillatorCreations;
+await engine.start('nebulapuls', 24, {
+  words: 430,
+  characters: 2550,
+  averageWordLength: 5.6,
+  vowelRatio: .41,
+  averageSentenceWords: 15,
+  paragraphs: 8,
+  headings: 2,
+  connectedness: .64,
+  documentId: 'nebula-document',
+  documentTitle: 'Ljus över omloppsbanan',
+  contentFingerprint: 88241
+});
+const nebulapulsEngine = sandbox.window.NebulapulsEngine;
+let nebulapulsState = nebulapulsEngine.getState();
+if (
+  nebulapulsState.padVoiceCount !== 4 ||
+  ![96, 108, 120, 132].includes(nebulapulsState.bpm) ||
+  FakeAudioContext.oscillatorCreations < nebulapulsOscillatorsBefore + 5
+) {
+  throw new Error('Nebulapuls byggde inte sitt permanenta analoga klangfält eller sin tempoidentitet.');
+}
+
+engine.handleKey('n');
+engine.handleKey('e');
+engine.handleKey('b');
+engine.handleKey('(');
+engine.handleKey(')');
+const paragraphPlan = nebulapulsEngine.commit('paragraph', {
+  text: 'Nebulosan rör sig långsamt men pulsen fortsätter.',
+  vowelRatio: .43,
+  goalMilestone: 50
+});
+const evolutionBeforeHeading = nebulapulsEngine.getState().evolutionGeneration;
+const headingPlan = nebulapulsEngine.commit('heading', {
+  text: 'En ny omloppsbana'
+});
+nebulapulsState = nebulapulsEngine.getState();
+if (
+  paragraphPlan?.role !== 'text-constellation' ||
+  paragraphPlan?.degrees.length < 3 ||
+  paragraphPlan?.degrees.length > 10 ||
+  paragraphPlan?.goalMilestone !== 50 ||
+  headingPlan?.role !== 'harmonic-portal' ||
+  nebulapulsState.evolutionGeneration <= evolutionBeforeHeading ||
+  nebulapulsState.pairedAccentCount !== 2
+) {
+  throw new Error('Nebulapuls formade inte textkonstellation, rubrikportal och parljud enligt kontraktet.');
+}
+
+for (let index = 0; index < 80; index += 1) {
+  engine.commit('paragraph', { text: 'Stycke ' + index + ' rör sig genom samma musikaliska rymd.' });
+}
+nebulapulsState = nebulapulsEngine.getState();
+if (nebulapulsState.pendingResponseCount + Number(nebulapulsState.responseActive) > 2) {
+  throw new Error('Nebulapuls överskred gränsen på två samtidiga svarplaner.');
+}
+engine.setTimerState('finished', 'focus');
+if (!nebulapulsEngine.getState().timerResting) {
+  throw new Error('Nebulapuls gick inte in i ett lugnare timerläge.');
+}
+engine.setTimerState('running', 'focus');
+if (nebulapulsEngine.getState().timerResting) {
+  throw new Error('Nebulapuls återväcktes inte när skrivpasset startade.');
+}
+engine.stop(true);
+if (nebulapulsEngine.getState().padVoiceCount !== 0) {
+  throw new Error('Nebulapuls tömde inte sitt permanenta klangfält vid stopp.');
+}
+console.log('  ok   Nebulapuls varierar flerskaligt, svarar på text och håller resursgränserna');
 
 const typewriter = sandbox.testTypewriter;
 const typewriterThemes = ['mekanisk', 'reseskrivare', 'elektrisk', 'dampad'];

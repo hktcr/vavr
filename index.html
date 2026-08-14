@@ -5722,6 +5722,7 @@
               <optgroup label="Dynamiska kompositioner">
                 <option value="valsang">Valsång</option>
                 <option value="hardfork">Hard Fork</option>
+                <option value="nebulapuls">Nebulapuls</option>
               </optgroup>
             </select>
           </div>
@@ -5846,6 +5847,7 @@
 
   <script src="./valsang-engine.js"></script>
   <script src="./hardfork-engine.js"></script>
+  <script src="./nebulapuls-engine.js"></script>
   <script src="./ordekon-kelly.js"></script>
   <script src="./ordekon-engine.js"></script>
   <script>
@@ -6004,6 +6006,12 @@
         adaptive: true,
         dynamic: true,
         description: 'Ett fylligt generativt skrivrum där dokumentet ger ljudidentiteten och varje skrivpass blir en ny tolkning. En accentdirigent väver ihop skiljetecken, parljud, styckessolon och målmilstolpar utan konkurrerande effekter.'
+      },
+      nebulapuls: {
+        name: 'Nebulapuls',
+        adaptive: true,
+        dynamic: true,
+        description: 'Breda analoga klangfält möter en lekfull syntsekvens. Harmonik, rytm, register, klang och täthet utvecklas på flera tidsskalor medan texten behåller en igenkännbar musikalisk identitet.'
       }
     };
 
@@ -6573,6 +6581,17 @@
           return;
         }
 
+        if (theme === 'nebulapuls') {
+          const engine = window.NebulapulsEngine;
+          if (!engine) throw new Error('Nebulapulsmotorn kunde inte laddas');
+          engine.init(active.context, active.master);
+          engine.setVolume(.7);
+          active.externalEngine = engine;
+          active.adaptive = { kind: theme };
+          active.dynamic = { kind: theme };
+          return;
+        }
+
         const air = addNoise(active, { color: 'brown', gain: .044, highpass: 70, lowpass: 1900 });
         const pad = addPad(active, [65.41, 98, 130.81], { gain: .057, lowpass: 680, detune: 2.5 });
         addLfo(active, pad.bus.gain, .048, .08);
@@ -6609,9 +6628,13 @@
 
         if (active.externalEngine) {
           active.externalEngine.setContext(profile);
-          active.externalEngine.setDepth(kind === 'valsang'
-            ? clamp(.82 + connectedness * .22 + vowelRatio * .08, .82, 1.12)
-            : clamp(.76 + cohesion * .24 + Math.min(.16, headings * .02), .76, 1.12));
+          active.externalEngine.setDepth(
+            kind === 'valsang'
+              ? clamp(.82 + connectedness * .22 + vowelRatio * .08, .82, 1.12)
+              : kind === 'nebulapuls'
+                ? clamp(.72 + connectedness * .18 + vowelRatio * .16 + Math.min(.12, paragraphs * .006), .72, 1.16)
+                : clamp(.76 + cohesion * .24 + Math.min(.16, headings * .02), .76, 1.12)
+          );
           return;
         }
 

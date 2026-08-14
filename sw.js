@@ -1,12 +1,13 @@
 'use strict';
 
 const CACHE_PREFIX = 'vavr-shell-';
-const CACHE_NAME = CACHE_PREFIX + '2026-08-11-07';
+const CACHE_NAME = CACHE_PREFIX + '2026-08-15-01';
 const SHELL_PATHS = [
   './',
   './index.html',
   './valsang-engine.js',
   './hardfork-engine.js',
+  './nebulapuls-engine.js',
   './ordekon-kelly.js',
   './ordekon-engine.js',
   './ordekon-worker.js',

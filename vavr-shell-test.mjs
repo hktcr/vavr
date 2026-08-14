@@ -6,6 +6,7 @@ const manifest = JSON.parse(readFileSync('manifest.webmanifest', 'utf8'));
 const worker = readFileSync('sw.js', 'utf8');
 const valsangEngine = readFileSync('valsang-engine.js', 'utf8');
 const hardForkEngine = readFileSync('hardfork-engine.js', 'utf8');
+const nebulapulsEngine = readFileSync('nebulapuls-engine.js', 'utf8');
 const ordekonReference = readFileSync('ordekon-kelly.js', 'utf8');
 const ordekonEngine = readFileSync('ordekon-engine.js', 'utf8');
 const ordekonWorker = readFileSync('ordekon-worker.js', 'utf8');
@@ -41,6 +42,7 @@ check(
   JSON.stringify(scriptSources) === JSON.stringify([
     './valsang-engine.js',
     './hardfork-engine.js',
+    './nebulapuls-engine.js',
     './ordekon-kelly.js',
     './ordekon-engine.js'
   ]),
@@ -67,6 +69,7 @@ try {
 for (const [name, source] of [
   ['Valsångsmotorn', valsangEngine],
   ['Hard Fork-motorn', hardForkEngine],
+  ['Nebulapulsmotorn', nebulapulsEngine],
   ['Ordekonreferensen', ordekonReference],
   ['Ordekonmotorn', ordekonEngine],
   ['Ordekonbakgrundstråden', ordekonWorker]
@@ -103,6 +106,7 @@ check(worker.includes("event.waitUntil(self.skipWaiting())"), 'uppdateringsmedde
 check(worker.includes("new URL('./index.html', self.registration.scope)"), 'offlineindex byggs från worker-scope');
 check(worker.includes("'./valsang-engine.js'"), 'Valsångsmotorn ingår i offlinecachen');
 check(worker.includes("'./hardfork-engine.js'"), 'Hard Fork-motorn ingår i offlinecachen');
+check(worker.includes("'./nebulapuls-engine.js'"), 'Nebulapulsmotorn ingår i offlinecachen');
 check(worker.includes("'./ordekon-kelly.js'"), 'Kelly-referensen ingår i offlinecachen');
 check(worker.includes("'./ordekon-engine.js'"), 'Ordekonmotorn ingår i offlinecachen');
 check(worker.includes("'./ordekon-worker.js'"), 'Ordekons bakgrundstråd ingår i offlinecachen');
@@ -380,7 +384,8 @@ for (const theme of [
   'sambandsvav',
   'strukturklang',
   'valsang',
-  'hardfork'
+  'hardfork',
+  'nebulapuls'
 ]) {
   check(html.includes(`${theme}: {`), 'ljudtemat ' + theme + ' finns');
 }
@@ -417,8 +422,19 @@ check(
   'ljudmotorerna stängs när sidan lämnas'
 );
 check(
-  html.includes('window.ValsangEngine') && html.includes('window.HardForkEngine'),
-  'VävR kopplar in de fullständiga SkrivR-motorerna'
+  html.includes('window.ValsangEngine') &&
+  html.includes('window.HardForkEngine') &&
+  html.includes('window.NebulapulsEngine'),
+  'VävR kopplar in de fullständiga dynamiska ljudmotorerna'
+);
+check(
+  nebulapulsEngine.includes('const HARMONIC_WORLDS =') &&
+  nebulapulsEngine.includes('const SEQUENCE_FAMILIES =') &&
+  nebulapulsEngine.includes('const RHYTHM_MASKS =') &&
+  nebulapulsEngine.includes('const TIMBRES =') &&
+  nebulapulsEngine.includes('function evolve(') &&
+  nebulapulsEngine.includes('MAX_RESPONSE_PLANS = 2'),
+  'Nebulapuls har flerskalig variation och en begränsad svarskö'
 );
 check(
   valsangEngine.includes('voiceOsc1') &&

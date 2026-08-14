@@ -148,7 +148,7 @@ Tre textlevande landskap förändras långsamt med texten:
 - **Sambandsväv** följer styckenas uppmätta lexikala återkoppling.
 - **Strukturklang** följer rubriknivåer, styckeantal och dokumentets tillväxt.
 
-Två dynamiska kompositioner svarar både på varje tecken och på textens
+Tre dynamiska kompositioner svarar både på varje tecken och på textens
 sammanlagda form:
 
 - **Valsång** formar melodisk riktning av bokstavsföljder, låter vokaler
@@ -189,8 +189,18 @@ sammanlagda form:
   kan staplas utan gräns. Fyra groovefamiljer och sex klangfamiljer byts bara
   vid fyrtaktsgränser. Efter lång intensiv skrivning minskar en
   koncentrationsvakt ornament och starka accenter.
+- **Nebulapuls** förenar breda analoga klangfält med en studsande syntsekvens.
+  Fyra harmoniska världar, fem sekvensfamiljer, fyra rytmnät och fyra
+  klangfamiljer kan kombineras utan att dokumentets musikaliska identitet
+  går förlorad. Små förändringar sker vid fyrtaktsgränser och större
+  harmoniska förflyttningar sker mer sällan. Skrivtempo och textprofil styr
+  täthet, ljushet, rymd och ornament. Varje tangent får ett direkt men
+  återhållet svar. Ett invävt stycke formar en textbunden konstellation med
+  tre till nio toner, medan rubriker öppnar en tydligare harmonisk portal.
+  Motorn begränsar samtidiga svar till två planer och glesar automatiskt ut
+  sekvensen under långa eller språkligt täta textpass.
 
-Tomma block ger inget musikaliskt svar i något av de två dynamiska temana.
+Tomma block ger inget musikaliskt svar i något av de tre dynamiska temana.
 Rubriker behåller sina tydligare temaväxlingar.
 
 Ett separat skrivmaskinslager kan kombineras med vilket ljudlandskap som

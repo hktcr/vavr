@@ -23,6 +23,7 @@ betydelse, argumentativ kvalitet eller om textens innehåll är korrekt.
 | `index.html` | Hela applikationens gränssnitt, dokumenttillstånd, dokumentyta, dokumentlikhet, analys, fysik, canvasritning, ljudrum, timer, mål och PWA-flöden |
 | `valsang-engine.js` | Biologiskt inspirerad Valsångsmotor med omedelbar tangentrespons, frasminne, kontextstyrda svarssånger och en fast tre-rösterspool för styckesvisa korsfader |
 | `hardfork-engine.js` | SkrivR:s 125 BPM-sequencer med trummor, bas, ostinato, fills, omedelbart tangentanslag och en begränsad lane för styckessolon |
+| `nebulapuls-engine.js` | Generativ analog syntmotor med fyra harmoniska världar, varierande stegsekvenser, långsamt transformerade padklanger och textbundna konstellationssvar |
 | `ordekon-engine.js` | Lokal analysmotor för upprepade ord, fraser, meningsstarter, förekomster och begränsad lokal anhopning |
 | `ordekon-kelly.js` | Genererad kompakt frekvensreferens från Språkbankens Swedish Kelly-list, CC-BY-4.0 |
 | `ordekon-worker.js` | Lokal bakgrundstråd som kör Ordekon utan att låsa redigeringsgränssnittet |
@@ -114,7 +115,7 @@ settings = {
   ],
   soundTheme:
     'none' | 'glantan' | 'regnvav' | 'djupstrom' | 'nattljus' |
-    'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork',
+    'ordfalt' | 'sambandsvav' | 'strukturklang' | 'valsang' | 'hardfork' | 'nebulapuls',
   soundVolume: 0..100,
   soundReactive: boolean,
   typewriterTheme:
